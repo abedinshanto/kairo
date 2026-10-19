@@ -190,8 +190,9 @@ fn close<R: Runtime>(app: &AppHandle<R>, open: &mut Option<OpenSpan>, at: Option
     let Some(span) = open.take() else { return };
     let state = app.state::<AppState>();
     let end = at.unwrap_or(span.last_seen).clamp(span.start, span.last_seen);
+    // Sub-second flickers (alt-tab passing through an app) aren't real visits.
     if end - span.start < 1000 {
-        let _ = state.db.update_span_end(span.id, span.start);
+        let _ = state.db.delete_span(span.id);
     } else {
         let _ = state.db.update_span_end(span.id, end);
     }

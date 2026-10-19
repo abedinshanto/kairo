@@ -249,3 +249,35 @@ pub struct CurrentActivity {
     pub productivity: i8,
     pub since: i64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn settings_keep_ui_fields_and_fill_defaults() {
+        let json = r#"{"focusMinutes": 50, "theme": "light", "sound": {"master": 0.4}}"#;
+        let s: Settings = serde_json::from_str(json).unwrap();
+        assert_eq!(s.focus_minutes, 50);
+        assert_eq!(s.short_break_minutes, 5, "missing fields take defaults");
+        assert_eq!(s.extra.get("theme").and_then(|v| v.as_str()), Some("light"));
+
+        let back = serde_json::to_value(&s).unwrap();
+        assert_eq!(back["theme"], "light");
+        assert_eq!(back["sound"]["master"], 0.4);
+        assert_eq!(back["focusMinutes"], 50);
+        assert!(back.get("extra").is_none(), "extra is flattened, not nested");
+    }
+
+    #[test]
+    fn sanitize_clamps_and_normalises() {
+        let s = Settings {
+            focus_minutes: 0,
+            excluded_apps: vec!["Slack".into(), "slack".into()],
+            ..Default::default()
+        }
+        .sanitized();
+        assert_eq!(s.focus_minutes, 1);
+        assert_eq!(s.excluded_apps, vec!["slack".to_string()]);
+    }
+}

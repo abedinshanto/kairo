@@ -51,6 +51,11 @@ function useTheme() {
   useEffect(() => {
     const theme = pref === "system" ? (prefersLight ? "light" : "dark") : pref;
     document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("kairo-theme", pref);
+    } catch {
+      /* storage unavailable */
+    }
   }, [pref, prefersLight]);
 }
 

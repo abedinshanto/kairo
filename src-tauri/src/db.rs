@@ -328,6 +328,14 @@ impl Db {
             .map_err(e)
     }
 
+    pub fn delete_span(&self, id: i64) -> DbResult<()> {
+        self.conn
+            .lock()
+            .execute("DELETE FROM activity WHERE id = ?1", [id])
+            .map(|_| ())
+            .map_err(e)
+    }
+
     /// Spans overlapping `[from, to)`, clipped to the range.
     pub fn spans(&self, from: i64, to: i64) -> DbResult<Vec<ActivitySpan>> {
         let conn = self.conn.lock();

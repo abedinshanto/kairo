@@ -11,8 +11,7 @@
     <script>
       // Pick the theme before first paint to avoid a flash.
       try {
-        var raw = localStorage.getItem("kairo-demo-settings");
-        var pref = raw ? JSON.parse(raw).theme : "system";
+        var pref = localStorage.getItem("kairo-theme") || "system";
         var light = pref === "light" || ((!pref || pref === "system") && matchMedia("(prefers-color-scheme: light)").matches);
         document.documentElement.dataset.theme = light ? "light" : "dark";
       } catch (e) {}
