@@ -169,6 +169,7 @@ pub fn run() {
     let app = builder
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_screentime::init())
         .setup(setup)
         .on_window_event(|window, event| {

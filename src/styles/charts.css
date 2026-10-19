@@ -1,0 +1,212 @@
+.chart {
+  position: relative;
+  width: 100%;
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart svg:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.chart-grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.chart-baseline {
+  stroke: var(--axis);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.chart-reference {
+  stroke: var(--text-3);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.chart-axis {
+  fill: var(--text-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-ref-label {
+  fill: var(--text-2);
+  font-weight: 550;
+}
+
+.chart-hover-band {
+  fill: var(--surface-3);
+  opacity: 0.6;
+}
+
+.chart-tip {
+  position: absolute;
+  z-index: 10;
+  transform: translate(-50%, -100%);
+  min-width: 150px;
+  max-width: 240px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: var(--shadow-pop);
+  pointer-events: none;
+  font-size: 12px;
+  animation: tip-in 0.12s var(--ease);
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 4px));
+  }
+}
+
+.chart-tip-title {
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-2);
+  line-height: 1.7;
+}
+
+.chart-tip-row strong {
+  color: var(--text-1);
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tip-key {
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.chart-tip-note {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line-2);
+  color: var(--text-3);
+}
+
+/* Timeline */
+
+.timeline-track {
+  fill: var(--surface-2);
+}
+
+.timeline-focus {
+  fill: var(--phase-focus);
+}
+
+.timeline-focus.partial {
+  fill: color-mix(in srgb, var(--phase-focus) 45%, transparent);
+}
+
+/* Heatmap — one hue, light → dark on light theme; anchored to the surface on dark. */
+
+.heat {
+  transition: opacity 0.15s;
+}
+
+.heat:hover {
+  stroke: var(--text-1);
+  stroke-width: 1.5;
+}
+
+.heat-0 {
+  fill: var(--heat-0);
+  background: var(--heat-0);
+}
+.heat-1 {
+  fill: #0d366b;
+  background: #0d366b;
+}
+.heat-2 {
+  fill: #184f95;
+  background: #184f95;
+}
+.heat-3 {
+  fill: #256abf;
+  background: #256abf;
+}
+.heat-4 {
+  fill: #3987e5;
+  background: #3987e5;
+}
+.heat-5 {
+  fill: #6da7ec;
+  background: #6da7ec;
+}
+.heat-6 {
+  fill: #9ec5f4;
+  background: #9ec5f4;
+}
+
+:root[data-theme="light"] .heat-1 {
+  fill: #cde2fb;
+  background: #cde2fb;
+}
+:root[data-theme="light"] .heat-2 {
+  fill: #9ec5f4;
+  background: #9ec5f4;
+}
+:root[data-theme="light"] .heat-3 {
+  fill: #6da7ec;
+  background: #6da7ec;
+}
+:root[data-theme="light"] .heat-4 {
+  fill: #3987e5;
+  background: #3987e5;
+}
+:root[data-theme="light"] .heat-5 {
+  fill: #256abf;
+  background: #256abf;
+}
+:root[data-theme="light"] .heat-6 {
+  fill: #184f95;
+  background: #184f95;
+}
+
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.heat-legend span:first-child {
+  margin-right: 5px;
+}
+
+.heat-legend span:last-child {
+  margin-left: 5px;
+}
+
+.heat-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}

@@ -1,0 +1,129 @@
+/* Kairo design tokens. Dark is the default; light is a fully stepped twin, not an inversion. */
+
+:root {
+  color-scheme: dark;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  /* Surfaces */
+  --bg: #08080b;
+  --bg-raised: #0b0b0f;
+  --surface-1: #111115;
+  --surface-2: #16161b;
+  --surface-3: #1c1c22;
+  --surface-4: #25252c;
+  --overlay: rgba(4, 4, 6, 0.72);
+  --glass: rgba(17, 17, 21, 0.72);
+
+  /* Lines */
+  --line: rgba(255, 255, 255, 0.06);
+  --line-2: rgba(255, 255, 255, 0.09);
+  --line-3: rgba(255, 255, 255, 0.15);
+
+  /* Ink */
+  --text-1: #f3f3f4;
+  --text-2: #a8a8b1;
+  --text-3: #70707a;
+  --text-4: #4b4b54;
+  --on-accent: #ffffff;
+
+  /* Brand & phases */
+  --accent: #3987e5;
+  --accent-hi: #6aa6f0;
+  --accent-ink: #8cb9f3;
+  --accent-soft: rgba(57, 135, 229, 0.14);
+  --accent-softer: rgba(57, 135, 229, 0.08);
+  --phase-focus: #3987e5;
+  --phase-focus-hi: #8f86ec;
+  --phase-short: #199e70;
+  --phase-short-hi: #4fd3a4;
+  --phase-long: #9085e9;
+  --phase-long-hi: #c3b9ff;
+
+  /* Productivity (diverging: blue ↔ gray ↔ orange) */
+  --productive: #3987e5;
+  --neutral: #5e5e67;
+  --distracting: #d95926;
+
+  /* Status (reserved meaning; always paired with icon + label) */
+  --good: #0ca30c;
+  --good-ink: #2fbf4a;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  --critical-ink: #ef6b6b;
+
+  /* Charts */
+  --grid: #222228;
+  --axis: #35353d;
+  --heat-0: #15151a;
+
+  /* Shape */
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* Elevation */
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.025), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 24px 64px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--line-2);
+  --shadow-btn: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 6px 20px -6px rgba(57, 135, 229, 0.6);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --sidebar-w: 236px;
+  --titlebar-h: 0px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f4f1;
+  --bg-raised: #eeeeea;
+  --surface-1: #ffffff;
+  --surface-2: #f6f6f3;
+  --surface-3: #efefeb;
+  --surface-4: #e5e5e0;
+  --overlay: rgba(244, 244, 241, 0.7);
+  --glass: rgba(255, 255, 255, 0.78);
+
+  --line: rgba(12, 12, 20, 0.06);
+  --line-2: rgba(12, 12, 20, 0.09);
+  --line-3: rgba(12, 12, 20, 0.16);
+
+  --text-1: #111114;
+  --text-2: #55555e;
+  --text-3: #8a8a93;
+  --text-4: #b6b6bc;
+
+  --accent: #2a78d6;
+  --accent-hi: #3987e5;
+  --accent-ink: #1c5cab;
+  --accent-soft: rgba(42, 120, 214, 0.12);
+  --accent-softer: rgba(42, 120, 214, 0.06);
+  --phase-focus: #2a78d6;
+  --phase-focus-hi: #6250d6;
+  --phase-short: #1baf7a;
+  --phase-short-hi: #12865d;
+  --phase-long: #6250d6;
+  --phase-long-hi: #9085e9;
+
+  --productive: #2a78d6;
+  --neutral: #c3c2b7;
+  --distracting: #eb6834;
+
+  --good-ink: #006300;
+  --critical-ink: #b52f2f;
+
+  --grid: #ebebe6;
+  --axis: #d6d5ce;
+  --heat-0: #f0f0ec;
+
+  --shadow-card: 0 1px 2px rgba(15, 15, 30, 0.04), 0 0 0 1px rgba(15, 15, 30, 0.02);
+  --shadow-pop: 0 24px 64px -18px rgba(20, 20, 40, 0.28), 0 0 0 1px var(--line-2);
+  --shadow-btn: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 6px 18px -6px rgba(42, 120, 214, 0.55);
+}
+
+html.is-mac.is-native {
+  --titlebar-h: 38px;
+}
