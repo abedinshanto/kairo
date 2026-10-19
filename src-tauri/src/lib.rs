@@ -70,6 +70,7 @@ pub fn notify<R: Runtime>(app: &AppHandle<R>, title: &str, body: &str) {
     let _ = app.notification().builder().title(title).body(body).show();
 }
 
+#[cfg(desktop)]
 pub fn show_main_window<R: Runtime>(app: &AppHandle<R>) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
