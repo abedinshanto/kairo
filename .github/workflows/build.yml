@@ -5,10 +5,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   CARGO_TERM_COLOR: always
 
@@ -113,9 +109,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
-      - name: Install NDK
-        run: sdkmanager "ndk;27.2.12479018"
+      - name: Use the runner's preinstalled Android SDK & NDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          echo "Using NDK at $ANDROID_NDK_LATEST_HOME"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
@@ -125,14 +123,10 @@ jobs:
           key: android
       - run: npm ci
       - name: Generate Android project
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
         run: |
           npx tauri android init --ci
           cp -R src-tauri/icons/android/. src-tauri/gen/android/app/src/main/res/
       - name: Build debug APK (installable, debug-signed)
-        env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
         run: npx tauri android build --debug --apk --target aarch64
       - uses: actions/upload-artifact@v4
         with:
