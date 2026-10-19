@@ -4,6 +4,7 @@ mod categories;
 mod commands;
 mod db;
 mod models;
+#[cfg(desktop)]
 mod sites;
 mod timer;
 #[cfg(desktop)]

@@ -312,6 +312,7 @@ pub fn set_intention<R: Runtime>(
     })
 }
 
+#[cfg(desktop)]
 pub fn note_interruption<R: Runtime>(app: &AppHandle<R>) {
     let changed = app.state::<AppState>().timer.lock().note_interruption();
     if changed {

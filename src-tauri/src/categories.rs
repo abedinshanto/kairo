@@ -338,6 +338,7 @@ pub fn classify_app(app_id: &str, app_name: &str) -> &'static str {
     "other"
 }
 
+#[cfg(desktop)]
 pub fn is_browser(app_id: &str, app_name: &str) -> bool {
     let id = app_id.to_lowercase();
     let name = app_name.to_lowercase();
