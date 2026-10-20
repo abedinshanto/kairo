@@ -33,7 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showTimerInTray: true,
   hideDockIcon: false,
   globalShortcut: "CommandOrControl+Shift+Space",
-  theme: "system",
+  theme: "light",
   onboarded: false,
   sound: DEFAULT_SOUND,
 };

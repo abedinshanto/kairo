@@ -1,0 +1,299 @@
+/* ================================================================ App shell */
+
+.boot {
+  height: 100%;
+  background: var(--canvas);
+}
+
+.app {
+  position: relative;
+  height: 100%;
+  isolation: isolate;
+}
+
+/* Soft blue light blooms behind everything (references: blurred glows on a cool canvas) */
+.canvas-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 12% 0%, var(--canvas-glow-1), transparent 70%),
+    radial-gradient(38% 42% at 92% 8%, var(--canvas-glow-2), transparent 70%),
+    radial-gradient(50% 40% at 50% 110%, var(--canvas-glow-2), transparent 70%);
+}
+
+.scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.page {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: calc(var(--titlebar) + 26px + env(safe-area-inset-top)) var(--gutter) calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));
+  animation: page-in 0.45s var(--ease);
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Vertical rhythm for top-level blocks */
+.stack-lg > * + * {
+  margin-top: 28px;
+}
+
+.stack > * + * {
+  margin-top: 18px;
+}
+
+.stack-sm > * + * {
+  margin-top: 12px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+
+.section-title .link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand-ink);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* ================================================================ Top bar */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  margin-bottom: 26px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.who-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.who-sub {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--brand-ink);
+}
+
+.buddy-avatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  flex: none;
+}
+
+/* ================================================================ Bottom navigation (floating pill) */
+
+.nav {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: var(--shadow-nav);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 56px;
+  min-width: 56px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 650;
+  transition: background 0.3s var(--ease), color 0.3s, padding 0.3s var(--ease);
+}
+
+.nav-item svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.nav-item .nav-label {
+  display: none;
+}
+
+.nav-item:hover:not(.active) {
+  background: var(--surface-sunk);
+}
+
+.nav-item.active {
+  padding: 0 24px 0 20px;
+  background: var(--brand);
+  color: var(--on-brand);
+  box-shadow: 0 10px 22px -10px var(--brand);
+}
+
+.nav-item.active .nav-label {
+  display: inline;
+}
+
+.preview-chip {
+  position: fixed;
+  z-index: 39;
+  left: 24px;
+  bottom: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+
+.preview-chip svg {
+  width: 13px;
+  height: 13px;
+  color: var(--brand);
+}
+
+/* ================================================================ Responsive */
+
+@media (max-width: 1024px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .display {
+    font-size: 32px;
+  }
+
+  .topbar {
+    margin-bottom: 20px;
+  }
+
+  .nav {
+    gap: 6px;
+    padding: 7px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .nav-item {
+    height: 50px;
+    min-width: 50px;
+    padding: 0 13px;
+  }
+
+  .nav-item.active {
+    padding: 0 18px 0 15px;
+  }
+
+  .nav-item svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .pill {
+    height: 44px;
+    padding: 0 17px;
+    font-size: 14.5px;
+  }
+
+  .pills {
+    gap: 8px;
+  }
+
+  .preview-chip {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom));
+  }
+
+  .grid-2,
+  .grid-3 {
+    gap: 12px;
+  }
+
+  .card {
+    padding: 20px;
+    border-radius: 28px;
+  }
+
+  .card.hero {
+    border-radius: 34px;
+  }
+}
+
+@media (max-width: 420px) {
+  .grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

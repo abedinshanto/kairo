@@ -1,15 +1,15 @@
-import "@fontsource-variable/inter";
+// Global styles first so per-view stylesheets (imported by each view) can refine them.
+import "@fontsource-variable/plus-jakarta-sans";
+import "./styles/tokens.css";
+import "./styles/base.css";
+import "./styles/ui.css";
+import "./styles/shell.css";
+import "./styles/charts.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { isNative } from "./lib/backend";
 import { os } from "./lib/platform";
-import "./styles/tokens.css";
-import "./styles/base.css";
-import "./styles/ui.css";
-import "./styles/layout.css";
-import "./styles/views.css";
-import "./styles/charts.css";
 
 const root = document.documentElement;
 root.classList.add(`os-${os}`);

@@ -146,7 +146,7 @@ function TaskRow({ task, current }: { task: Task; current: boolean }) {
           className="btn btn-secondary btn-sm"
           onClick={async () => {
             await setIntention(task.title, task.id);
-            setView("focus");
+            setView("home");
           }}
         >
           <Play /> Focus

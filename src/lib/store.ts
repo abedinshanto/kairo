@@ -4,8 +4,10 @@ import { backend } from "./backend";
 import { DEFAULT_SETTINGS, withDefaults } from "./defaults";
 import type { Phase, Settings, SoundPrefs, TimerAction, TimerSnapshot, TrackerStatus } from "./types";
 
-export type View = "focus" | "today" | "insights" | "apps" | "tasks" | "sounds" | "settings" | "more";
-export const VIEWS: View[] = ["focus", "today", "insights", "apps", "tasks", "sounds", "settings", "more"];
+export type View = "home" | "stats" | "sounds" | "tasks" | "settings" | "apps";
+export const VIEWS: View[] = ["home", "stats", "sounds", "tasks", "settings", "apps"];
+/** Views reachable from the bottom navigation, in order (⌘1…⌘5). */
+export const TAB_VIEWS: View[] = ["home", "stats", "sounds", "tasks", "settings"];
 
 export interface Toast {
   id: number;
@@ -53,7 +55,7 @@ const viewFromHash = (): View | null => {
 
 export const useApp = create<State>((set, get) => ({
   ready: false,
-  view: viewFromHash() ?? "focus",
+  view: viewFromHash() ?? "home",
   settings: DEFAULT_SETTINGS,
   timer: null,
   clockSkew: 0,

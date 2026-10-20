@@ -42,6 +42,8 @@ export interface Settings {
   // UI-owned (stored in the core's `extra` map)
   theme?: ThemePref;
   onboarded?: boolean;
+  /** What Kairo calls you in greetings (optional, stays on device). */
+  name?: string;
   sound?: SoundPrefs;
 }
 

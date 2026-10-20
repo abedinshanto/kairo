@@ -86,10 +86,10 @@ const INTENTIONS = [
 ];
 
 export const SEED_TASKS: Omit<Task, "pomodoros" | "focusMs">[] = [
-  { id: 1, title: "Ship onboarding redesign", estimate: 4, done: false, createdAt: 0, completedAt: null },
-  { id: 2, title: "Write Q4 planning doc", estimate: 3, done: false, createdAt: 0, completedAt: null },
-  { id: 3, title: "Review pull requests", estimate: 2, done: false, createdAt: 0, completedAt: null },
-  { id: 4, title: "Refactor sync engine", estimate: 6, done: false, createdAt: 0, completedAt: null },
+  { id: 1, title: "Ship onboarding redesign", estimate: 6, done: false, createdAt: 0, completedAt: null },
+  { id: 2, title: "Write Q4 planning doc", estimate: 5, done: false, createdAt: 0, completedAt: null },
+  { id: 3, title: "Review pull requests", estimate: 6, done: false, createdAt: 0, completedAt: null },
+  { id: 4, title: "Refactor sync engine", estimate: 8, done: false, createdAt: 0, completedAt: null },
   { id: 5, title: "Prepare investor update", estimate: 2, done: true, createdAt: 0, completedAt: 0 },
 ];
 

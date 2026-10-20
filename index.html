@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#08080b" />
+    <meta name="theme-color" content="#eef1f6" />
     <meta name="description" content="Kairo — a private focus timer with on-device time tracking and insights." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Kairo</title>
     <script>
       // Pick the theme before first paint to avoid a flash.
       try {
-        var pref = localStorage.getItem("kairo-theme") || "system";
+        var pref = localStorage.getItem("kairo-theme") || "light";
         var light = pref === "light" || ((!pref || pref === "system") && matchMedia("(prefers-color-scheme: light)").matches);
         document.documentElement.dataset.theme = light ? "light" : "dark";
       } catch (e) {}
