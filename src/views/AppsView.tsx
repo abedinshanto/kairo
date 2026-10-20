@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, EyeOff, RotateCcw, Search, Sparkles, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, EyeOff, RotateCcw, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Buddy } from "../components/Buddy";
 import { Avatar, PageTitle, PillTabs, Segmented, Sheet, TopBar, cx } from "../components/ui";
@@ -88,20 +88,11 @@ export function AppsView() {
 
       <div className="apps-grid">
         <div className="apps-title">
-          <PageTitle strong="Apps & sites," dim="you decide what counts." />
+          <PageTitle strong="Apps & sites," dim="your call." />
         </div>
 
         <aside className="apps-side">
           <Summary range={range} onRange={setRange} total={total} split={split} />
-          <div className="card apps-tip">
-            <span className="icon-tile round">
-              <Sparkles />
-            </span>
-            <div>
-              <div className="card-title">Your call</div>
-              <p className="card-sub">Tap any app or site to change how it counts. Your whole history updates, right here on your device.</p>
-            </div>
-          </div>
         </aside>
 
         <div className="apps-controls">
@@ -134,6 +125,7 @@ export function AppsView() {
               ]}
             />
           </div>
+          {(!data || visible.length > 0) && <p className="muted apps-hint">Tap any app or site to change how it counts.</p>}
         </div>
 
         <section className="apps-list-wrap" aria-label="Apps and sites">

@@ -115,6 +115,8 @@
   justify-self: end;
   height: 44px;
   padding: 0 18px;
+  /* Pull the label flush with the column edge, mirroring the Back circle on the left */
+  margin-right: -18px;
   font-size: 14.5px;
 }
 
@@ -528,6 +530,11 @@
 
   .onb-col {
     height: 100%;
+  }
+
+  .onb-skip {
+    padding: 0 14px;
+    margin-right: -14px;
   }
 
   .onb-kai {

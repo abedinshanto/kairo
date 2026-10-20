@@ -50,7 +50,7 @@
 .apps-list-wrap {
   grid-area: list;
   min-width: 0;
-  margin-top: 20px;
+  margin-top: 16px;
   transition: opacity 0.2s var(--ease);
 }
 
@@ -97,19 +97,13 @@
   margin-bottom: -16px;
 }
 
-/* ---------------------------------------------------------------- Tip (desktop side column) */
-
-.apps-tip {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin-top: 16px;
-  padding: 20px 22px;
-}
-
-.apps-tip .card-sub {
-  margin-top: 4px;
-  line-height: 1.5;
+/* One-line hint under the filters (ink-2 nudged darker to stay ≥ 4.5:1 on the light canvas) */
+.apps-hint {
+  margin: 14px 0 0;
+  padding-left: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--ink-2) 82%, var(--ink));
 }
 
 /* ---------------------------------------------------------------- Hero summary */
@@ -618,10 +612,6 @@ button.apps-cat.active:hover {
 
   .apps-side {
     position: static;
-  }
-
-  .apps-tip {
-    display: none;
   }
 
   .apps-controls {

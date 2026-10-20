@@ -8,11 +8,50 @@
 }
 
 .home-main > .display {
-  max-width: 520px;
+  max-width: 600px;
+  text-wrap: balance;
 }
 
 .home-tabs {
   margin: 26px 0 0;
+}
+
+/* One accent per screen: in a break the active pill follows the hero's colour. */
+.home.phase-short_break .home-tabs .pill.active {
+  background: #08805f;
+  box-shadow: 0 10px 22px -12px #08805f;
+}
+
+.home.phase-long_break .home-tabs .pill.active {
+  background: #6d4ae8;
+  box-shadow: 0 10px 22px -12px #6d4ae8;
+}
+
+/* Top bar status line */
+.home .who-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home .who-sub.off-track {
+  color: var(--distracting);
+  color: color-mix(in srgb, var(--distracting) 70%, var(--ink));
+}
+
+.who-link {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.who-link:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  background: var(--brand-tint);
 }
 
 .home-side {
@@ -32,14 +71,33 @@
   transition: background 0.6s var(--ease), box-shadow 0.6s var(--ease);
 }
 
+/* Break fills, a step deeper than the phase tokens so white text keeps >= 3:1 even at the light corner. */
 .timer-card.phase-short_break {
-  background: var(--phase-short);
+  background: linear-gradient(155deg, #0f9b75 0%, #08805f 50%, #066a4f 100%);
   box-shadow: var(--phase-short-shadow);
 }
 
 .timer-card.phase-long_break {
-  background: var(--phase-long);
+  background: linear-gradient(155deg, #8a6ff9 0%, #6d4ae8 50%, #5537cc 100%);
   box-shadow: var(--phase-long-shadow);
+}
+
+.home .stacked.phase-short_break::before,
+.home .stacked.phase-short_break::after {
+  background: #12a87e;
+}
+
+.home .stacked.phase-long_break::before,
+.home .stacked.phase-long_break::after {
+  background: #8f78ff;
+}
+
+.timer-card.phase-short_break .play {
+  color: #08805f;
+}
+
+.timer-card.phase-long_break .play {
+  color: #5537cc;
 }
 
 .timer-top {
@@ -47,12 +105,56 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  /* Holds the "Ends" chip's height even while idle, so pressing Start doesn't shift the card. */
+  min-height: 36px;
+}
+
+.timer-top-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .timer-top .chip {
-  height: 40px;
-  padding: 0 16px;
-  font-size: 13.5px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.timer-top .badge {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+
+.timer-top .badge.white.warn {
+  color: #c63a1d;
+}
+
+/* Session pager: done = white, current = white pill, still to come = faint */
+.session-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 2px;
+}
+
+.session-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: width 0.35s var(--ease), background 0.35s;
+}
+
+.session-dots span.done {
+  background: #fff;
+}
+
+.session-dots span.current {
+  width: 22px;
+  background: #fff;
 }
 
 .timer-body {
@@ -69,16 +171,6 @@
   gap: 10px;
   min-width: 0;
   flex: 1;
-}
-
-.timer-text .badge.white {
-  height: 30px;
-  padding: 0 12px;
-  font-size: 12.5px;
-}
-
-.timer-text .badge.white.warn {
-  color: #e2452a;
 }
 
 .timer-digits {
@@ -115,11 +207,20 @@
 .intention {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+
+.intention-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .intention-input {
+  flex: 1;
+  min-width: 0;
   width: 100%;
+  overflow: hidden;
   resize: none;
   border: 0;
   outline: none;
@@ -145,33 +246,97 @@
   text-underline-offset: 6px;
 }
 
-.intention-task {
-  appearance: none;
-  field-sizing: content;
-  align-self: flex-start;
-  max-width: 100%;
-  height: 34px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--r-pill);
+/* Link a task: a small glass circle at the end of the intention line. An invisible native
+   select covers it, so every platform gets its own picker and keyboard support. */
+.intention-link {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  /* centre on the first 33px line of the intention */
+  margin-top: -5.5px;
+  border-radius: 50%;
   background: var(--on-brand-3);
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
   cursor: pointer;
-  outline: none;
+  transition: background 0.2s, color 0.2s, transform 0.12s var(--ease);
 }
 
-.intention-task option {
+.intention-link svg {
+  width: 19px;
+  height: 19px;
+}
+
+@media (hover: hover) {
+  .intention-link:hover {
+    background: rgba(255, 255, 255, 0.32);
+  }
+
+  .intention-link.on:hover {
+    background: #f3f6ff;
+  }
+}
+
+.intention-link:active {
+  transform: scale(0.94);
+}
+
+.intention-link.on {
+  background: #fff;
+  color: var(--on-white);
+}
+
+.intention-link:focus-within {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.intention-link select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  appearance: none;
+  border: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.intention-link option {
   color: var(--ink);
+}
+
+/* Shown only when the intention says something other than the linked task's title */
+.intention-linked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.intention-linked svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.intention-linked span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timer-rest {
   font-size: 17px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--on-brand-2);
+  color: rgba(255, 255, 255, 0.86);
   max-width: 420px;
 }
 
@@ -239,10 +404,37 @@
   color: #fff;
 }
 
-.sound-row {
+/* Soundscape: one row — artwork, name (a compact preset picker) + its sounds, play */
+.sound-card {
   display: flex;
   align-items: center;
   gap: 14px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.sound-art {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  color: rgba(255, 255, 255, 0.85);
+  transition: transform 0.15s var(--ease);
+}
+
+.sound-art svg {
+  width: 26px;
+  height: 26px;
+}
+
+@media (hover: hover) {
+  .sound-art:hover {
+    transform: scale(1.04);
+  }
+}
+
+.sound-art:active {
+  transform: scale(0.96);
 }
 
 .sound-meta {
@@ -251,18 +443,64 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  text-align: left;
+  gap: 3px;
 }
 
-.sound-meta .card-title {
+.sound-pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sound-pick .card-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
 }
 
-.home-presets {
-  margin-top: 20px;
+.sound-pick svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: var(--ink-3);
+  transition: color 0.2s;
+}
+
+@media (hover: hover) {
+  .sound-pick:hover svg {
+    color: var(--ink);
+  }
+}
+
+.sound-pick:focus-within {
+  outline: 2px solid var(--brand);
+  outline-offset: 4px;
+}
+
+/* the invisible native picker, with a taller hit area than the 22px title */
+.sound-pick select {
+  position: absolute;
+  inset: -11px -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 22px);
+  opacity: 0;
+  appearance: none;
+  border: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.sound-sub {
+  max-width: 100%;
+  font-size: 13px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .upnext {
@@ -342,6 +580,35 @@
   font-size: 128px;
 }
 
+/* Deep focus is the calmest screen: one big number, Kai, the intention and play.
+   No peeking cards; the rest fades in on hover or keyboard focus. */
+.stacked.is-deep {
+  margin-top: 0;
+}
+
+.stacked.is-deep::before,
+.stacked.is-deep::after {
+  display: none;
+}
+
+.is-deep :is(.timer-top, .intention-link, .intention-linked, .timer-secondary) {
+  transition: opacity 0.3s var(--ease), visibility 0.3s;
+}
+
+@media (hover: hover) {
+  .stacked.is-deep:not(:hover):not(:focus-within) :is(.timer-top, .intention-link, .intention-linked, .timer-secondary) {
+    opacity: 0;
+  }
+}
+
+/* Touch has no hover to reveal them: hide outright so nothing invisible can be tapped. Exit deep focus for the tray. */
+@media (hover: none) {
+  .is-deep :is(.timer-top, .intention-link, .intention-linked, .timer-secondary) {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 /* ---------------------------------------------------------------- Responsive */
 
 @media (max-width: 1024px) {
@@ -381,6 +648,11 @@
     font-size: 22px;
   }
 
+  /* centre on the 26px first line */
+  .intention-link {
+    margin-top: -9px;
+  }
+
   .timer-secondary {
     gap: 6px;
     padding: 6px;
@@ -404,7 +676,12 @@
     height: 72px;
   }
 
+  /* digits + gap + Kai must fit the phone card: 198 + 16 + 84 <= 358 - 2 × 26 */
+  .stacked.is-deep .timer-card {
+    padding: 26px;
+  }
+
   .stacked.is-deep .timer-digits {
-    font-size: 88px;
+    font-size: 80px;
   }
 }

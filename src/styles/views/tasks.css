@@ -161,6 +161,19 @@
   overflow-wrap: anywhere;
 }
 
+/* Keep the slider and Play above the fold: clamp long titles (full text in the tooltip) */
+h2.task-hero-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.task-hero-title.is-long {
+  font-size: 36px;
+}
+
 .task-hero-edit {
   display: block;
   resize: none;
@@ -304,16 +317,12 @@
   margin-top: 4px;
 }
 
-/* ---------------------------------------------------------------- Composer (pill input + estimate + add) */
-
-.composer-wrap {
-  container-type: inline-size;
-}
+/* ---------------------------------------------------------------- Composer (one pill: input · estimate chip · solid add) */
 
 .composer {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 64px;
   padding: 8px 8px 8px 24px;
   border-radius: var(--r-pill);
@@ -344,54 +353,30 @@
   font-weight: 500;
 }
 
-.composer-trail {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* Estimate: a small trailing chip that opens the native picker */
+.composer-est {
   flex: none;
+  height: 40px;
+  padding: 0 32px 0 14px;
+  background-position: right 12px center;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  field-sizing: content;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-.composer-trail .stepper .value {
-  min-width: 70px;
+@media (hover: hover) {
+  .composer-est:hover {
+    background-color: var(--surface-sunk);
+    color: var(--ink);
+  }
 }
 
-/* Disabled add button: calm tint instead of a washed-out brand fill */
-.composer .circle-btn.brand:disabled {
-  opacity: 1;
-  background: var(--brand-tint);
-  color: var(--brand-ink);
-  box-shadow: none;
-}
-
-/* Narrow: the pill input sits on its own row, estimate + add below it */
-@container (max-width: 440px) {
-  .composer {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px;
-    border-radius: var(--r-xl);
-  }
-
-  .composer:focus-within {
-    box-shadow: var(--shadow-sm);
-  }
-
-  .composer-input {
-    flex-basis: 100%;
-    height: 52px;
-    padding: 0 20px;
-    border-radius: var(--r-pill);
-    background: var(--surface-soft);
-    transition: box-shadow 0.2s;
-  }
-
-  .composer-input:focus {
-    box-shadow: inset 0 0 0 1.5px var(--brand), 0 0 0 4px var(--brand-tint-2);
-  }
-
-  .composer-trail {
-    width: 100%;
-    justify-content: space-between;
+@media (pointer: coarse) {
+  .composer-est {
+    height: 44px;
   }
 }
 
@@ -539,46 +524,67 @@
   white-space: nowrap;
 }
 
-.task-dots {
-  display: inline-flex;
-  gap: 4px;
-  flex: none;
-}
-
-.task-dots > span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px var(--ink-4);
-}
-
-.task-dots > span.on {
-  background: var(--brand);
-  box-shadow: none;
-}
-
-.task-mini-meter {
-  display: block;
-  width: 44px;
-  height: 6px;
-  flex: none;
-  border-radius: 6px;
-  background: var(--surface-sunk);
-  overflow: hidden;
-}
-
-.task-mini-meter > span {
-  display: block;
-  height: 100%;
-  border-radius: 6px;
-  background: var(--brand);
-}
-
 .task-actions {
   display: flex;
   align-items: center;
   gap: 4px;
   flex: none;
+}
+
+/* Calm rows: with a mouse, Play and "…" appear on hover / keyboard focus / while the menu is open */
+@media (hover: hover) {
+  .task-row .task-actions > * {
+    opacity: 0;
+    transition: opacity 0.18s var(--ease);
+  }
+
+  .task-row:hover .task-actions > *,
+  .task-row:focus-within .task-actions > *,
+  .task-row .task-menu-wrap.open {
+    opacity: 1;
+  }
+}
+
+/* Touch: only the Play circle shows; tapping the row opens its menu (the "…" button stretches under the row) */
+@media (hover: none) {
+  .task-row:not(.is-editing) .task-menu-wrap {
+    position: static;
+  }
+
+  .task-row .task-more {
+    position: absolute;
+    inset: 4px -10px;
+    z-index: 0;
+    width: auto;
+    height: auto;
+    border-radius: var(--r-md);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .task-row .task-more:active:not(:disabled) {
+    transform: none;
+    background: var(--surface-soft);
+  }
+
+  .tasks .task-row .task-menu-wrap:not(.open) .task-more:not(:active) {
+    background: transparent;
+  }
+
+  .task-row .task-more > svg {
+    display: none;
+  }
+
+  .task-row .task-check,
+  .task-row .task-play {
+    position: relative;
+    z-index: 1;
+  }
+
+  .task-row:not(.is-editing) .task-main {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }
 }
 
 .task-play,
@@ -736,6 +742,19 @@
 
   .task-hero-title {
     font-size: 34px;
+  }
+
+  .task-hero-title.is-long {
+    font-size: 28px;
+  }
+
+  .composer {
+    padding-left: 20px;
+  }
+
+  /* 16px keeps iOS from zooming into the field */
+  .composer-input {
+    font-size: 16px;
   }
 
   .task-hero-foot {

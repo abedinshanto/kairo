@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type MouseEvent } from "react";
+import { useId, useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
 import {
   categoryLabel,
   entityName,
@@ -57,6 +57,8 @@ export function DayTimeline({
 }) {
   const [ref, { width }] = useSize<HTMLDivElement>();
   const [tip, setTip] = useState<TipData | null>(null);
+  /** Keyboard cursor: lane 0 = apps (each span), lane 1 = focus blocks. */
+  const [kb, setKb] = useState<{ lane: 0 | 1; i: number } | null>(null);
   const clipId = `tl${useId().replace(/:/g, "")}`;
   const auto = useMemo(() => activeHourRange(spans, day), [spans, day]);
   const [h0, h1] = hours ?? auto;
@@ -84,52 +86,89 @@ export function DayTimeline({
 
   const focus = sessions.filter((s) => s.kind === "focus");
 
+  const focusTip = (s: FocusSession, px: number): TipData => ({
+    x: px,
+    y: LANE_H + GAP - 8,
+    title: s.intention || "Focus block",
+    rows: [
+      {
+        label: s.completed ? "completed" : "ended early",
+        value: fmtDuration(s.actualMs),
+        color: FOCUS_COLOR,
+      },
+    ],
+    note: `${fmtTime(s.start)} – ${fmtTime(s.end)}${s.interruptions ? ` · ${s.interruptions} detour${s.interruptions > 1 ? "s" : ""}` : ""}`,
+  });
+
+  const spanTip = (hit: ActivitySpan, px: number): TipData => ({
+    x: px,
+    y: -8,
+    title: entityName(
+      hit.domain ? "site" : "app",
+      hit.domain ?? hit.appId,
+      hit.appName,
+    ),
+    rows: [
+      {
+        label: `${categoryLabel(hit.category)} · ${PRODUCTIVITY_LABEL[hit.productivity]}`,
+        value: fmtDuration(hit.end - hit.start),
+        color: COLOR[hit.productivity],
+      },
+    ],
+    note: `${fmtTime(hit.start)} – ${fmtTime(hit.end)}${hit.domain ? ` · in ${hit.appName}` : ""}`,
+  });
+
   const onMove = (e: MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
     const t = x0 + ((px - labelLeft) / plotW) * span;
+    setKb(null);
     if (py > LANE_H + 2) {
       const s = focus.find((f) => t >= f.start - 60_000 && t <= f.end + 60_000);
-      if (s) {
-        setTip({
-          x: px,
-          y: LANE_H + GAP - 8,
-          title: s.intention || "Focus block",
-          rows: [
-            {
-              label: s.completed ? "completed" : "ended early",
-              value: fmtDuration(s.actualMs),
-              color: FOCUS_COLOR,
-            },
-          ],
-          note: `${fmtTime(s.start)} – ${fmtTime(s.end)}${s.interruptions ? ` · ${s.interruptions} detour${s.interruptions > 1 ? "s" : ""}` : ""}`,
-        });
-        return;
-      }
+      if (s) return setTip(focusTip(s, px));
     }
     const hit =
       spans.find((s) => t >= s.start && t <= s.end) ??
       spans.find((s) => Math.abs(x(s.start) - px) < 3);
-    if (!hit) return setTip(null);
-    setTip({
-      x: px,
-      y: -8,
-      title: entityName(
-        hit.domain ? "site" : "app",
-        hit.domain ?? hit.appId,
-        hit.appName,
-      ),
-      rows: [
-        {
-          label: `${categoryLabel(hit.category)} · ${PRODUCTIVITY_LABEL[hit.productivity]}`,
-          value: fmtDuration(hit.end - hit.start),
-          color: COLOR[hit.productivity],
-        },
-      ],
-      note: `${fmtTime(hit.start)} – ${fmtTime(hit.end)}${hit.domain ? ` · in ${hit.appName}` : ""}`,
-    });
+    setTip(hit ? spanTip(hit, px) : null);
   };
+
+  // Arrow keys walk the spans (or, after ↓, the focus blocks); the tooltip follows.
+  const show = (lane: 0 | 1, i: number) => {
+    const item = lane === 0 ? spans[i] : focus[i];
+    if (!item) return;
+    const mid = x((Math.max(item.start, x0) + Math.min(item.end, x0 + span)) / 2);
+    setKb({ lane, i });
+    setTip(lane === 0 ? spanTip(spans[i], mid) : focusTip(focus[i], mid));
+  };
+  const nearest = (list: { start: number; end: number }[], t: number) => {
+    let best = 0;
+    list.forEach((it, k) => {
+      if (Math.abs((it.start + it.end) / 2 - t) < Math.abs((list[best].start + list[best].end) / 2 - t)) best = k;
+    });
+    return best;
+  };
+  const onKey = (e: KeyboardEvent) => {
+    const lane = kb?.lane ?? 0;
+    const list = lane === 0 ? spans : focus;
+    const i = kb?.i ?? -1;
+    const at = kb ? (list[i].start + list[i].end) / 2 : x0;
+    if (e.key === "ArrowRight") show(lane, Math.min(list.length - 1, i + 1));
+    else if (e.key === "ArrowLeft") show(lane, i < 0 ? list.length - 1 : Math.max(0, i - 1));
+    else if (e.key === "ArrowDown" && focus.length) show(1, nearest(focus, at));
+    else if (e.key === "ArrowUp" && spans.length) show(0, nearest(spans, at));
+    else if (e.key === "Escape") {
+      setKb(null);
+      setTip(null);
+    } else return;
+    e.preventDefault();
+  };
+  const clear = () => {
+    setKb(null);
+    setTip(null);
+  };
+  const kbItem = kb ? (kb.lane === 0 ? spans[kb.i] : focus[kb.i]) : null;
 
   const hourMarks = Array.from({ length: h1 - h0 + 1 }, (_, i) => h0 + i);
   const caption = "Timeline of the day's activity and focus blocks";
@@ -141,9 +180,12 @@ export function DayTimeline({
           width={width}
           height={height}
           role="img"
-          aria-label={caption}
+          aria-label={`${caption}. Use the arrow keys to read each stretch; down for focus blocks.`}
+          tabIndex={0}
+          onKeyDown={onKey}
+          onBlur={clear}
           onMouseMove={onMove}
-          onMouseLeave={() => setTip(null)}
+          onMouseLeave={clear}
         >
           <defs>
             <clipPath id={clipId}>
@@ -204,6 +246,16 @@ export function DayTimeline({
               }
             />
           ))}
+          {kb && kbItem && (
+            <rect
+              x={x(Math.max(kbItem.start, x0)) - 1}
+              y={(kb.lane === 0 ? 0 : LANE_H + GAP) - 1}
+              width={Math.max(kb.lane === 0 ? 3 : FOCUS_H, x(Math.min(kbItem.end, x0 + span)) - x(Math.max(kbItem.start, x0))) + 2}
+              height={(kb.lane === 0 ? LANE_H : FOCUS_H) + 2}
+              rx={kb.lane === 0 ? 3 : FOCUS_H / 2 + 1}
+              className="timeline-hit"
+            />
+          )}
           {labelLeft >= 30 && (
             <>
               <text
@@ -243,23 +295,26 @@ export function DayTimeline({
         </svg>
       )}
       <ChartTooltip tip={tip} width={width} />
-      <table className="sr-only">
-        <caption>{caption}</caption>
-        <tbody>
-          {blocks.map((b, i) => (
-            <tr key={i}>
-              <th>{`${fmtTime(b.start)} – ${fmtTime(b.end)}`}</th>
-              <td>{PRODUCTIVITY_LABEL[b.p]}</td>
-            </tr>
-          ))}
-          {focus.map((s) => (
-            <tr key={`f${s.id}`}>
-              <th>{`${fmtTime(s.start)} – ${fmtTime(s.end)}`}</th>
-              <td>{`Focus block: ${s.intention || "untitled"}, ${s.completed ? "completed" : "ended early"}`}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* A table can't shrink to the 1px sr-only box, so the wrapper carries the class. */}
+      <div className="sr-only">
+        <table>
+          <caption>{caption}</caption>
+          <tbody>
+            {blocks.map((b, i) => (
+              <tr key={i}>
+                <th>{`${fmtTime(b.start)} – ${fmtTime(b.end)}`}</th>
+                <td>{PRODUCTIVITY_LABEL[b.p]}</td>
+              </tr>
+            ))}
+            {focus.map((s) => (
+              <tr key={`f${s.id}`}>
+                <th>{`${fmtTime(s.start)} – ${fmtTime(s.end)}`}</th>
+                <td>{`Focus block: ${s.intention || "untitled"}, ${s.completed ? "completed" : "ended early"}`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -163,27 +163,30 @@ export function StackedColumns({ data, series, height = 220, labelEvery = 1, ref
         </svg>
       )}
       <ChartTooltip tip={tip} width={width} />
-      <table className="sr-only">
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            <th>Period</th>
-            {series.map((s) => (
-              <th key={s.name}>{s.name}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((d) => (
-            <tr key={d.key}>
-              <th>{d.title}</th>
-              {d.values.map((v, k) => (
-                <td key={k}>{fmtDuration(v)}</td>
+      {/* A table can't shrink to the 1px sr-only box, so the wrapper carries the class. */}
+      <div className="sr-only">
+        <table>
+          <caption>{caption}</caption>
+          <thead>
+            <tr>
+              <th>Period</th>
+              {series.map((s) => (
+                <th key={s.name}>{s.name}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((d) => (
+              <tr key={d.key}>
+                <th>{d.title}</th>
+                {d.values.map((v, k) => (
+                  <td key={k}>{fmtDuration(v)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { productivityClass } from "../../lib/categories";
+import { PRODUCTIVITY_LABEL, productivityClass } from "../../lib/categories";
 import { fmtDuration } from "../../lib/time";
 
 export interface BarRow {
@@ -25,6 +25,8 @@ export function BarList({ rows, max, empty }: { rows: BarRow[]; max?: number; em
             <div className="barlist-line">
               <span className="barlist-label">{r.label}</span>
               <span className="barlist-value">{fmtDuration(r.value)}</span>
+              {/* The bar colour carries productivity; say it in words too. */}
+              <span className="sr-only">, {PRODUCTIVITY_LABEL[Math.sign(r.productivity) as -1 | 0 | 1]}</span>
             </div>
             {r.sub && <div className="barlist-sub">{r.sub}</div>}
             <div className="barlist-track" aria-hidden>

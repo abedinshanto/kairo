@@ -2,6 +2,7 @@ import {
   AudioWaveform,
   Bird,
   Brain,
+  Check,
   CloudLightning,
   CloudMoonRain,
   CloudRain,
@@ -83,7 +84,7 @@ export function SoundsView() {
 
   return (
     <div className="sounds">
-      <PageTitle strong="Soundscapes," dim="made on your device." />
+      <PageTitle strong="Soundscapes," dim="tune out the noise." />
 
       <div className="sounds-grid">
         {/* ------------------------------------------------ Hero player */}
@@ -173,9 +174,9 @@ export function SoundsView() {
                     <span className="preset-icon" aria-hidden>
                       {PRESET_ICONS[p.id] ?? <Headphones />}
                     </span>
-                    {on && playing ? (
+                    {on ? (
                       <span className="preset-state" aria-hidden>
-                        <Equalizer />
+                        {playing ? <Equalizer /> : <Check strokeWidth={3} />}
                       </span>
                     ) : (
                       <span className="preset-state hint" aria-hidden>
@@ -192,53 +193,52 @@ export function SoundsView() {
             })}
           </div>
         </section>
-      </div>
 
-      {/* ------------------------------------------------ Mixer */}
-      <section className="sounds-mixer" aria-labelledby="mixer-title">
-        <div className="mixer-head">
-          <div>
-            <h2 className="section-title" id="mixer-title">
-              Mix your own
-            </h2>
-            <p className="mixer-sub">Tap a sound to add it, then slide to blend.</p>
+        {/* ------------------------------------------------ Mixer */}
+        <section className="sounds-mixer" aria-labelledby="mixer-title">
+          <div className="mixer-head">
+            <div>
+              <h2 className="section-title" id="mixer-title">
+                Mix your own
+              </h2>
+              <p className="mixer-sub">Slide to blend. Every sound is made right on your device.</p>
+            </div>
+            <PillTabs<Group>
+              label="Sound group"
+              size="sm"
+              value={group}
+              onChange={setGroup}
+              options={GROUPS.map((g) => {
+                const n = active.filter((s) => s.group === g).length;
+                return { value: g, label: g, count: n || undefined };
+              })}
+            />
           </div>
-          <PillTabs<Group>
-            label="Sound group"
-            size="sm"
-            value={group}
-            onChange={setGroup}
-            options={GROUPS.map((g) => {
-              const n = active.filter((s) => s.group === g).length;
-              return { value: g, label: g, count: n || undefined };
-            })}
-          />
-        </div>
 
-        <div className="mixer-grid">
-          {SOUNDS.filter((s) => s.group === group).map((s) => {
-            const level = levels[s.id] ?? 0;
-            const on = level > 0;
-            return (
-              <div key={s.id} className={cx("card mix-tile", on && "on")}>
-                <button className="mix-toggle" aria-pressed={on} onClick={() => setLevel(s.id, on ? 0 : 0.5)}>
-                  <span className="mix-top">
-                    <span className="mix-icon">{ICONS[s.id]}</span>
-                    {on && <span className="badge brand mix-level">{Math.round(level * 100)}%</span>}
-                  </span>
-                  <span className="mix-label">{s.label}</span>
-                  <span className="mix-hint">{s.hint}</span>
-                </button>
-                {on && (
-                  <div className="mix-slider">
+          <ul className="card list mix-list">
+            {SOUNDS.filter((s) => s.group === group).map((s) => {
+              const level = levels[s.id] ?? 0;
+              const on = level > 0;
+              return (
+                <li key={s.id} className={cx("mix-row", on && "on")}>
+                  <button className="mix-toggle" aria-label={s.label} aria-pressed={on} title={s.hint} onClick={() => setLevel(s.id, on ? 0 : 0.5)}>
+                    {ICONS[s.id]}
+                  </button>
+                  <div className="mix-main">
+                    <div className="mix-line">
+                      <span className="mix-label" title={s.hint}>
+                        {s.label}
+                      </span>
+                      {on && <span className="mix-level">{Math.round(level * 100)}%</span>}
+                    </div>
                     <Slider label={`${s.label} volume`} value={level} onChange={(v) => setLevel(s.id, v)} />
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }

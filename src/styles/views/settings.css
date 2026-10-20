@@ -89,13 +89,6 @@
   pointer-events: none;
 }
 
-.set-privacy-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .set-privacy-shield {
   display: grid;
   place-items: center;
@@ -109,53 +102,6 @@
 .set-privacy-shield svg {
   width: 24px;
   height: 24px;
-}
-
-.set-retention {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  border-radius: var(--r-pill);
-  background: var(--on-brand-3);
-  color: var(--on-brand);
-  transition: background 0.2s;
-}
-
-.set-retention:hover {
-  background: rgba(255, 255, 255, 0.32);
-}
-
-.set-retention:focus-within {
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
-}
-
-.set-retention > svg {
-  position: absolute;
-  left: 15px;
-  width: 16px;
-  height: 16px;
-  pointer-events: none;
-}
-
-.set-retention select {
-  appearance: none;
-  height: 40px;
-  padding: 0 36px 0 39px;
-  border: 0;
-  border-radius: var(--r-pill);
-  background: transparent
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
-    no-repeat right 15px center;
-  color: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-}
-
-.set-retention option {
-  color: var(--ink);
-  background: var(--surface);
 }
 
 .set-privacy-copy h2 {
@@ -220,30 +166,6 @@
   color: var(--on-brand-2);
 }
 
-.set-path {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  margin-top: -6px;
-  font-size: 12px;
-  color: var(--on-brand-2);
-}
-
-.set-path svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
-
-.set-path span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-}
-
 .set-privacy-bar {
   display: flex;
   align-items: center;
@@ -271,11 +193,6 @@
 .set-export .btn {
   height: 40px;
   padding: 0 15px;
-}
-
-.set-delete {
-  height: 52px;
-  padding: 0 20px;
 }
 
 /* ---------------------------------------------------------------- Grouped lists */
@@ -306,37 +223,25 @@
 .set-row {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    "icon text control"
-    ". below below";
+    "text control"
+    "below below";
   align-items: center;
-  column-gap: 14px;
-  min-height: 80px;
-  padding: 16px 0;
+  column-gap: 16px;
+  min-height: 72px;
+  padding: 14px 0;
 }
 
-/* Hairline between rows, inset to the text like a grouped iOS list */
+/* Hairline between rows */
 .set-row + .set-row::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 54px;
+  left: 0;
   right: 0;
   height: 1px;
   background: var(--line);
-}
-
-.set-icon {
-  grid-area: icon;
-  width: 40px;
-  height: 40px;
-  border-radius: 13px;
-}
-
-.set-icon svg {
-  width: 19px;
-  height: 19px;
 }
 
 .set-text {
@@ -375,6 +280,31 @@
 .set-btns {
   display: flex;
   gap: 8px;
+}
+
+/* Every trailing control (except the switch) is a 44px soft-filled pill, like the stepper */
+.set-control .btn,
+.set-control .select {
+  height: 44px;
+}
+
+.set-control .circle-btn.sm {
+  width: 44px;
+  height: 44px;
+}
+
+.set-control .btn-soft {
+  background: var(--surface-soft);
+  box-shadow: none;
+}
+
+.set-control .btn-soft:hover:not(:disabled) {
+  background: var(--surface-sunk);
+}
+
+/* Data location: plain text, wraps instead of overflowing */
+.set-path {
+  overflow-wrap: anywhere;
 }
 
 .set-foot {
@@ -621,21 +551,6 @@
     padding: 0 12px;
   }
 
-  .set-delete {
-    width: 52px;
-    padding: 0;
-    flex: none;
-  }
-
-  .set-delete-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-
   /* Lists */
   .set-card {
     padding: 2px 18px;
@@ -643,31 +558,30 @@
 
   .set-row {
     column-gap: 12px;
-    min-height: 74px;
-    padding: 15px 0;
+    min-height: 68px;
+    padding: 12px 0;
   }
 
-  .set-row + .set-row::before {
-    left: 48px;
+  /* Steppers stay inline on the right, just more compact */
+  .set-control .stepper {
+    gap: 2px;
   }
 
-  .set-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
+  .set-control .stepper .value {
+    min-width: 60px;
+    font-size: 13.5px;
   }
 
-  .set-icon svg {
-    width: 17px;
-    height: 17px;
+  .set-control .btn-sm {
+    padding: 0 14px;
   }
 
-  /* Wide controls get their own line, full width under the text */
+  /* Only wide controls (segmented, slider) get their own line, full width under the text */
   .set-row.wide {
     grid-template-areas:
-      "icon text text"
-      ". control control"
-      ". below below";
+      "text text"
+      "control control"
+      "below below";
   }
 
   .set-row.wide .set-control {
@@ -676,18 +590,6 @@
   }
 
   .set-row.wide .set-control > * {
-    flex: 1;
-  }
-
-  .set-row.wide .stepper {
-    justify-content: space-between;
-  }
-
-  .set-row.wide .select {
-    width: 100%;
-  }
-
-  .set-row.wide .set-btns .btn {
     flex: 1;
   }
 

@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type Keyb
 import { Buddy, type BuddyMood } from "../components/Buddy";
 import { PageTitle, PillTabs, SlideToConfirm, Stepper, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
+import { confirmDialog } from "../lib/dialogs";
 import { useQuery } from "../lib/hooks";
 import { useApp } from "../lib/store";
 import { addDays, fmtDuration, fmtShortDay, MINUTE, relativeDayLabel, startOfDay } from "../lib/time";
@@ -69,7 +70,14 @@ const actions = {
 
   estimate: (task: Task, estimate: number) => run("change the estimate", () => backend.taskUpdate(task.id, { estimate })),
 
-  remove: (task: Task) => run("delete the task", () => backend.taskDelete(task.id)),
+  async remove(task: Task) {
+    const ok = await confirmDialog(`Delete “${task.title}”? Its focus time stays in your stats.`, {
+      title: "Delete task",
+      okLabel: "Delete",
+      destructive: true,
+    });
+    return ok && run("delete the task", () => backend.taskDelete(task.id));
+  },
 
   /** Make this task the timer's intention and jump to the timer. */
   async focus(task: Task) {
@@ -346,7 +354,7 @@ function DoneSummary({ tasks }: { tasks: Task[] }) {
           <small>{tasks.length === 1 ? "task done" : "tasks done"}</small>
         </div>
         <p className="task-summary-copy">
-          {focus > 0 ? `${fmtDuration(focus)} of focus across ${plural(blocks, "block")}.` : "Every one of them counts."} Lovely work.
+          {focus > 0 ? `${fmtDuration(focus)} of focus${blocks ? ` across ${plural(blocks, "block")}` : ""}.` : "Every one of them counts."} Lovely work.
         </p>
       </div>
       <Buddy mood="happy" tone="blue" size={116} />
@@ -360,37 +368,50 @@ function Composer() {
   const [title, setTitle] = useState("");
   const [estimate, setEstimate] = useState(2);
   const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const t = title.trim();
-    if (!t || busy) return;
+    // Nothing typed yet: the add button just points you at the field.
+    if (!t) return input.current?.focus();
+    if (busy) return;
     setBusy(true);
     if (await run("add the task", () => backend.taskCreate(t, estimate))) setTitle("");
     setBusy(false);
   };
 
+  // One pill: the title, a small estimate chip (native picker), and a solid add circle.
   return (
-    <div className="composer-wrap">
-      <form className="composer" onSubmit={submit}>
-        <input
-          id={COMPOSER_ID}
-          className="composer-input"
-          placeholder="Add a task…"
-          value={title}
-          maxLength={120}
-          onChange={(e) => setTitle(e.target.value)}
-          aria-label="New task"
-          enterKeyHint="done"
-        />
-        <div className="composer-trail">
-          <Stepper label="estimated blocks" value={estimate} onChange={setEstimate} min={1} max={MAX_ESTIMATE} format={(v) => plural(v, "block")} />
-          <button className="circle-btn brand" type="submit" aria-label="Add task" title="Add task (Enter)" disabled={!title.trim() || busy}>
-            <Plus />
-          </button>
-        </div>
-      </form>
-    </div>
+    <form className="composer" onSubmit={submit}>
+      <input
+        ref={input}
+        id={COMPOSER_ID}
+        className="composer-input"
+        placeholder="Add a task…"
+        value={title}
+        maxLength={120}
+        onChange={(e) => setTitle(e.target.value)}
+        aria-label="New task"
+        enterKeyHint="done"
+      />
+      <select
+        className="select composer-est"
+        value={estimate}
+        onChange={(e) => setEstimate(Number(e.target.value))}
+        aria-label="Estimated focus blocks"
+        title="How many focus blocks?"
+      >
+        {Array.from({ length: MAX_ESTIMATE }, (_, i) => i + 1).map((n) => (
+          <option key={n} value={n}>
+            {plural(n, "block")}
+          </option>
+        ))}
+      </select>
+      <button className="circle-btn brand" type="submit" aria-label="Add task" title="Add task (Enter)" disabled={busy}>
+        <Plus />
+      </button>
+    </form>
   );
 }
 
@@ -431,13 +452,10 @@ function TaskRow({ task }: { task: Task }) {
                 {[task.pomodoros > 0 && plural(task.pomodoros, "block"), task.focusMs > 0 && fmtDuration(task.focusMs), when ?? "Finished"].filter(Boolean).join(" · ")}
               </span>
             ) : (
-              <>
-                <Dots done={task.pomodoros} estimate={task.estimate} />
-                <span className="task-sub-text">
-                  {task.pomodoros} of {plural(task.estimate, "block")}
-                  {task.focusMs > 0 && <span className="task-sub-time"> · {fmtDuration(task.focusMs)}</span>}
-                </span>
-              </>
+              <span className="task-sub-text">
+                {task.pomodoros} of {plural(task.estimate, "block")}
+                {task.focusMs > 0 && <span className="task-sub-time"> · {fmtDuration(task.focusMs)}</span>}
+              </span>
             )}
           </div>
         )}
@@ -499,11 +517,13 @@ function TaskTitle({
     }
   };
   const canEdit = !task.done;
+  // Long hero titles step down a size and clamp to three lines (full title in the tooltip).
+  const long = task.title.length > 40;
 
   if (editing && variant === "hero") {
     return (
       <textarea
-        className="task-hero-title task-hero-edit"
+        className={cx("task-hero-title task-hero-edit", long && "is-long")}
         rows={1}
         value={value}
         maxLength={120}
@@ -532,7 +552,7 @@ function TaskTitle({
     );
   }
   return variant === "hero" ? (
-    <h2 className="task-hero-title" onDoubleClick={() => setEditing(true)} title="Double-click to rename">
+    <h2 className={cx("task-hero-title", long && "is-long")} onDoubleClick={() => setEditing(true)} title={long ? task.title : "Double-click to rename"}>
       {task.title}
     </h2>
   ) : (
@@ -641,24 +661,5 @@ function BlockBar({ done, estimate }: { done: number; estimate: number }) {
         <span key={i} className={cx(i < done && "on", i >= estimate && "over")} />
       ))}
     </div>
-  );
-}
-
-/** Rows: small dots when they fit, a mini meter when the estimate is large. */
-function Dots({ done, estimate }: { done: number; estimate: number }) {
-  const total = Math.max(estimate, done);
-  if (total > 8) {
-    return (
-      <span className="task-mini-meter" aria-hidden>
-        <span style={{ width: `${Math.min(100, (done / Math.max(1, estimate)) * 100)}%` }} />
-      </span>
-    );
-  }
-  return (
-    <span className="task-dots" aria-hidden>
-      {Array.from({ length: total }, (_, i) => (
-        <span key={i} className={cx(i < done && "on")} />
-      ))}
-    </span>
   );
 }

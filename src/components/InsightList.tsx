@@ -38,8 +38,18 @@ const TONE_TILE: Record<InsightTone, string | undefined> = {
   neutral: undefined,
 };
 
+/** The first sentence of a note ("1.5" and "11am–1pm" don't end one). */
+function lead(body: string): string {
+  const m = body.match(/^.*?[.!?](?=\s|$)/);
+  return m ? m[0] : body;
+}
+
+/** Keep "11am–1pm" on one line. */
+const keepRanges = (s: string) => s.replace(/(\w)–(\w)/g, "$1\u2060–\u2060$2");
+
 /**
- * Calm insight cards: a tinted icon, a title and a one-line body that opens on tap.
+ * Calm insight cards: a tinted icon, a title and the note's lead sentence; the
+ * rest of the note (usually the advice) opens on tap.
  * Shows `limit` at first; "Show more" reveals the rest.
  */
 export function InsightList({ insights, limit = 3, columns }: { insights: Insight[]; limit?: number; columns?: boolean }) {
@@ -52,6 +62,25 @@ export function InsightList({ insights, limit = 3, columns }: { insights: Insigh
     <div className="insights-wrap">
       <ul className={cx("insights", columns && "columns")}>
         {shown.map((i) => {
+          const short = lead(i.body);
+          const icon = (
+            <span className={cx("icon-tile round", TONE_TILE[i.tone])} aria-hidden>
+              {ICONS[i.icon]}
+            </span>
+          );
+          // Nothing more to say: a plain card, not a button.
+          if (short === i.body)
+            return (
+              <li key={i.id}>
+                <div className={cx("insight", i.tone)}>
+                  {icon}
+                  <span className="insight-text">
+                    <span className="insight-title">{keepRanges(i.title)}</span>
+                    <span className="insight-body">{i.body}</span>
+                  </span>
+                </div>
+              </li>
+            );
           const expanded = open === i.id;
           return (
             <li key={i.id}>
@@ -61,13 +90,12 @@ export function InsightList({ insights, limit = 3, columns }: { insights: Insigh
                 aria-expanded={expanded}
                 onClick={() => setOpen(expanded ? null : i.id)}
               >
-                <span className={cx("icon-tile round", TONE_TILE[i.tone])} aria-hidden>
-                  {ICONS[i.icon]}
-                </span>
+                {icon}
                 <span className="insight-text">
-                  <span className="insight-title">{i.title}</span>
-                  <span className="insight-body">{i.body}</span>
+                  <span className="insight-title">{keepRanges(i.title)}</span>
+                  <span className="insight-body">{expanded ? i.body : short}</span>
                 </span>
+                <ChevronDown className="insight-more" aria-hidden />
               </button>
             </li>
           );

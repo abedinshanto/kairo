@@ -158,9 +158,18 @@
   fill: var(--focus-mark);
 }
 
+/* Ended early: hollow, so it can't be read as neutral (grey) time. */
 .timeline-focus.partial {
-  fill: var(--focus-mark);
-  opacity: 0.35;
+  fill: var(--surface);
+  stroke: var(--focus-mark);
+  stroke-width: 1.5;
+}
+
+.timeline-hit {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------- Heatmap: one blue ramp
@@ -172,7 +181,8 @@
   transition: opacity 0.15s;
 }
 
-.heat:hover {
+.heat:hover,
+.heat.active {
   stroke: var(--ink);
   stroke-width: 1.5;
 }
@@ -486,7 +496,11 @@
 
 .insights.columns {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.insights.columns .insight {
+  height: 100%;
 }
 
 .insight {
@@ -502,12 +516,29 @@
   transition: box-shadow 0.25s var(--ease), transform 0.12s var(--ease);
 }
 
-.insight:hover {
+button.insight:hover {
   box-shadow: var(--shadow-md);
 }
 
-.insight:active {
+button.insight:active {
   transform: scale(0.99);
+}
+
+.insight-more {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px -2px 0 0;
+  color: var(--ink-3);
+  transition: transform 0.25s var(--ease), color 0.2s;
+}
+
+button.insight:hover .insight-more {
+  color: var(--ink-2);
+}
+
+.insight.open .insight-more {
+  transform: rotate(180deg);
 }
 
 .insight .icon-tile {
@@ -536,17 +567,20 @@
   line-height: 1.35;
 }
 
+/* Collapsed: the lead sentence, two lines at most. Open: the whole note. */
 .insight-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--ink-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .insight.open .insight-body {
-  white-space: normal;
+  display: block;
+  -webkit-line-clamp: unset;
 }
 
 .insights-more {

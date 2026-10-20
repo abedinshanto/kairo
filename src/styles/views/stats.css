@@ -3,7 +3,7 @@
 .stats-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 36px;
+  gap: 28px 36px;
   align-items: start;
   transition: opacity 0.2s var(--ease);
 }
@@ -37,8 +37,9 @@
   margin-top: 26px;
 }
 
+/* 18px column gap + 26px − the 24px the peeking cards rise = 20px of air under the tabs, like Home. */
 .stats .stacked {
-  margin-top: 8px;
+  margin-top: 26px;
 }
 
 /* ---------------------------------------------------------------- Top bar */
@@ -87,27 +88,35 @@
   margin-right: 0;
 }
 
-/* ---------------------------------------------------------------- Hero */
+/* ---------------------------------------------------------------- Hero
+ * Label + delta, one big number, one line under it, a small score ring, the split.
+ */
 
 .stats-hero {
   padding: 26px 28px 28px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
+}
+
+.stats-hero :focus-visible {
+  outline-color: #fff;
 }
 
 .stats-hero-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px 10px;
+  min-height: 30px;
 }
 
-.stats-hero-top .chip {
-  height: 40px;
-  padding: 0 16px;
-  font-size: 13.5px;
+.stats-hero-label {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--on-brand-2);
+  white-space: nowrap;
 }
 
 .stats-hero-delta {
@@ -117,6 +126,7 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--on-brand-2);
+  white-space: nowrap;
 }
 
 .stats-hero-delta .delta {
@@ -164,38 +174,122 @@
   color: var(--on-brand-2);
 }
 
+/* The score is secondary: a small ring that explains itself on tap. */
 .stats-hero-score {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
   flex: none;
-  margin-right: 2px;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  margin: -6px -6px 0 0;
+  align-self: flex-start;
+  border-radius: 50%;
+  transition: background 0.2s var(--ease), transform 0.12s var(--ease);
 }
 
-.stats-hero-score-delta {
-  font-size: 12.5px;
-  font-weight: 650;
-  color: var(--on-brand-2);
-  white-space: nowrap;
+.stats-hero-score:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.stats-hero-score:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.stats-hero .score-value {
+  font-size: 24px;
+}
+
+.stats-hero .score-label {
+  margin-top: 3px;
+  font-size: 10.5px;
 }
 
 .stats-hero-split {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px 18px 16px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.12);
+  gap: 16px;
+  margin-top: 6px;
 }
 
-.legend.on-brand {
+/* Same anatomy as the Apps & sites hero: swatch + label, value underneath, three columns. */
+.stats-hero-legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.stats-hero-legend dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--on-brand-2);
-  gap: 8px 20px;
+  white-space: nowrap;
 }
 
-.legend.on-brand .legend-value {
-  color: #fff;
+.stats-hero-legend dd {
+  margin: 3px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- Productivity score sheet */
+
+.score-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 6px;
+}
+
+.score-sheet .title {
+  margin-top: 18px;
+}
+
+.score-sheet-text {
+  margin: 8px 0 0;
+  max-width: 340px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.score-sheet-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 22px;
+}
+
+.score-sheet-compare > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface-soft);
+  text-align: left;
+}
+
+.score-sheet-compare strong {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.score-sheet-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-2);
 }
 
 /* ---------------------------------------------------------------- Tiles */
@@ -246,32 +340,50 @@
   color: var(--ink-2);
 }
 
-.stats .tile-wide {
-  grid-column: 1 / -1;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 22px;
+.stats .tile > span {
+  display: block;
 }
 
-.tile-wide-main {
-  flex: 1;
-  min-width: 0;
+.stats .tile > .tile-top {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
-.stats .tile-wide .big-number {
-  font-size: 28px;
+/* Day mode: the focus tile opens the day's focus blocks. */
+.stats .tile-button {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  transition: box-shadow 0.25s var(--ease), transform 0.12s var(--ease);
 }
 
-.stats .tile-wide .tile-foot {
-  margin-top: 4px;
+.stats .tile-button:hover {
+  box-shadow: var(--shadow-md);
 }
 
-.stats .tile-wide .badge {
-  align-self: flex-start;
+.stats .tile-button:active {
+  transform: scale(0.985);
+}
+
+.tile-go {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-2);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  transition: transform 0.2s var(--ease), color 0.2s;
+}
+
+.tile-go svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stats .tile-button:hover .tile-go {
+  color: var(--ink);
+  transform: translateX(2px);
 }
 
 /* ---------------------------------------------------------------- Chart card */
@@ -279,6 +391,14 @@
 .stats-chart .card-head {
   align-items: flex-start;
   margin-bottom: 14px;
+}
+
+.stats-chart-head .segmented {
+  flex: none;
+}
+
+.stats-timeline {
+  padding-top: 4px;
 }
 
 .stats-legend {
@@ -323,6 +443,11 @@
   padding-left: 4px;
 }
 
+/* Today on desktop: the insights run as one row under both columns. */
+.stats-insights-wide {
+  grid-column: 1 / -1;
+}
+
 .stats-insights-empty {
   display: flex;
   align-items: center;
@@ -335,10 +460,15 @@
   font-weight: 700;
 }
 
-/* ---------------------------------------------------------------- Focus blocks */
+/* ---------------------------------------------------------------- Focus blocks sheet */
 
-.stats-blocks .card-head {
-  margin-bottom: 6px;
+.stats-sheet-head {
+  padding-right: 48px;
+  margin-bottom: 8px;
+}
+
+.stats-sheet-head .card-sub {
+  margin-top: 4px;
 }
 
 .block-row {
@@ -365,12 +495,6 @@
   width: 15px;
   height: 15px;
   stroke-width: 3;
-}
-
-.stats-more {
-  margin-top: 6px;
-  padding: 0 12px;
-  margin-left: -12px;
 }
 
 /* ---------------------------------------------------------------- Persona */
@@ -497,6 +621,11 @@
     min-width: 0;
   }
 
+  /* 16px gap + 28px − 24px peeking rise = 20px under the tabs. */
+  .stats .stacked {
+    margin-top: 28px;
+  }
+
   .stats .o-1 {
     order: 1;
   }
@@ -511,17 +640,22 @@
   }
   .stats .o-5 {
     order: 5;
-    margin-top: 12px;
   }
   .stats .o-6 {
     order: 6;
-    margin-top: 12px;
   }
   .stats .o-7 {
     order: 7;
   }
-  .stats .o-8 {
-    order: 8;
+
+  /* Sections get the 28px rhythm; plain cards keep the 16px gap. */
+  .stats .stats-insights,
+  .stats .stats-apps-slot {
+    margin-top: 12px;
+  }
+
+  .stats-insights-wide {
+    margin-top: 12px;
   }
 }
 
@@ -539,38 +673,27 @@
     gap: 8px;
   }
 
-  .stats .topbar-right .circle-btn {
-    width: 44px;
-    height: 44px;
-  }
-
   .stats-hero {
     padding: 22px;
-    gap: 20px;
+    gap: 16px;
   }
 
   .stats-hero-top {
     gap: 8px;
   }
 
-  .stats-hero-top .chip {
-    height: 36px;
-    padding: 0 14px;
-    font-size: 13px;
-  }
-
-  .stats-hero-top .chip svg {
-    display: none;
+  .stats-hero-label {
+    font-size: 14px;
   }
 
   .stats-hero-delta {
     gap: 6px;
     font-size: 12.5px;
-    white-space: nowrap;
   }
 
   .stats-hero-delta .delta {
     height: 28px;
+    padding: 0 9px 0 7px;
   }
 
   .stats-hero-number {
@@ -582,14 +705,25 @@
     margin-top: 10px;
   }
 
-  .stats-hero-split {
-    padding: 16px 16px 14px;
-    border-radius: 20px;
+  .stats-hero .score-value {
+    font-size: 21px;
   }
 
-  .legend.on-brand {
-    gap: 6px 14px;
+  .stats-hero-split {
+    margin-top: 4px;
+  }
+
+  .stats-hero-legend {
+    gap: 8px;
+  }
+
+  .stats-hero-legend dt {
     font-size: 12.5px;
+    gap: 6px;
+  }
+
+  .stats-hero-legend dd {
+    font-size: 16px;
   }
 
   .stats-tiles {
@@ -604,15 +738,6 @@
     font-size: 30px;
   }
 
-  .stats .tile-wide {
-    padding: 18px;
-    gap: 14px;
-  }
-
-  .stats .tile-wide .big-number {
-    font-size: 26px;
-  }
-
   .stats-legend {
     margin-bottom: 16px;
     font-size: 12.5px;
@@ -621,6 +746,16 @@
 
   .stats-chart .card-head {
     flex-wrap: wrap;
+    row-gap: 14px;
+  }
+
+  .stats-chart-head .segmented {
+    width: 100%;
+    display: flex;
+  }
+
+  .stats-chart-head .segmented button {
+    flex: 1;
   }
 
   .persona-card {

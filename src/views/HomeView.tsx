@@ -1,10 +1,32 @@
-import { Clock, Flag, Flame, Headphones, Maximize2, Minimize2, Pause, Play, Plus, RotateCcw, SkipForward, Timer } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  Brain,
+  ChevronDown,
+  Clock,
+  CloudMoonRain,
+  Flag,
+  Flame,
+  Headphones,
+  Link2,
+  ListChecks,
+  Maximize2,
+  Minimize2,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  SkipForward,
+  Sparkles,
+  Timer,
+  Trees,
+  Waves,
+} from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Buddy, type BuddyMood, type BuddyTone } from "../components/Buddy";
 import { PageTitle, PillTabs, TopBar, cx } from "../components/ui";
 import { PRESETS, SOUNDS, soundEngine, type SoundId } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
 import { entityName } from "../lib/categories";
+import { confirmDialog } from "../lib/dialogs";
 import { useNow, useQuery } from "../lib/hooks";
 import { remainingNow, useApp } from "../lib/store";
 import { addDays, DAY, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
@@ -14,6 +36,25 @@ import "../styles/views/home.css";
 const PHASE_LABEL: Record<Phase, string> = { focus: "Focus", short_break: "Short break", long_break: "Long break" };
 const TONE: Record<Phase, BuddyTone> = { focus: "cloud", short_break: "cloud", long_break: "cloud" };
 
+const PRESET_ICONS: Record<string, ReactNode> = {
+  "deep-work": <Brain />,
+  "rainy-night": <CloudMoonRain />,
+  "ocean-calm": <Waves />,
+  forest: <Trees />,
+  campfire: <Flame />,
+  flow: <Sparkles />,
+};
+
+/** A phase duration for the pill tabs: "25m" on screen, "25 minutes" to screen readers. */
+function minutes(n: number) {
+  return (
+    <>
+      <span aria-hidden>{n}m</span>
+      <span className="sr-only">{n} minutes</span>
+    </>
+  );
+}
+
 function moodFor(t: TimerSnapshot): BuddyMood {
   if (t.status === "paused") return "paused";
   if (t.phase !== "focus") return t.status === "running" ? "break" : "happy";
@@ -22,9 +63,10 @@ function moodFor(t: TimerSnapshot): BuddyMood {
 
 function greeting(t: TimerSnapshot, name: string): [string, string] {
   const who = name.trim() ? `Hi ${name.trim()},` : "Hi there,";
-  if (t.status === "paused") return ["Paused,", "pick it up when you're ready."];
-  if (t.phase !== "focus") return t.status === "running" ? ["Nice work,", "take a breather."] : ["Break time,", "you earned it."];
-  if (t.status === "running") return ["Deep work,", "you're in the zone."];
+  // Every state fits one line at phone width, so the hero doesn't jump when the timer starts or pauses.
+  if (t.status === "paused") return ["Paused,", "take your time."];
+  if (t.phase !== "focus") return t.status === "running" ? ["On a break,", "breathe out."] : ["Nice work,", "take a break."];
+  if (t.status === "running") return ["In the zone,", "keep going."];
   return [who, "ready to focus?"];
 }
 
@@ -35,7 +77,7 @@ export function HomeView() {
   const settings = useApp((s) => s.settings);
   const tracker = useApp((s) => s.tracker);
   const playing = useApp((s) => s.soundPlaying);
-  const { setPhase, setDeepFocus } = useApp.getState();
+  const { setPhase, setDeepFocus, setView } = useApp.getState();
   const running = timer.status === "running";
   useNow(250, running);
   const remaining = remainingNow(timer, skew);
@@ -46,15 +88,38 @@ export function HomeView() {
 
   const [strong, dim] = greeting(timer, settings.name ?? "");
   const current = tracker?.current;
-  const status = !tracker?.supported
-    ? "Focus timer"
-    : tracker.pausedUntil
-      ? "Tracking paused"
-      : current
-        ? `Now · ${entityName(current.domain ? "site" : "app", current.domain ?? current.appId, current.appName)}`
-        : isNative
-          ? "Tracking privately"
-          : "Preview";
+  const currentName = current ? entityName(current.domain ? "site" : "app", current.domain ?? current.appId, current.appName) : "";
+  const offTrack = !!current && current.productivity < 0 && timer.phase === "focus" && running;
+  const status: ReactNode = !tracker?.supported ? (
+    "Focus timer"
+  ) : !settings.trackingEnabled ? (
+    "Tracking off"
+  ) : tracker.needsPermission ? (
+    <button className="who-link" onClick={() => setView("settings")}>
+      Allow usage access
+    </button>
+  ) : tracker.pausedUntil ? (
+    <span title={`Tracking is paused until ${fmtTime(tracker.pausedUntil)}`}>Private until {fmtTime(tracker.pausedUntil)}</span>
+  ) : current ? (
+    `${offTrack ? "Off track" : "Now"} · ${currentName}`
+  ) : isNative ? (
+    "Tracking privately"
+  ) : (
+    "Preview"
+  );
+
+  // Switching phase mid-block ends the block, so a stray tap on a pill must not lose it silently.
+  const pickPhase = async (p: Phase) => {
+    if (p === timer.phase) return;
+    if (timer.startedAt !== null) {
+      const ok = await confirmDialog(
+        timer.phase === "focus" ? `End this focus block early and switch to ${PHASE_LABEL[p].toLowerCase()}?` : `End this ${PHASE_LABEL[timer.phase].toLowerCase()} early?`,
+        { title: timer.phase === "focus" ? "End focus block?" : "End break?", okLabel: "End early" },
+      );
+      if (!ok) return;
+    }
+    void setPhase(p);
+  };
 
   if (deep) {
     return (
@@ -68,7 +133,7 @@ export function HomeView() {
   }
 
   return (
-    <div className="home">
+    <div className={cx("home", `phase-${timer.phase}`)}>
       <TopBar
         left={
           <>
@@ -77,7 +142,9 @@ export function HomeView() {
             </span>
             <div style={{ minWidth: 0 }}>
               <div className="who-name">{settings.name?.trim() || "Kairo"}</div>
-              <div className="who-sub">{status}</div>
+              <div className={cx("who-sub", offTrack && "off-track")} title={offTrack ? "This is a distracting app. Your focus block is still running." : undefined}>
+                {status}
+              </div>
             </div>
           </>
         }
@@ -106,11 +173,11 @@ export function HomeView() {
             <PillTabs<Phase>
               label="Timer mode"
               value={timer.phase}
-              onChange={(p) => void setPhase(p)}
+              onChange={(p) => void pickPhase(p)}
               options={[
-                { value: "focus", label: "Focus", count: settings.focusMinutes },
-                { value: "short_break", label: "Short break", count: settings.shortBreakMinutes },
-                { value: "long_break", label: "Long break", count: settings.longBreakMinutes },
+                { value: "focus", label: "Focus", count: minutes(settings.focusMinutes) },
+                { value: "short_break", label: "Short break", count: minutes(settings.shortBreakMinutes) },
+                { value: "long_break", label: "Long break", count: minutes(settings.longBreakMinutes) },
               ]}
             />
           </div>
@@ -127,40 +194,52 @@ export function HomeView() {
   );
 }
 
+function SessionDots({ timer }: { timer: TimerSnapshot }) {
+  const total = Math.max(1, timer.cycleLength);
+  const done = Math.min(timer.cycle, total);
+  const current = timer.phase === "focus" ? Math.min(timer.cycle, total - 1) : -1;
+  const label = timer.phase === "focus" ? `Session ${current + 1} of ${total}` : `${done} of ${total} sessions done`;
+  return (
+    <div className="session-dots" role="img" aria-label={label} title={label}>
+      {Array.from({ length: total }, (_, i) => (
+        <span key={i} className={cx(i === current ? "current" : i < done && "done")} />
+      ))}
+    </div>
+  );
+}
+
 function TimerCard({ deep = false }: { deep?: boolean }) {
   const timer = useApp((s) => s.timer)!;
   const skew = useApp((s) => s.clockSkew);
-  const goalMin = useApp((s) => s.settings.dailyFocusGoalMinutes);
   const { timerAction, extend } = useApp.getState();
   const remaining = remainingNow(timer, skew);
   const progress = timer.durationMs > 0 ? Math.min(1, Math.max(0, 1 - remaining / timer.durationMs)) : 0;
   const running = timer.status === "running";
-  const focusToday = useFocusToday();
-  const goalPct = goalMin ? Math.min(100, Math.round((focusToday.ms / (goalMin * 60_000)) * 100)) : 0;
+  const detours = timer.phase === "focus" ? timer.interruptions : 0;
 
   return (
     <div className={cx("stacked", `phase-${timer.phase}`, deep && "is-deep")}>
       <div className={cx("card hero timer-card", `phase-${timer.phase}`)}>
         <div className="timer-top">
-          <span className="chip on-brand">
-            {timer.phase === "focus" ? `Session ${Math.min(timer.cycle + 1, timer.cycleLength)} of ${timer.cycleLength}` : PHASE_LABEL[timer.phase]}
-          </span>
-          <span className="chip on-brand">
-            <Clock />
-            {running ? `Ends ${fmtTime(Date.now() + remaining)}` : timer.status === "paused" ? "Paused" : `${Math.round(timer.durationMs / 60_000)} min`}
-          </span>
+          <SessionDots timer={timer} />
+          <div className="timer-top-end">
+            {detours > 0 && (
+              <span className="badge white warn" title="Times you switched to a distracting app during this block">
+                <Flag />
+                {detours} detour{detours > 1 ? "s" : ""}
+              </span>
+            )}
+            {timer.status !== "idle" && (
+              <span className="chip on-brand">
+                <Clock />
+                {running ? `Ends ${fmtTime(Date.now() + remaining)}` : "Paused"}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="timer-body">
           <div className="timer-text">
-            {timer.phase === "focus" && (
-              <span className={cx("badge white", timer.interruptions > 0 && "warn")}>
-                <Flag />
-                {timer.interruptions > 0
-                  ? `${timer.interruptions} detour${timer.interruptions > 1 ? "s" : ""} this block`
-                  : `${goalPct}% of today's goal`}
-              </span>
-            )}
             <div className="timer-digits tabular" aria-live="off">
               {fmtClock(remaining)}
             </div>
@@ -202,53 +281,81 @@ function Intention() {
   const version = useApp((s) => s.dataVersion);
   const [value, setValue] = useState(timer.intention);
   const [tasks, setTasks] = useState<{ id: number; title: string }[]>([]);
+  const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => setValue(timer.intention), [timer.intention]);
   useEffect(() => {
     backend.tasksList().then((t) => setTasks(t.filter((x) => !x.done)));
   }, [version]);
 
+  // Grow with the text. `field-sizing: content` does this in Chromium only; WebKit (macOS, iOS, Linux) needs JS.
+  useLayoutEffect(() => {
+    const el = input.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    fit();
+    void document.fonts?.ready.then(fit);
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [value]);
+
+  const linked = tasks.find((t) => t.id === timer.taskId);
   const commit = () => {
     if (value !== timer.intention) void setIntention(value, timer.taskId);
   };
 
   return (
     <div className="intention">
-      <textarea
-        className="intention-input"
-        rows={1}
-        placeholder="What are you focusing on?"
-        value={value}
-        maxLength={120}
-        onChange={(e) => setValue(e.target.value.replace(/\n/g, ""))}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            (e.currentTarget as HTMLTextAreaElement).blur();
-          }
-        }}
-        aria-label="Focus intention"
-      />
-      {tasks.length > 0 && (
-        <select
-          className="intention-task"
-          aria-label="Link a task"
-          value={timer.taskId ?? ""}
-          onChange={(e) => {
-            const id = e.target.value ? Number(e.target.value) : null;
-            const task = tasks.find((t) => t.id === id);
-            const next = !value && task ? task.title : value;
-            setValue(next);
-            void setIntention(next, id);
+      <div className="intention-row">
+        <textarea
+          ref={input}
+          className="intention-input"
+          rows={1}
+          placeholder="What's your focus?"
+          value={value}
+          maxLength={120}
+          onChange={(e) => setValue(e.target.value.replace(/\n/g, ""))}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            }
           }}
-        >
-          <option value="">Link a task</option>
-          {tasks.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.title}
-            </option>
-          ))}
-        </select>
+          aria-label="Focus intention"
+        />
+        {(tasks.length > 0 || linked) && (
+          <label className={cx("intention-link", linked && "on")} title={linked ? `Linked to ${linked.title}` : "Link a task"}>
+            {linked ? <ListChecks aria-hidden /> : <Link2 aria-hidden />}
+            <select
+              aria-label={linked ? `Linked task: ${linked.title}` : "Link a task"}
+              value={linked ? String(linked.id) : ""}
+              onChange={(e) => {
+                const id = e.target.value ? Number(e.target.value) : null;
+                const task = tasks.find((t) => t.id === id);
+                // Take the task's title when the intention is empty or was just the previous task's title.
+                const next = task && (!value.trim() || value === linked?.title) ? task.title : value;
+                setValue(next);
+                void setIntention(next, id);
+              }}
+            >
+              <option value="">{linked ? "Unlink task" : "No task"}</option>
+              {tasks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+      {linked && value.trim() !== linked.title && (
+        <div className="intention-linked">
+          <ListChecks aria-hidden />
+          <span>{linked.title}</span>
+        </div>
       )}
     </div>
   );
@@ -320,32 +427,46 @@ function SoundCard() {
     const keys = Object.keys(p.levels);
     return keys.length === active.length && keys.every((k) => (sound.levels[k] ?? 0) > 0);
   });
+  const name = preset?.name ?? (active.length ? "Custom mix" : "Pick a sound");
+  const sounds = active.length ? active.map((s) => s.label).join(" · ") : "Nothing selected";
   return (
-    <div className="card">
-      <div className="sound-row">
-        <span className={cx("art", `art-${preset?.id ?? "custom"}`)} style={{ width: 60, height: 60 }} aria-hidden />
-        <button className="sound-meta" onClick={() => setView("sounds")}>
-          <span className="label">{playing ? "Now playing" : "Soundscape"}</span>
-          <span className="card-title">{preset?.name ?? (active.length ? "Custom mix" : "Pick a sound")}</span>
-        </button>
-        <button className={cx("circle-btn", playing ? "brand" : "soft")} aria-label={playing ? "Pause soundscape" : "Play soundscape"} disabled={!active.length} onClick={() => void soundEngine.toggle()}>
-          {playing ? <Pause className="fill" /> : <Play className="fill" />}
-        </button>
-      </div>
-      <div className="pills sm fade-end home-presets">
-        {PRESETS.map((p) => (
-          <button
-            key={p.id}
-            className={cx("pill", preset?.id === p.id && "active")}
-            onClick={() => {
+    <div className="card sound-card">
+      <button className={cx("art sound-art", `art-${preset?.id ?? "custom"}`)} aria-label="Open soundscapes" title="Open soundscapes" onClick={() => setView("sounds")}>
+        {preset ? PRESET_ICONS[preset.id] : <Headphones />}
+      </button>
+      <div className="sound-meta">
+        <label className="sound-pick" title="Change soundscape">
+          <span className="card-title">{name}</span>
+          <ChevronDown aria-hidden />
+          <select
+            aria-label={`Soundscape: ${name}`}
+            value={preset?.id ?? ""}
+            onChange={(e) => {
+              if (e.target.value === "mixer") return setView("sounds");
+              const p = PRESETS.find((x) => x.id === e.target.value);
+              if (!p) return;
               updateSound({ levels: p.levels as Record<SoundId, number> });
               if (!soundEngine.playing) void soundEngine.play();
             }}
           >
-            {p.name}
-          </button>
-        ))}
+            {!preset && (
+              <option value="" disabled>
+                {name}
+              </option>
+            )}
+            {PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+            <option value="mixer">Mix your own…</option>
+          </select>
+        </label>
+        <span className="sound-sub">{playing ? `Playing · ${sounds}` : sounds}</span>
       </div>
+      <button className={cx("circle-btn", playing ? "brand" : "soft")} aria-label={playing ? "Pause soundscape" : "Play soundscape"} disabled={!active.length} onClick={() => void soundEngine.toggle()}>
+        {playing ? <Pause className="fill" /> : <Play className="fill" />}
+      </button>
     </div>
   );
 }

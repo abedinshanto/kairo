@@ -1,4 +1,4 @@
-import { AppWindow, Check, ChevronLeft, ChevronRight, Download, Flame, Hourglass, Shuffle, Sparkles, Timer } from "lucide-react";
+import { AppWindow, Check, ChevronLeft, ChevronRight, Download, Flame, Hourglass, Sparkles, Timer } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { BarList, ProportionBar, type BarRow } from "../components/charts/Bars";
@@ -8,7 +8,7 @@ import { Heatmap } from "../components/charts/Heatmap";
 import { ScoreRing } from "../components/charts/ScoreRing";
 import { StackedColumns } from "../components/charts/StackedColumns";
 import { InsightList } from "../components/InsightList";
-import { Avatar, Delta, PageTitle, PillTabs, Segmented, TopBar, cx } from "../components/ui";
+import { Avatar, Delta, PageTitle, PillTabs, Segmented, Sheet, TopBar, cx } from "../components/ui";
 import { buildDayStats, categoryTotals, goalStreak, pctChange, rhythmMatrix, sumDays, type DayStat, type RhythmCell } from "../lib/analytics";
 import { backend } from "../lib/backend";
 import { categoryLabel, entityName, PRODUCTIVITY_LABEL } from "../lib/categories";
@@ -30,6 +30,8 @@ interface Model {
   first: number;
   /** Number of days covered. */
   n: number;
+  /** Day mode, today: `before` covers yesterday only up to the same clock time. */
+  cut: boolean;
   now: Summary;
   before: Summary;
   days: DayStat[];
@@ -46,11 +48,15 @@ const longWeekday = new Intl.DateTimeFormat(undefined, { weekday: "long" });
 
 // ------------------------------------------------------------------ URL state (#/stats?d=… or ?r=7)
 
+/** The last period shown, so leaving for Apps & sites (or another tab) and coming back keeps it. */
+let lastShown: { range: Range; day: number } | null = null;
+
 function readHash(): { range: Range; day: number } {
   const h = window.location.hash;
   const today = startOfDay(Date.now());
   const r = h.match(/[?&]r=(7|30)\b/);
   const d = h.match(/[?&]d=(\d+)/);
+  if (!r && !d && lastShown) return { range: lastShown.range, day: Math.min(today, lastShown.day) };
   const day = d ? Math.min(today, startOfDay(Number(d[1]))) : today;
   return { range: r ? (Number(r[1]) as 7 | 30) : "day", day };
 }
@@ -59,6 +65,7 @@ function writeHash(range: Range, day: number) {
   const today = startOfDay(Date.now());
   const q = range !== "day" ? `?r=${range}` : day !== today ? `?d=${day}` : "";
   window.history.replaceState(null, "", `#/stats${q}`);
+  lastShown = { range, day };
 }
 
 // ------------------------------------------------------------------ Loading
@@ -66,17 +73,20 @@ function writeHash(range: Range, day: number) {
 async function loadDay(day: number): Promise<Model> {
   const prev = addDays(day, -1);
   const next = addDays(day, 1);
+  // Today is still in progress, so compare it with yesterday up to the same clock time.
+  const cut = day === startOfDay(Date.now());
+  const prevEnd = cut ? Math.min(day, prev + (Date.now() - day)) : day;
   const [totals, spans, sessions, entities, prevEntities] = await Promise.all([
-    backend.bucketTotals([[prev, day], [day, next], ...hourBuckets(day)]),
+    backend.bucketTotals([[prev, prevEnd], [day, next], ...hourBuckets(day)]),
     backend.activitySpans(day, next),
     backend.focusSessions(prev, next),
     backend.entityTotals(day, next),
-    backend.entityTotals(prev, day),
+    backend.entityTotals(prev, prevEnd),
   ]);
   const [yTotals, dTotals, ...hourly] = totals;
   const [yesterday, stat] = buildDayStats(
     [
-      [prev, day],
+      [prev, prevEnd],
       [day, next],
     ],
     [yTotals, dTotals],
@@ -88,6 +98,7 @@ async function loadDay(day: number): Promise<Model> {
     range: "day",
     first: day,
     n: 1,
+    cut,
     now: sumDays([stat]),
     before: sumDays([yesterday]),
     days: [stat],
@@ -123,6 +134,7 @@ async function loadRange(n: 7 | 30, today: number): Promise<Model> {
     range: n,
     first,
     n,
+    cut: false,
     now: sumDays(stats),
     before: sumDays(prevStats),
     days: stats,
@@ -187,12 +199,33 @@ function TileDur({ ms }: { ms: number }) {
 
 const perDay = (ms: number, days: number) => (days > 0 ? ms / days : 0);
 
+/** What the hero's delta (and the score) is measured against. */
+function vsLabel(model: Model | undefined): string {
+  if (!model) return "vs yesterday";
+  if (model.range !== "day") return `vs prior ${model.n} days`;
+  return model.cut ? "vs this time yesterday" : "vs the day before";
+}
+
+/**
+ * Single-day wording for insight copy written for periods ("per active day",
+ * "the period before"), and the right comparison name for ranges.
+ */
+function periodWording(i: Insight, model: Model): Insight {
+  const before = model.range === "day" ? (model.cut ? "this time yesterday" : "the day before") : `the ${model.n} days before`;
+  let body = i.body.replace(/the period before/g, before);
+  if (model.range === "day") body = body.replace(/,? about [^.]*? per active day\./, ".").replace(/ per active day/g, "").replace(/^That hour averages /, "That hour had ");
+  return body === i.body ? i : { ...i, body };
+}
+
 // ------------------------------------------------------------------ View
+
+type SheetKind = "score" | "blocks" | null;
 
 export function StatsView() {
   const initial = useMemo(readHash, []);
   const [range, setRange] = useState<Range>(initial.range);
   const [day, setDay] = useState(initial.day);
+  const [sheet, setSheet] = useState<SheetKind>(null);
   const settings = useApp((s) => s.settings);
   const setView = useApp((s) => s.setView);
   const today = startOfDay(Date.now());
@@ -219,7 +252,22 @@ export function StatsView() {
       goalMs,
       periodLabel: dayMode ? (data.first === today ? "today" : "that day") : data.n === 7 ? "this week" : `in ${data.n} days`,
     });
+    // The hero already carries the productive-time trend.
+    insights = insights.filter((i) => i.id !== "trend");
     if (dayMode) insights = insights.filter((i) => i.id !== "goal" && i.id !== "weekday" && i.id !== "late");
+    // App switching has no tile of its own; keep the middle ground visible here too.
+    const activeHours = data.now.activeMs / HOUR;
+    if (activeHours >= 2 && !insights.some((i) => i.id === "switching")) {
+      insights.push({
+        id: "switching",
+        tone: "neutral",
+        icon: "shuffle",
+        weight: 30,
+        title: `About ${Math.round(data.now.switches / activeHours)} app switches an hour`,
+        body: "A healthy middle ground. Batching chat and email between blocks keeps it there.",
+      });
+    }
+    insights = insights.map((i) => periodWording(i, data)).sort((a, b) => b.weight - a.weight);
     return {
       insights,
       persona: dayMode ? null : focusPersona(data.days, data.hourly),
@@ -234,6 +282,13 @@ export function StatsView() {
     setRange(r);
   };
 
+  /** Apps & sites opens on the same period (Today / 7 / 30 days). */
+  const openApps = () => {
+    const r = range === "day" ? (isToday ? 1 : null) : range;
+    setView("apps");
+    if (r) window.history.replaceState(null, "", `#/apps?r=${r}`);
+  };
+
   const dayMode = range === "day";
   const dim = dayMode
     ? isToday
@@ -246,6 +301,8 @@ export function StatsView() {
       : "this month.";
 
   const whenName = dayMode ? shortDate.format(day) : `${fmtShortDay(addDays(today, -(range - 1)))} – ${fmtShortDay(today)}`;
+  const shownDayMode = !data || data.range === "day";
+  const focusSessions = (data?.sessions ?? []).filter((s) => s.kind === "focus");
 
   return (
     <div className={cx("stats", stale && "refreshing")}>
@@ -274,14 +331,15 @@ export function StatsView() {
                 </button>
               </div>
             )}
-            <button className="circle-btn" aria-label="Apps & sites" title="Apps & sites" onClick={() => setView("apps")}>
+            <button className="circle-btn" aria-label="Apps & sites" title="Apps & sites" onClick={openApps}>
               <AppWindow />
             </button>
           </>
         }
       />
 
-      <div className="stats-grid">
+      {/* Desktop: two columns. Below 1024px the columns dissolve and the o-* classes set the order. */}
+      <div className={cx("stats-grid", shownDayMode ? "is-day" : "is-range")}>
         <div className="stats-main">
           <div className="stats-intro o-1">
             <PageTitle strong="Your progress," dim={dim} />
@@ -300,57 +358,60 @@ export function StatsView() {
           </div>
 
           <div className="o-2">
-            <Hero model={data} />
+            <Hero model={data} onScore={() => setSheet("score")} />
           </div>
 
-          <div className="o-4">{data && data.range === "day" ? <DayChart model={data} /> : <RangeChart model={data} goalMs={goalMs} />}</div>
-
-          {data && data.range !== "day" && (
-            <section className="card o-7" aria-labelledby="rhythm-title">
-              <div className="card-head">
-                <div>
-                  <h2 className="card-title" id="rhythm-title">
-                    When you focus best
-                  </h2>
-                  <div className="card-sub">Average productive time by weekday and hour</div>
-                </div>
+          {shownDayMode ? (
+            <div className="o-4">{data && <DayChart model={data} />}</div>
+          ) : (
+            <>
+              <div className="o-5">
+                <RangeChart model={data} goalMs={goalMs} grid={derived?.grid ?? null} />
               </div>
-              {derived?.grid && <Heatmap grid={derived.grid as RhythmCell[][]} caption="Average productive time per weekday and hour" />}
-            </section>
+              <Insights className="o-6" insights={derived?.insights ?? null} />
+            </>
           )}
-
-          <Insights className="o-5" insights={derived?.insights ?? null} />
         </div>
 
         <div className="stats-side">
           <div className="o-3">
-            <Tiles model={data} streak={derived?.streak ?? 0} goalMs={goalMs} budgetMs={budgetMs} />
+            <Tiles model={data} streak={derived?.streak ?? 0} goalMs={goalMs} budgetMs={budgetMs} onFocus={shownDayMode ? () => setSheet("blocks") : undefined} />
           </div>
-          <div className="o-6">
-            <TopApps model={data} />
-          </div>
-          {data && data.range !== "day" ? (
-            <div className="o-8">
+          {!shownDayMode && data && (
+            <div className="o-4">
               <PersonaCard persona={derived?.persona ?? null} range={data.n} activeHours={data.now.activeMs / HOUR} />
             </div>
-          ) : (
-            <div className="o-7">
-              <FocusBlocks sessions={(data?.sessions ?? []).filter((s) => s.kind === "focus")} isToday={data ? data.first === today : true} />
-            </div>
           )}
+          <div className={cx("stats-apps-slot", shownDayMode ? "o-6" : "o-7")}>
+            <TopApps model={data} onSeeAll={openApps} />
+          </div>
         </div>
+
+        {shownDayMode && <Insights className="o-5 stats-insights-wide" insights={derived?.insights ?? null} columns />}
       </div>
+
+      {sheet === "score" && data && <ScoreSheet model={data} onClose={() => setSheet(null)} />}
+      {sheet === "blocks" && (
+        <FocusBlocksSheet
+          sessions={focusSessions}
+          isToday={data ? data.first === today : true}
+          onClose={() => setSheet(null)}
+          onStart={() => {
+            setSheet(null);
+            setView("home");
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // ------------------------------------------------------------------ Hero
 
-function Hero({ model }: { model: Model | undefined }) {
+function Hero({ model, onScore }: { model: Model | undefined; onScore: () => void }) {
   const now = model?.now;
   const before = model?.before;
   const dayMode = !model || model.range === "day";
-  const today = startOfDay(Date.now());
 
   let headline = 0;
   let delta: number | null = null;
@@ -366,22 +427,25 @@ function Hero({ model }: { model: Model | undefined }) {
       sub = now.activeMs > 0 ? "a day, on average" : "Nothing tracked yet";
     }
   }
-  const vs = dayMode ? (model && model.first !== today ? "vs the day before" : "vs yesterday") : `vs prior ${model?.n} days`;
-  const scoreDelta = now?.score != null && before?.score != null ? now.score - before.score : null;
+  // Ranges headline a daily average, so the split under it is per day too.
+  const per = (ms: number) => (dayMode ? ms : perDay(ms, now?.activeDays ?? 0));
+  const split = [
+    { name: "Productive", color: "#fff", ms: per(now?.productiveMs ?? 0) },
+    { name: "Neutral", color: "rgba(255,255,255,.42)", ms: per(now?.neutralMs ?? 0) },
+    { name: "Distracting", color: "#ffae9b", ms: per(now?.distractingMs ?? 0) },
+  ];
   const compact = useMediaQuery("(max-width: 760px)");
+  const score = now?.score ?? null;
 
   return (
     <div className="stacked">
       <section className="card hero stats-hero" aria-label="Summary">
         <div className="stats-hero-top">
-          <span className="chip on-brand">
-            <Sparkles />
-            Productive time
-          </span>
+          <span className="stats-hero-label">Productive time</span>
           {delta !== null && (
             <span className="stats-hero-delta">
               <Delta value={delta} />
-              <span>{vs}</span>
+              <span>{vsLabel(model)}</span>
             </span>
           )}
         </div>
@@ -393,39 +457,96 @@ function Hero({ model }: { model: Model | undefined }) {
             </div>
             <div className="stats-hero-sub">{sub || " "}</div>
           </div>
-          <div className="stats-hero-score">
-            <ScoreRing value={now?.score ?? null} onBrand size={compact ? 88 : 112} stroke={compact ? 8 : 9} title="Productivity score: productive time counts fully, neutral time half." />
-            <span className="stats-hero-score-delta">
-              {scoreDelta === null ? "Productivity" : scoreDelta === 0 ? "No change" : `${scoreDelta > 0 ? "+" : "−"}${Math.abs(scoreDelta)} pts`}
-            </span>
-          </div>
+          <button
+            type="button"
+            className="stats-hero-score"
+            onClick={onScore}
+            disabled={!model}
+            aria-haspopup="dialog"
+            aria-label={score === null ? "Productivity score: not enough data yet. What it means" : `Productivity score ${score} out of 100. What it means`}
+            title="What's the score?"
+          >
+            <ScoreRing value={score} onBrand size={compact ? 68 : 80} stroke={compact ? 6 : 7} />
+          </button>
         </div>
 
         <div className="stats-hero-split">
-          <ProportionBar p={now?.productiveMs ?? 0} n={now?.neutralMs ?? 0} d={now?.distractingMs ?? 0} height={12} onBrand />
-          <Legend
-            className="on-brand"
-            items={[
-              { name: "Productive", color: "#fff", value: fmtDuration(now?.productiveMs ?? 0) },
-              { name: "Neutral", color: "rgba(255,255,255,.42)", value: fmtDuration(now?.neutralMs ?? 0) },
-              { name: "Distracting", color: "#ffae9b", value: fmtDuration(now?.distractingMs ?? 0) },
-            ]}
-          />
+          <ProportionBar p={split[0].ms} n={split[1].ms} d={split[2].ms} height={10} onBrand />
+          <dl className="stats-hero-legend">
+            {split.map((s) => (
+              <div key={s.name}>
+                <dt>
+                  <span className="swatch" style={{ background: s.color }} />
+                  {s.name}
+                </dt>
+                <dd>{fmtDuration(s.ms)}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
     </div>
   );
 }
 
+function ScoreSheet({ model, onClose }: { model: Model; onClose: () => void }) {
+  const dayMode = model.range === "day";
+  const isToday = model.first === startOfDay(Date.now());
+  const now = model.now.score;
+  const before = model.before.score;
+  const change = now !== null && before !== null ? now - before : null;
+  const nowLabel = dayMode ? (isToday ? "Today so far" : shortDate.format(model.first)) : `Last ${model.n} days`;
+  const beforeLabel = dayMode ? (model.cut ? "Yesterday by now" : "The day before") : `${model.n} days before`;
+  return (
+    <Sheet label="Productivity score" onClose={onClose}>
+      <div className="score-sheet">
+        <ScoreRing value={now} size={104} stroke={9} />
+        <h2 className="title">Productivity score</h2>
+        <p className="score-sheet-text">
+          A 0–100 read of how your active time was spent. Productive time counts fully, neutral time half, distracting time not at all.
+        </p>
+        <div className="score-sheet-compare">
+          <div>
+            <span className="label">{nowLabel}</span>
+            <strong>{now ?? "–"}</strong>
+          </div>
+          <div>
+            <span className="label">{beforeLabel}</span>
+            <strong>{before ?? "–"}</strong>
+          </div>
+        </div>
+        {change !== null && (
+          <p className="score-sheet-change">
+            <Delta value={change} format={(v) => `${v} pts`} /> {vsLabel(model)}
+          </p>
+        )}
+      </div>
+    </Sheet>
+  );
+}
+
 // ------------------------------------------------------------------ Tiles
 
-function Tiles({ model, streak, goalMs, budgetMs }: { model: Model | undefined; streak: number; goalMs: number; budgetMs: number }) {
+function Tiles({
+  model,
+  streak,
+  goalMs,
+  budgetMs,
+  onFocus,
+}: {
+  model: Model | undefined;
+  streak: number;
+  goalMs: number;
+  budgetMs: number;
+  /** Day mode: the focus tile opens the day's focus blocks. */
+  onFocus?: () => void;
+}) {
   const now = model?.now;
   const dayMode = !model || model.range === "day";
   const days = model?.days ?? [];
   const eligible = days.filter((d) => d.activeMs >= 30 * MINUTE);
 
-  // Focus
+  // Focus: the day's total, or a per-day average for ranges (same unit as the meter and the next tile).
   const focusMs = now?.focusMs ?? 0;
   const focusAvg = dayMode ? focusMs : perDay(focusMs, now?.activeDays ?? 0);
   const focusMeter = goalMs ? focusAvg / goalMs : 0;
@@ -433,7 +554,7 @@ function Tiles({ model, streak, goalMs, budgetMs }: { model: Model | undefined; 
     ? now?.sessions
       ? `${now.completed} of ${now.sessions} block${now.sessions === 1 ? "" : "s"} done`
       : `Goal ${fmtDuration(goalMs)}`
-    : `${fmtDuration(focusAvg)} a day · goal ${fmtDuration(goalMs)}`;
+    : `${fmtDuration(focusMs)} total · goal ${fmtDuration(goalMs)}`;
 
   // Distracting vs budget
   const distractMs = dayMode ? (now?.distractingMs ?? 0) : perDay(now?.distractingMs ?? 0, now?.activeDays ?? 0);
@@ -448,28 +569,18 @@ function Tiles({ model, streak, goalMs, budgetMs }: { model: Model | undefined; 
         ? `In budget ${underBudget} of ${eligible.length} days`
         : `Budget ${fmtDuration(budgetMs)} a day`;
 
-  // Switches
-  const activeHours = (now?.activeMs ?? 0) / HOUR;
-  const perHour = activeHours >= 0.5 ? Math.round((now?.switches ?? 0) / activeHours) : null;
-  const mood = perHour === null ? null : perHour <= 12 ? { label: "Steady", cls: "good" } : perHour >= 25 ? { label: "Scattered", cls: "warn" } : { label: "Balanced", cls: "brand" };
-  const firstSeen = dayMode && model?.spans.length ? fmtTime(model.spans[0].start) : null;
-  const switchFoot = dayMode
-    ? firstSeen
-      ? `${now?.switches ?? 0} switches · since ${firstSeen}`
-      : "Too early to tell"
-    : `${now?.switches ?? 0} switches in ${now?.activeDays ?? 0} active day${now?.activeDays === 1 ? "" : "s"}`;
-
   return (
     <div className="stats-tiles">
       <Tile
         tint
         icon={<Timer />}
         iconClass="brand-solid"
-        value={<TileDur ms={focusMs} />}
-        label="Focus time"
+        value={<TileDur ms={focusAvg} />}
+        label={dayMode ? "Focus time" : "Focus a day"}
         meter={Math.min(1, focusMeter)}
         meterClass={focusMeter >= 1 ? "done" : undefined}
         foot={focusFoot}
+        onClick={onFocus}
         badge={
           !dayMode && streak > 0 ? (
             <span className="badge warn">
@@ -488,20 +599,6 @@ function Tiles({ model, streak, goalMs, budgetMs }: { model: Model | undefined; 
         meterClass="distracting"
         foot={distractFoot}
       />
-      <div className="card tile tile-wide">
-        <span className="icon-tile round gray">
-          <Shuffle />
-        </span>
-        <div className="tile-wide-main">
-          <div className="big-number">
-            {perHour ?? "–"}
-            <small>/ hour</small>
-          </div>
-          <div className="tile-label">App switches</div>
-          <div className="tile-foot">{switchFoot}</div>
-        </div>
-        {mood && <span className={cx("badge", mood.cls)}>{mood.label}</span>}
-      </div>
     </div>
   );
 }
@@ -516,6 +613,7 @@ function Tile({
   foot,
   tint,
   badge,
+  onClick,
 }: {
   icon: ReactNode;
   iconClass?: string;
@@ -526,37 +624,59 @@ function Tile({
   foot: string;
   tint?: boolean;
   badge?: ReactNode;
+  onClick?: () => void;
 }) {
-  return (
-    <div className={cx("card tile", tint && "tint")}>
-      <div className="tile-top">
+  const body = (
+    <>
+      <span className="tile-top">
         <span className={cx("icon-tile round", iconClass)}>{icon}</span>
         {badge}
-      </div>
-      <div className="big-number">{value}</div>
-      <div className="tile-label">{label}</div>
+        {onClick && (
+          <span className="tile-go" aria-hidden>
+            <ChevronRight />
+          </span>
+        )}
+      </span>
+      <span className="big-number">{value}</span>
+      <span className="tile-label">{label}</span>
       {meter !== undefined && (
-        <div className={cx("meter", meterClass)} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(meter * 100)}>
+        <span className={cx("meter", meterClass)} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(meter * 100)}>
           <span style={{ width: `${meter * 100}%` }} />
-        </div>
+        </span>
       )}
-      <div className="tile-foot">{foot}</div>
-    </div>
+      <span className="tile-foot">{foot}</span>
+    </>
+  );
+  return onClick ? (
+    <button type="button" className={cx("card tile tile-button", tint && "tint")} onClick={onClick} aria-haspopup="dialog">
+      {body}
+    </button>
+  ) : (
+    <div className={cx("card tile", tint && "tint")}>{body}</div>
   );
 }
 
 // ------------------------------------------------------------------ Charts
 
 const ACTIVITY_SERIES = [SERIES.productive, SERIES.neutral, SERIES.distracting];
+/** Ended-early focus blocks are drawn hollow; the swatch matches. */
+const PARTIAL_SWATCH = "radial-gradient(circle, var(--surface) 0 2.6px, var(--focus-mark) 3.1px)";
 
 function DayChart({ model }: { model: Model }) {
+  const [mode, setMode] = useState<"hours" | "timeline">("hours");
   const isToday = model.first === startOfDay(Date.now());
   const [h0, h1] = useMemo(() => activeHourRange(model.spans, model.first, 10), [model.spans, model.first]);
   const spans = model.spans;
   const hourly = model.hourly;
+  const focus = model.sessions.filter((s) => s.kind === "focus");
+  const timelineLegend = [
+    ...ACTIVITY_SERIES,
+    { name: "Focus block", color: FOCUS_COLOR },
+    ...(focus.some((s) => !s.completed) ? [{ name: "Ended early", color: PARTIAL_SWATCH }] : []),
+  ];
   return (
     <section className="card stats-chart" aria-labelledby="day-chart-title">
-      <div className="card-head">
+      <div className="card-head stats-chart-head">
         <div>
           <h2 className="card-title" id="day-chart-title">
             Your day
@@ -565,27 +685,45 @@ function DayChart({ model }: { model: Model }) {
             {spans.length ? `${fmtTime(spans[0].start)} – ${fmtTime(spans[spans.length - 1].end)} · ${fmtDuration(model.now.activeMs)} active` : "Nothing recorded yet"}
           </div>
         </div>
+        {spans.length > 0 && (
+          <Segmented
+            label="Chart"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "hours", label: "Hours" },
+              { value: "timeline", label: "Timeline" },
+            ]}
+          />
+        )}
       </div>
       {spans.length ? (
-        <>
-          <Legend className="stats-legend" items={[...ACTIVITY_SERIES, { name: "Focus block", color: FOCUS_COLOR }]} />
-          <DayTimeline day={model.first} spans={spans} sessions={model.sessions} hours={[h0, h1]} axis={false} />
-          <div className="stats-chart-gap" />
-          <StackedColumns
-            caption="Time per hour by productivity"
-            height={168}
-            series={ACTIVITY_SERIES}
-            labelEvery={h1 - h0 > 12 ? 2 : 1}
-            gridLines={2}
-            data={hourly.slice(h0, h1).map((h, i) => ({
-              key: h0 + i,
-              label: fmtHour(h0 + i),
-              title: `${fmtHour(h0 + i)} – ${fmtHour((h0 + i + 1) % 24)}`,
-              values: [h.productiveMs, h.neutralMs, h.distractingMs],
-              note: h.switches ? `${h.switches} switches` : undefined,
-            }))}
-          />
-        </>
+        mode === "hours" ? (
+          <>
+            <Legend className="stats-legend" items={[...ACTIVITY_SERIES]} />
+            <StackedColumns
+              caption="Time per hour by productivity"
+              height={196}
+              series={ACTIVITY_SERIES}
+              labelEvery={h1 - h0 > 12 ? 2 : 1}
+              gridLines={2}
+              data={hourly.slice(h0, h1).map((h, i) => ({
+                key: h0 + i,
+                label: fmtHour(h0 + i),
+                title: `${fmtHour(h0 + i)} – ${fmtHour((h0 + i + 1) % 24)}`,
+                values: [h.productiveMs, h.neutralMs, h.distractingMs],
+                note: h.switches ? `${h.switches} switches` : undefined,
+              }))}
+            />
+          </>
+        ) : (
+          <>
+            <Legend className="stats-legend" items={timelineLegend} />
+            <div className="stats-timeline">
+              <DayTimeline day={model.first} spans={spans} sessions={model.sessions} hours={[h0, h1]} />
+            </div>
+          </>
+        )
       ) : (
         <div className="empty stats-empty">
           <Buddy mood="sleep" size={84} />
@@ -597,29 +735,34 @@ function DayChart({ model }: { model: Model }) {
   );
 }
 
-function RangeChart({ model, goalMs }: { model: Model | undefined; goalMs: number }) {
-  const [mode, setMode] = useState<"activity" | "focus">("activity");
+type RangeMode = "activity" | "focus" | "rhythm";
+
+function RangeChart({ model, goalMs, grid }: { model: Model | undefined; goalMs: number; grid: RhythmCell[][] | null }) {
+  const [mode, setMode] = useState<RangeMode>("activity");
   const n = model?.n ?? 7;
   const days = model?.days ?? [];
   const labelEvery = n <= 7 ? 1 : 5;
   const label = (d: number) => (n <= 7 ? fmtWeekday(d) : fmtShortDay(d));
   const title = (d: number) => `${fmtWeekday(d)}, ${fmtShortDay(d)}`;
+  const sub =
+    mode === "activity" ? "Active time, split by productivity" : mode === "focus" ? `Focus time against your ${fmtDuration(goalMs)} goal` : "When you focus best, by weekday and hour";
   return (
     <section className="card stats-chart" aria-labelledby="range-chart-title">
       <div className="card-head stats-chart-head">
         <div>
           <h2 className="card-title" id="range-chart-title">
-            Day by day
+            {n <= 7 ? "Your week" : "Your month"}
           </h2>
-          <div className="card-sub">{mode === "activity" ? "Active time, split by productivity" : `Focus time against your ${fmtDuration(goalMs)} goal`}</div>
+          <div className="card-sub">{sub}</div>
         </div>
-        <Segmented
+        <Segmented<RangeMode>
           label="Chart"
           value={mode}
           onChange={setMode}
           options={[
             { value: "activity", label: "Activity" },
             { value: "focus", label: "Focus" },
+            { value: "rhythm", label: "Rhythm" },
           ]}
         />
       </div>
@@ -640,7 +783,7 @@ function RangeChart({ model, goalMs }: { model: Model | undefined; goalMs: numbe
             }))}
           />
         </>
-      ) : (
+      ) : mode === "focus" ? (
         <StackedColumns
           caption="Focus time per day against the daily goal"
           height={232 + 36}
@@ -655,6 +798,8 @@ function RangeChart({ model, goalMs }: { model: Model | undefined; goalMs: numbe
             note: `${x.completed} of ${x.sessions} blocks completed`,
           }))}
         />
+      ) : (
+        grid && <Heatmap grid={grid} caption="Average productive time per weekday and hour" />
       )}
     </section>
   );
@@ -664,8 +809,7 @@ function RangeChart({ model, goalMs }: { model: Model | undefined; goalMs: numbe
 
 type AppsMode = "apps" | "categories" | "leaks";
 
-function TopApps({ model }: { model: Model | undefined }) {
-  const setView = useApp((s) => s.setView);
+function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () => void }) {
   const [mode, setMode] = useState<AppsMode>("apps");
   const entities = model?.entities ?? [];
   const activeDays = Math.max(1, model?.now.activeDays ?? 1);
@@ -725,7 +869,7 @@ function TopApps({ model }: { model: Model | undefined }) {
             {entities.length} used {dayMode ? "that day" : `in ${model?.n} days`}
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => setView("apps")}>
+        <button className="btn btn-ghost btn-sm" onClick={onSeeAll}>
           See all
         </button>
       </div>
@@ -756,14 +900,14 @@ function TopApps({ model }: { model: Model | undefined }) {
 
 // ------------------------------------------------------------------ Insights
 
-function Insights({ insights, className }: { insights: Insight[] | null; className?: string }) {
+function Insights({ insights, className, columns }: { insights: Insight[] | null; className?: string; columns?: boolean }) {
   return (
     <section className={cx("stats-insights", className)} aria-labelledby="insights-title">
       <h2 className="section-title" id="insights-title">
         Worth noticing
       </h2>
       {insights === null ? null : insights.length ? (
-        <InsightList insights={insights} limit={3} />
+        <InsightList insights={insights} limit={3} columns={columns} />
       ) : (
         <div className="card soft stats-insights-empty">
           <span className="icon-tile round">
@@ -779,29 +923,22 @@ function Insights({ insights, className }: { insights: Insight[] | null; classNa
   );
 }
 
-// ------------------------------------------------------------------ Focus blocks (day)
+// ------------------------------------------------------------------ Focus blocks (day) — opened from the Focus tile
 
-function FocusBlocks({ sessions, isToday }: { sessions: FocusSession[]; isToday: boolean }) {
-  const setView = useApp((s) => s.setView);
-  const [all, setAll] = useState(false);
+function FocusBlocksSheet({ sessions, isToday, onClose, onStart }: { sessions: FocusSession[]; isToday: boolean; onClose: () => void; onStart: () => void }) {
   const ordered = [...sessions].reverse();
-  const shown = all ? ordered : ordered.slice(0, 4);
   const done = sessions.filter((s) => s.completed).length;
   const total = sessions.reduce((a, s) => a + s.actualMs, 0);
   return (
-    <section className="card stats-blocks" aria-labelledby="blocks-title">
-      <div className="card-head">
-        <div>
-          <h2 className="card-title" id="blocks-title">
-            Focus blocks
-          </h2>
+    <Sheet label="Focus blocks" onClose={onClose}>
+      <div className="stats-sheet">
+        <div className="stats-sheet-head">
+          <h2 className="title">Focus blocks</h2>
           <div className="card-sub">{sessions.length ? `${done} of ${sessions.length} completed · ${fmtDuration(total)}` : isToday ? "None yet today" : "None that day"}</div>
         </div>
-      </div>
-      {sessions.length ? (
-        <>
+        {sessions.length ? (
           <ul className="list">
-            {shown.map((s) => (
+            {ordered.map((s) => (
               <li key={s.id} className="list-row block-row">
                 <span className={cx("block-check", s.completed && "done")} aria-label={s.completed ? "Completed" : "Ended early"}>
                   {s.completed && <Check />}
@@ -817,25 +954,20 @@ function FocusBlocks({ sessions, isToday }: { sessions: FocusSession[]; isToday:
               </li>
             ))}
           </ul>
-          {sessions.length > 4 && (
-            <button className="btn btn-ghost btn-sm stats-more" onClick={() => setAll((v) => !v)} aria-expanded={all}>
-              {all ? "Show less" : `Show all ${sessions.length}`}
-            </button>
-          )}
-        </>
-      ) : (
-        <div className="empty">
-          <Buddy mood="idle" size={64} />
-          <strong>No focus blocks</strong>
-          {isToday ? "Start one from Home and it lands here with your intention." : "Nothing was timed that day."}
-          {isToday && (
-            <button className="btn btn-soft btn-sm" style={{ marginTop: 8 }} onClick={() => setView("home")}>
-              Start a block
-            </button>
-          )}
-        </div>
-      )}
-    </section>
+        ) : (
+          <div className="empty">
+            <Buddy mood="idle" size={64} />
+            <strong>No focus blocks</strong>
+            {isToday ? "Start one from Home and it lands here with your intention." : "Nothing was timed that day."}
+            {isToday && (
+              <button className="btn btn-soft btn-sm" style={{ marginTop: 8 }} onClick={onStart}>
+                Start a block
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </Sheet>
   );
 }
 
