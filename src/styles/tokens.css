@@ -19,6 +19,7 @@
   --glass: rgba(255, 255, 255, 0.72);
   --nav-glass: rgba(255, 255, 255, 0.88);
   --scrim: rgba(225, 230, 240, 0.6);
+  --switch-off: #e3e7ef;
 
   /* Lines (used sparingly — prefer space and shadow) */
   --line: rgba(17, 24, 39, 0.06);
@@ -106,6 +107,7 @@
   --glass: rgba(21, 25, 37, 0.78);
   --nav-glass: rgba(21, 25, 37, 0.9);
   --scrim: rgba(5, 7, 12, 0.6);
+  --switch-off: #2c3245;
 
   --line: rgba(255, 255, 255, 0.06);
   --line-strong: rgba(255, 255, 255, 0.11);
