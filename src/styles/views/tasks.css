@@ -16,6 +16,45 @@
   margin-top: 26px;
 }
 
+/* Two tabs always fit: let the active pill's soft shadow breathe instead of clipping it */
+.tasks-tabs .pills {
+  overflow: visible;
+}
+
+/* Top-bar avatar: planned-blocks progress ring */
+.plan-ring {
+  position: relative;
+  color: var(--brand-ink);
+}
+
+.plan-ring > svg:first-child {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.plan-ring > svg:first-child circle {
+  fill: none;
+  stroke-width: 4;
+}
+
+.plan-ring-track {
+  stroke: var(--brand-tint);
+}
+
+.plan-ring-fill {
+  stroke: var(--brand);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s var(--ease);
+}
+
+.plan-ring > svg + svg {
+  width: 20px;
+  height: 20px;
+}
+
 .tasks-side {
   display: flex;
   flex-direction: column;
@@ -111,8 +150,10 @@
 
 .task-hero-title {
   width: 100%;
+  max-width: 470px;
   margin: 0;
-  font-size: 44px;
+  text-wrap: balance;
+  font-size: 46px;
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.08;
@@ -223,6 +264,10 @@
   color: var(--on-brand-2);
 }
 
+.task-empty-cta {
+  margin-top: 14px;
+}
+
 /* ---------------------------------------------------------------- Done summary */
 
 .task-summary {
@@ -235,7 +280,11 @@
 }
 
 .task-summary .big-number {
-  font-size: 44px;
+  font-size: 56px;
+}
+
+.task-summary .big-number small {
+  font-size: 15px;
 }
 
 .task-summary-copy {
@@ -374,6 +423,17 @@
 
 .task-row + .task-row {
   border-top: 1px solid var(--line);
+}
+
+@keyframes task-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.task-row {
+  animation: task-row-in 0.4s var(--ease);
 }
 
 .task-row.is-leaving {
@@ -570,6 +630,12 @@
   box-shadow: var(--shadow-lg), 0 0 0 1px var(--line);
   animation: task-menu-in 0.18s var(--ease);
   transform-origin: top right;
+}
+
+.task-menu.up {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform-origin: bottom right;
 }
 
 @keyframes task-menu-in {

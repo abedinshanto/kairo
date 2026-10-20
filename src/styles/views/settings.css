@@ -1,0 +1,711 @@
+/* ================================================================ Settings */
+
+.settings > .display {
+  max-width: 560px;
+}
+
+/* ---------------------------------------------------------------- Top: profile + privacy hero */
+
+.set-top {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 28px;
+  align-items: stretch;
+}
+
+/* Profile (Kai + your name) */
+.set-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 32px;
+  text-align: center;
+}
+
+.set-kai {
+  display: grid;
+  place-items: center;
+  width: 164px;
+  height: 164px;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--surface) 30%, var(--brand-tint-2) 100%);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.set-profile-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 340px;
+}
+
+.set-profile .title {
+  font-size: 26px;
+}
+
+.set-profile-q {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.set-name {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.set-profile-note {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* Privacy hero */
+.set-privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 28px;
+}
+
+.set-privacy-mark {
+  position: absolute;
+  z-index: -1;
+  right: -46px;
+  top: 34px;
+  width: 250px;
+  height: 250px;
+  color: #fff;
+  opacity: 0.08;
+  stroke-width: 1.3;
+  pointer-events: none;
+}
+
+.set-privacy-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.set-privacy-shield {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--on-brand-3);
+}
+
+.set-privacy-shield svg {
+  width: 24px;
+  height: 24px;
+}
+
+.set-retention {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-pill);
+  background: var(--on-brand-3);
+  color: var(--on-brand);
+  transition: background 0.2s;
+}
+
+.set-retention:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.set-retention:focus-within {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+}
+
+.set-retention > svg {
+  position: absolute;
+  left: 15px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.set-retention select {
+  appearance: none;
+  height: 40px;
+  padding: 0 36px 0 39px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 15px center;
+  color: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.set-retention option {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.set-privacy-copy h2 {
+  max-width: 420px;
+  text-wrap: balance;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.set-privacy-copy p {
+  max-width: 430px;
+  text-wrap: pretty;
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--on-brand-2);
+}
+
+.set-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.set-facts > div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.set-facts dt {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--on-brand-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.set-facts dd {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.set-facts dd small {
+  margin-left: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--on-brand-2);
+}
+
+.set-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: -6px;
+  font-size: 12px;
+  color: var(--on-brand-2);
+}
+
+.set-path svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.set-path span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.set-privacy-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.set-export {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 6px 6px 18px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.set-export-label {
+  margin-right: 6px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.set-export .btn {
+  height: 40px;
+  padding: 0 15px;
+}
+
+.set-delete {
+  height: 52px;
+  padding: 0 20px;
+}
+
+/* ---------------------------------------------------------------- Grouped lists */
+
+.set-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px 24px;
+  align-items: start;
+  margin-top: 40px;
+}
+
+.set-col {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+}
+
+.set-group .section-title {
+  margin: 0 0 12px 4px;
+}
+
+.set-card {
+  padding: 4px 24px;
+}
+
+.set-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon text control"
+    ". below below";
+  align-items: center;
+  column-gap: 14px;
+  min-height: 80px;
+  padding: 16px 0;
+}
+
+/* Hairline between rows, inset to the text like a grouped iOS list */
+.set-row + .set-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 54px;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.set-icon {
+  grid-area: icon;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+}
+
+.set-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.set-text {
+  grid-area: text;
+  min-width: 0;
+}
+
+.set-label {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.set-desc {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+.set-control {
+  grid-area: control;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.set-below {
+  grid-area: below;
+  min-width: 0;
+  margin-top: 14px;
+}
+
+.set-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.set-foot {
+  margin: 12px 6px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* Off switches need a visible track on white cards (esp. dark theme) */
+.settings .switch:not([aria-checked="true"]) {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+:root[data-theme="dark"] .settings .switch:not([aria-checked="true"]) {
+  background: var(--ink-4);
+  box-shadow: none;
+}
+
+/* Segmented with little icons (theme) */
+.settings .segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.settings .segmented svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Chime volume */
+.set-volume {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 250px;
+}
+
+.set-volume .slider {
+  flex: 1;
+  min-width: 60px;
+}
+
+.set-volume-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--ink-3);
+}
+
+.set-volume .btn svg.fill {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+
+/* Excluded apps */
+.set-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.set-chip {
+  gap: 2px;
+  padding: 0 5px 0 14px;
+}
+
+.set-chip button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--ink-2);
+  transition: background 0.2s, color 0.2s;
+}
+
+.set-chip button:hover {
+  background: var(--surface-sunk);
+  color: var(--ink);
+}
+
+.set-chip button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------------------------------------------------------------- Footer */
+
+.set-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 48px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- Responsive */
+
+@media (max-width: 1024px) {
+  .set-top,
+  .set-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .set-cols {
+    gap: 32px;
+  }
+
+  /* Profile goes horizontal once it has the full width */
+  .set-profile {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 24px;
+    text-align: left;
+  }
+
+  .set-profile-text {
+    align-items: stretch;
+    max-width: 420px;
+  }
+
+  .set-name {
+    text-align: left;
+  }
+}
+
+@media (max-width: 760px) {
+  .set-top {
+    gap: 16px;
+    margin-top: 22px;
+  }
+
+  .set-cols {
+    gap: 28px;
+    margin-top: 32px;
+  }
+
+  .set-col {
+    gap: 28px;
+  }
+
+  /* Profile */
+  .set-profile {
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .set-kai {
+    width: 88px;
+    height: 88px;
+  }
+
+  .set-kai svg {
+    width: 68px;
+    height: 68px;
+  }
+
+  .set-profile .title {
+    font-size: 20px;
+  }
+
+  .set-profile-q {
+    margin-top: 0;
+    font-size: 13.5px;
+  }
+
+  .set-name {
+    height: 46px;
+    margin-top: 12px;
+    font-size: 15px;
+  }
+
+  .set-profile-note {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  /* Privacy hero */
+  .set-privacy {
+    gap: 18px;
+    padding: 22px;
+  }
+
+  .set-privacy-mark {
+    width: 190px;
+    height: 190px;
+    right: -50px;
+    top: 30px;
+  }
+
+  .set-privacy-shield {
+    width: 46px;
+    height: 46px;
+  }
+
+  .set-privacy-copy h2 {
+    font-size: 24px;
+  }
+
+  .set-privacy-copy p {
+    font-size: 14px;
+  }
+
+  .set-facts {
+    gap: 8px;
+  }
+
+  .set-facts > div {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .set-facts dt {
+    font-size: 11.5px;
+  }
+
+  .set-facts dd {
+    font-size: 20px;
+  }
+
+  .set-facts dd small {
+    font-size: 12px;
+  }
+
+  .set-export {
+    flex: 1;
+    padding-left: 16px;
+  }
+
+  .set-export-label {
+    margin-right: auto;
+    font-size: 13.5px;
+  }
+
+  .set-export .btn {
+    padding: 0 12px;
+  }
+
+  .set-delete {
+    width: 52px;
+    padding: 0;
+    flex: none;
+  }
+
+  .set-delete-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* Lists */
+  .set-card {
+    padding: 2px 18px;
+  }
+
+  .set-row {
+    column-gap: 12px;
+    min-height: 74px;
+    padding: 15px 0;
+  }
+
+  .set-row + .set-row::before {
+    left: 48px;
+  }
+
+  .set-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .set-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  /* Wide controls get their own line, full width under the text */
+  .set-row.wide {
+    grid-template-areas:
+      "icon text text"
+      ". control control"
+      ". below below";
+  }
+
+  .set-row.wide .set-control {
+    justify-content: stretch;
+    margin-top: 12px;
+  }
+
+  .set-row.wide .set-control > * {
+    flex: 1;
+  }
+
+  .set-row.wide .stepper {
+    justify-content: space-between;
+  }
+
+  .set-row.wide .select {
+    width: 100%;
+  }
+
+  .set-row.wide .set-btns .btn {
+    flex: 1;
+  }
+
+  .set-row.wide .set-volume {
+    width: auto;
+  }
+
+  .settings .segmented {
+    display: flex;
+    width: 100%;
+  }
+
+  .settings .segmented button {
+    flex: 1;
+    padding: 0 8px;
+  }
+
+  .set-footer {
+    margin-top: 40px;
+  }
+}

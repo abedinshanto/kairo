@@ -1,5 +1,5 @@
-import { Check, Clock, Ellipsis, Layers, Pencil, Play, Plus, RotateCcw, Timer, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Check, Clock, Ellipsis, Layers, ListChecks, Pencil, Play, Plus, RotateCcw, Timer, Trash2 } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Buddy, type BuddyMood } from "../components/Buddy";
 import { PageTitle, PillTabs, SlideToConfirm, Stepper, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
@@ -12,8 +12,23 @@ import "../styles/views/tasks.css";
 type Tab = "todo" | "done";
 
 const MAX_ESTIMATE = 12;
+const COMPOSER_ID = "task-composer-input";
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const blocksLeft = (t: Task) => Math.max(0, t.estimate - t.pomodoros);
+
+/**
+ * The hero stays put while you add tasks (both backends list newest first, so
+ * "first open task" alone would swap it out under you). Lives at module level
+ * so it also survives switching screens.
+ */
+let stickyHeroId: number | null = null;
+
+/** `#/tasks?tab=done` deep-links (and survives a reload). */
+const tabFromHash = (): Tab => (/[?&]tab=done\b/.test(window.location.hash) ? "done" : "todo");
+function writeTab(tab: Tab) {
+  const next = tab === "done" ? "#/tasks?tab=done" : "#/tasks";
+  if (window.location.hash !== next) window.history.replaceState(null, "", next);
+}
 
 // ------------------------------------------------------------------ Actions (shared by hero, rows and menus)
 
@@ -74,15 +89,26 @@ export function TasksView() {
   const timer = useApp((s) => s.timer)!;
   const focusMin = useApp((s) => s.settings.focusMinutes);
   const setView = useApp((s) => s.setView);
-  const [tab, setTab] = useState<Tab>("todo");
+  const [tab, setTabState] = useState<Tab>(tabFromHash);
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    writeTab(t);
+  };
 
   const loaded = data !== undefined;
   const all = data ?? [];
   const open = all.filter((t) => !t.done);
   const done = all.filter((t) => t.done).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
-  const hero = open.find((t) => t.id === timer.taskId) ?? open[0];
+  // Hero: the task linked to the timer, else the one already on screen, else the first open task.
+  const hero = open.find((t) => t.id === timer.taskId) ?? open.find((t) => t.id === stickyHeroId) ?? open[0];
   const rest = open.filter((t) => t !== hero);
   const left = open.reduce((a, t) => a + blocksLeft(t), 0);
+  const planned = open.reduce((a, t) => a + t.estimate, 0);
+  const progressed = open.reduce((a, t) => a + Math.min(t.pomodoros, t.estimate), 0);
+
+  useLayoutEffect(() => {
+    if (loaded) stickyHeroId = hero?.id ?? null;
+  }, [loaded, hero?.id]);
 
   const [headline, sub] = !loaded
     ? ["Tasks", "Loading your plan"]
@@ -96,10 +122,13 @@ export function TasksView() {
     <div className="tasks">
       <TopBar
         left={
-          <div style={{ minWidth: 0 }}>
-            <div className="who-name">{headline}</div>
-            <div className="who-sub">{sub}</div>
-          </div>
+          <>
+            <PlanRing done={progressed} total={planned} allDone={loaded && !open.length && done.length > 0} />
+            <div style={{ minWidth: 0 }}>
+              <div className="who-name">{headline}</div>
+              <div className="who-sub">{sub}</div>
+            </div>
+          </>
         }
         right={
           <button className="circle-btn" aria-label="Open the timer" title="Timer" onClick={() => setView("home")}>
@@ -263,8 +292,35 @@ function EmptyHero({ cleared }: { cleared: boolean }) {
         <Buddy mood={cleared ? "happy" : "idle"} tone="cloud" size={128} />
         <h2 className="task-empty-title">{cleared ? "All clear!" : "A fresh page"}</h2>
         <p className="task-empty-copy">{cleared ? "Every task is done. Add the next one whenever you're ready." : "Add a task and guess how many focus blocks it needs."}</p>
+        <button
+          type="button"
+          className="btn btn-on-brand task-empty-cta"
+          onClick={() => {
+            const input = document.getElementById(COMPOSER_ID);
+            input?.scrollIntoView({ behavior: "smooth", block: "center" });
+            input?.focus({ preventScroll: true });
+          }}
+        >
+          <Plus /> {cleared ? "Add the next one" : "Add your first task"}
+        </button>
       </div>
     </div>
+  );
+}
+
+/** Top-bar avatar: how much of the planned work is already done. */
+function PlanRing({ done, total, allDone }: { done: number; total: number; allDone: boolean }) {
+  const pct = total ? Math.min(1, done / total) : allDone ? 1 : 0;
+  const r = 24;
+  const c = 2 * Math.PI * r;
+  return (
+    <span className="buddy-avatar plan-ring" role="img" aria-label={total ? `${Math.round(pct * 100)}% of planned blocks done` : allDone ? "Everything done" : "Nothing planned"}>
+      <svg viewBox="0 0 56 56" aria-hidden>
+        <circle cx="28" cy="28" r={r} className="plan-ring-track" />
+        <circle cx="28" cy="28" r={r} className="plan-ring-fill" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} />
+      </svg>
+      {allDone ? <Check /> : <ListChecks />}
+    </span>
   );
 }
 
@@ -293,7 +349,7 @@ function DoneSummary({ tasks }: { tasks: Task[] }) {
           {focus > 0 ? `${fmtDuration(focus)} of focus across ${plural(blocks, "block")}.` : "Every one of them counts."} Lovely work.
         </p>
       </div>
-      <Buddy mood="happy" tone="blue" size={104} />
+      <Buddy mood="happy" tone="blue" size={116} />
     </div>
   );
 }
@@ -318,6 +374,7 @@ function Composer() {
     <div className="composer-wrap">
       <form className="composer" onSubmit={submit}>
         <input
+          id={COMPOSER_ID}
           className="composer-input"
           placeholder="Add a task…"
           value={title}
@@ -489,9 +546,17 @@ function TaskTitle({
 
 function TaskMenu({ task, onRename, onBrand }: { task: Task; onRename: () => void; onBrand?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
   const [estimate, setEstimate] = useState(task.estimate);
   const wrap = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
+
+  const toggle = () => {
+    // Open upwards when the floating nav would cover the menu.
+    const rect = wrap.current?.getBoundingClientRect();
+    setUp(!!rect && window.innerHeight - rect.bottom < 300 && rect.top > 300);
+    setOpen((v) => !v);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -526,12 +591,12 @@ function TaskMenu({ task, onRename, onBrand }: { task: Task; onRename: () => voi
         title="More"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
       >
         <Ellipsis />
       </button>
       {open && (
-        <div className="task-menu" role="menu" ref={menu} aria-label={task.title}>
+        <div className={cx("task-menu", up && "up")} role="menu" ref={menu} aria-label={task.title}>
           {task.done ? (
             <button type="button" role="menuitem" onClick={pick(() => void actions.setDone(task, false))}>
               <RotateCcw /> Back to To do

@@ -1,177 +1,413 @@
-import { EyeOff, RotateCcw, Search } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, EyeOff, RotateCcw, Search, Sparkles, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { PageHeader } from "../components/PageHeader";
-import { Monogram, Segmented, cx } from "../components/ui";
+import { Buddy } from "../components/Buddy";
+import { Avatar, PageTitle, PillTabs, Segmented, Sheet, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
-import { CATEGORIES, categoryLabel, defaultProductivity, entityName } from "../lib/categories";
+import { CATEGORIES, PRODUCTIVITY_LABEL, categoryLabel, defaultProductivity, entityName, productivityClass } from "../lib/categories";
 import { confirmDialog } from "../lib/dialogs";
-import { useQuery } from "../lib/hooks";
+import { useMediaQuery, useQuery } from "../lib/hooks";
 import { useApp } from "../lib/store";
 import { addDays, fmtDuration, startOfDay } from "../lib/time";
 import type { EntityTotal, Productivity } from "../lib/types";
+import "../styles/views/apps.css";
 
 type Range = 1 | 7 | 30;
 type Filter = "all" | "1" | "0" | "-1";
+type Split = Record<"1" | "0" | "-1", number>;
+
+const LEVELS: Productivity[] = [1, 0, -1];
+/** Rows shown before "Show all" (progressive disclosure keeps the screen calm). */
+const PAGE = 10;
+
+const ruleKey = (e: EntityTotal) => `${e.kind === "site" ? "site" : "app"}:${e.key}`;
+const displayName = (e: EntityTotal) => entityName(e.kind, e.key, e.name);
+const periodLabel = (r: Range) => (r === 1 ? "today" : `in the last ${r} days`);
+const fmtShare = (ms: number, total: number) => {
+  if (!total || ms <= 0) return "0%";
+  const pct = (ms / total) * 100;
+  return pct < 1 ? "<1%" : `${Math.round(pct)}%`;
+};
 
 export function AppsView() {
   const [range, setRange] = useState<Range>(7);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
-  const settings = useApp((s) => s.settings);
-  const updateSettings = useApp((s) => s.updateSettings);
-  const toast = useApp((s) => s.toast);
+  const [showAll, setShowAll] = useState(false);
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const today = startOfDay(Date.now());
   const from = addDays(today, -(range - 1));
 
-  const { data } = useQuery(async () => {
+  const { data, loading } = useQuery(async () => {
     const [entities, rules] = await Promise.all([backend.entityTotals(from, addDays(today, 1)), backend.rulesList()]);
     return { entities, rules: new Set(rules.map((r) => r.key)) };
   }, [from]);
 
-  const total = useMemo(() => (data?.entities ?? []).reduce((a, e) => a + e.ms, 0), [data]);
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (data?.entities ?? []).filter(
-      (e) =>
-        (filter === "all" || String(e.productivity) === filter) &&
-        (!q || e.name.toLowerCase().includes(q) || e.key.includes(q) || categoryLabel(e.category).toLowerCase().includes(q)),
-    );
-  }, [data, filter, query]);
+  const entities = useMemo(() => data?.entities ?? [], [data]);
 
-  const ruleKey = (e: EntityTotal) => `${e.kind === "site" ? "site" : "app"}:${e.key}`;
+  const { total, split } = useMemo(() => {
+    const split: Split = { "1": 0, "0": 0, "-1": 0 };
+    for (const e of entities) split[String(Math.sign(e.productivity)) as keyof Split] += e.ms;
+    return { total: split["1"] + split["0"] + split["-1"], split };
+  }, [entities]);
 
-  const setRule = async (e: EntityTotal, category: string, productivity: Productivity) => {
-    await backend.ruleSet({ key: ruleKey(e), category, productivity });
-    useApp.getState().bumpData();
+  const q = query.trim().toLowerCase();
+  const matched = useMemo(
+    () =>
+      entities.filter(
+        (e) =>
+          !q ||
+          e.name.toLowerCase().includes(q) ||
+          displayName(e).toLowerCase().includes(q) ||
+          e.key.toLowerCase().includes(q) ||
+          categoryLabel(e.category).toLowerCase().includes(q),
+      ),
+    [entities, q],
+  );
+
+  const counts = useMemo(() => {
+    const c: Record<Filter, number> = { all: matched.length, "1": 0, "0": 0, "-1": 0 };
+    for (const e of matched) c[String(Math.sign(e.productivity)) as Filter]++;
+    return c;
+  }, [matched]);
+
+  const rows = filter === "all" ? matched : matched.filter((e) => String(e.productivity) === filter);
+  const expanded = showAll || !!q;
+  const visible = expanded ? rows : rows.slice(0, PAGE);
+  const filtered = !!q || filter !== "all";
+  const selected = openKey ? entities.find((e) => ruleKey(e) === openKey) : undefined;
+
+  return (
+    <div className={cx("apps", loading && data && "refreshing")}>
+      <TopBar
+        left={
+          <button className="circle-btn" aria-label="Back to stats" title="Back to stats" onClick={() => useApp.getState().setView("stats")}>
+            <ChevronLeft />
+          </button>
+        }
+      />
+
+      <div className="apps-grid">
+        <div className="apps-title">
+          <PageTitle strong="Apps & sites," dim="you decide what counts." />
+        </div>
+
+        <aside className="apps-side">
+          <Summary range={range} onRange={setRange} total={total} split={split} />
+          <div className="card apps-tip">
+            <span className="icon-tile round">
+              <Sparkles />
+            </span>
+            <div>
+              <div className="card-title">Your call</div>
+              <p className="card-sub">Tap any app or site to change how it counts. Your whole history updates, right here on your device.</p>
+            </div>
+          </div>
+        </aside>
+
+        <div className="apps-controls">
+          <div className="input-wrap apps-search">
+            <Search />
+            <input
+              className="input pill"
+              type="search"
+              placeholder="Search apps, sites or categories"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search apps and sites"
+            />
+            {query && (
+              <button className="circle-btn sm soft apps-search-clear" aria-label="Clear search" onClick={() => setQuery("")}>
+                <X />
+              </button>
+            )}
+          </div>
+          <div className="apps-filters">
+            <PillTabs<Filter>
+              label="Filter by how it counts"
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "all", label: "All", count: counts.all },
+                { value: "1", label: "Productive", count: counts["1"] },
+                { value: "0", label: "Neutral", count: counts["0"] },
+                { value: "-1", label: "Distracting", count: counts["-1"] },
+              ]}
+            />
+          </div>
+        </div>
+
+        <section className="apps-list-wrap" aria-label="Apps and sites">
+          <div className="card apps-card">
+            {!data ? (
+              <div className="apps-loading" aria-busy="true" aria-label="Loading" />
+            ) : visible.length ? (
+              <>
+                <ul className="apps-list">
+                  {visible.map((e) => (
+                    <Row key={ruleKey(e)} e={e} total={total} custom={data.rules.has(ruleKey(e))} onOpen={() => setOpenKey(ruleKey(e))} />
+                  ))}
+                </ul>
+                {!expanded && rows.length > PAGE && (
+                  <div className="apps-more">
+                    <button className="btn btn-ghost btn-sm" onClick={() => setShowAll(true)}>
+                      Show all {rows.length}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="apps-empty">
+                <Buddy mood={filtered ? "idle" : "sleep"} size={96} />
+                <strong>{filtered ? "Nothing matches" : "All quiet so far"}</strong>
+                <span>{filtered ? "Try another search or filter." : "Apps and sites show up here as you use them."}</span>
+                {filtered && (
+                  <button
+                    className="btn btn-soft btn-sm"
+                    onClick={() => {
+                      setQuery("");
+                      setFilter("all");
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {selected && data && (
+        <EntitySheet e={selected} custom={data.rules.has(ruleKey(selected))} total={total} range={range} onClose={() => setOpenKey(null)} />
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ Hero summary
+
+function Summary({ range, onRange, total, split }: { range: Range; onRange: (r: Range) => void; total: number; split: Split }) {
+  const share = total ? split["1"] / total : 0;
+  const mood = !total ? "sleep" : share >= 0.5 ? "happy" : "idle";
+  const totalMin = Math.round(total / 60_000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const described = LEVELS.map((p) => `${PRODUCTIVITY_LABEL[p]} ${fmtDuration(split[String(p) as keyof Split])}`).join(", ");
+
+  return (
+    <div className="stacked">
+      <section className="card hero apps-hero" aria-label="Time summary">
+        <Segmented<Range>
+          label="Date range"
+          value={range}
+          onChange={onRange}
+          options={[
+            { value: 1, label: "Today" },
+            { value: 7, label: "7 days" },
+            { value: 30, label: "30 days" },
+          ]}
+        />
+
+        <div className="apps-hero-body">
+          <div className="apps-hero-text">
+            <span className="apps-hero-label">Tracked {periodLabel(range)}</span>
+            <div className="apps-total tabular">
+              {h > 0 && (
+                <>
+                  {h}
+                  <small>h</small>
+                </>
+              )}
+              {(m > 0 || h === 0) && (
+                <>
+                  {m}
+                  <small>m</small>
+                </>
+              )}
+            </div>
+            <span className="badge white">{total ? `${Math.round(share * 100)}% productive` : "Nothing yet"}</span>
+          </div>
+          <span className="apps-hero-buddy">
+            <Buddy mood={mood} tone="cloud" size={108} />
+          </span>
+        </div>
+
+        <div className="apps-split">
+          <div className="apps-bar" role="img" aria-label={described}>
+            {total ? (
+              LEVELS.map((p) => {
+                const ms = split[String(p) as keyof Split];
+                return ms > 0 ? (
+                  <span
+                    key={p}
+                    className={cx("apps-seg", productivityClass(p))}
+                    style={{ flexGrow: ms }}
+                    title={`${PRODUCTIVITY_LABEL[p]} · ${fmtDuration(ms)} · ${fmtShare(ms, total)}`}
+                  />
+                ) : null;
+              })
+            ) : (
+              <span className="apps-seg empty" />
+            )}
+          </div>
+          <dl className="apps-legend">
+            {LEVELS.map((p) => (
+              <div key={p}>
+                <dt>
+                  <span className={cx("swatch", productivityClass(p))} aria-hidden />
+                  {PRODUCTIVITY_LABEL[p]}
+                </dt>
+                <dd className="tabular">{fmtDuration(split[String(p) as keyof Split])}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ Row
+
+function Row({ e, total, custom, onOpen }: { e: EntityTotal; total: number; custom: boolean; onOpen: () => void }) {
+  const name = displayName(e);
+  return (
+    <li>
+      <button className="apps-row" aria-haspopup="dialog" onClick={onOpen}>
+        <Avatar name={name} productivity={e.productivity} size={46} />
+        <span className="apps-row-main">
+          <span className="apps-row-title">
+            <span className="apps-row-name">{name}</span>
+            {custom && <span className="badge brand">Custom</span>}
+          </span>
+          <span className="apps-row-sub">
+            {categoryLabel(e.category)} · {e.kind === "site" ? "Site" : "App"}
+            <span className="sr-only">, {PRODUCTIVITY_LABEL[e.productivity]}</span>
+          </span>
+        </span>
+        <span className="apps-row-trail">
+          <span className="apps-row-time tabular">{fmtDuration(e.ms)}</span>
+          <span className="apps-row-pct tabular">{fmtShare(e.ms, total)}</span>
+        </span>
+        <ChevronRight className="apps-row-chev" aria-hidden />
+      </button>
+    </li>
+  );
+}
+
+// ------------------------------------------------------------------ Detail sheet
+
+function EntitySheet({ e, custom, total, range, onClose }: { e: EntityTotal; custom: boolean; total: number; range: Range; onClose: () => void }) {
+  const toast = useApp((s) => s.toast);
+  const phone = useMediaQuery("(max-width: 760px)");
+  const [busy, setBusy] = useState(false);
+  const name = displayName(e);
+  const key = ruleKey(e);
+
+  const run = async (fn: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await fn();
+      useApp.getState().bumpData();
+    } catch (err) {
+      toast({ title: "Couldn't save that change", body: String(err), tone: "warning" });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const exclude = async (e: EntityTotal) => {
-    const name = entityName(e.kind, e.key, e.name);
+  const setRule = (category: string, productivity: Productivity) => {
+    if (category === e.category && productivity === e.productivity) return;
+    void run(() => backend.ruleSet({ key, category, productivity }));
+  };
+
+  const reset = () => void run(() => backend.ruleDelete(key));
+
+  const exclude = async () => {
     const ok = await confirmDialog(`Stop tracking ${name} and permanently delete its history from this device?`, {
       title: "Exclude app",
       okLabel: "Exclude & delete",
       destructive: true,
     });
     if (!ok) return;
-    updateSettings({ excludedApps: [...settings.excludedApps, e.key.toLowerCase()] });
+    const { settings, updateSettings } = useApp.getState();
+    const id = e.key.toLowerCase();
+    if (!settings.excludedApps.includes(id)) updateSettings({ excludedApps: [...settings.excludedApps, id] });
+    onClose();
     toast({ title: `${name} excluded`, body: "Its history was deleted. You can re-enable it in Settings.", tone: "success" });
     window.setTimeout(() => useApp.getState().bumpData(), 600);
   };
 
+  const where = e.kind === "site" ? `${e.key} in ${e.appName}` : "App";
+
   return (
-    <div>
-      <PageHeader
-        title="Apps & Sites"
-        subtitle="Choose what counts as productive. Changes apply to your whole history."
-        actions={
-          <Segmented<Range>
-            label="Date range"
-            value={range}
-            onChange={setRange}
-            options={[
-              { value: 1, label: "Today" },
-              { value: 7, label: "7 days" },
-              { value: 30, label: "30 days" },
-            ]}
-          />
-        }
-      />
+    <Sheet label={`${name} details`} onClose={onClose}>
+      <div className={cx("apps-sheet", busy && "busy")}>
+        <header className="apps-sheet-head">
+          <Avatar name={name} productivity={e.productivity} size={phone ? 60 : 72} />
+          <h2 className="title apps-sheet-name">{name}</h2>
+          <p className="apps-sheet-where">
+            {where} · {e.visits} visit{e.visits === 1 ? "" : "s"}
+          </p>
+          <div className="apps-sheet-time tabular">{fmtDuration(e.ms)}</div>
+          <p className="apps-sheet-period">
+            {periodLabel(range)} · {fmtShare(e.ms, total)} of your time
+          </p>
+        </header>
 
-      <div className="filter-row">
-        <div className="input-icon" style={{ flex: "1 1 220px", maxWidth: 340 }}>
-          <Search />
-          <input className="input" placeholder="Search apps, sites, categories" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search" />
-        </div>
-        <Segmented<Filter>
-          label="Filter by productivity"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "all", label: "All" },
-            { value: "1", label: "Productive" },
-            { value: "0", label: "Neutral" },
-            { value: "-1", label: "Distracting" },
-          ]}
-        />
-      </div>
-
-      <div className="card flush">
-        {rows.length ? (
-          <ul className="app-table">
-            {rows.map((e) => {
-              const custom = data?.rules.has(ruleKey(e));
+        <section aria-labelledby="apps-counts-as">
+          <h3 className="apps-sheet-label" id="apps-counts-as">
+            Counts as
+          </h3>
+          <div className="apps-levels" role="group" aria-labelledby="apps-counts-as">
+            {LEVELS.map((p) => {
+              const on = e.productivity === p;
               return (
-                <li key={ruleKey(e)} className="app-row">
-                  <Monogram name={entityName(e.kind, e.key, e.name)} kind={e.kind} productivity={e.productivity} />
-                  <div className="app-name-col">
-                    <div className="app-name">
-                      {entityName(e.kind, e.key, e.name)}
-                      {custom && <span className="badge accent">Custom</span>}
-                    </div>
-                    <div className="faint app-sub">
-                      {e.kind === "site" ? `${e.key} · in ${e.appName}` : "App"} · {e.visits} visit{e.visits === 1 ? "" : "s"}
-                    </div>
-                  </div>
-                  <select
-                    className="select app-cat"
-                    aria-label={`Category for ${e.name}`}
-                    value={e.category}
-                    onChange={(ev) => void setRule(e, ev.target.value, defaultProductivity(ev.target.value))}
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="prod-toggle" role="group" aria-label={`Productivity for ${e.name}`}>
-                    {([1, 0, -1] as Productivity[]).map((p) => (
-                      <button
-                        key={p}
-                        className={cx("prod-btn", p > 0 ? "productive" : p < 0 ? "distracting" : "neutral", e.productivity === p && "on")}
-                        aria-pressed={e.productivity === p}
-                        title={p > 0 ? "Productive" : p < 0 ? "Distracting" : "Neutral"}
-                        onClick={() => void setRule(e, e.category, p)}
-                      >
-                        {p > 0 ? "Productive" : p < 0 ? "Distracting" : "Neutral"}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="app-time">
-                    <span className="tabular">{fmtDuration(e.ms)}</span>
-                    <span className="faint tabular">{total ? `${Math.round((e.ms / total) * 100)}%` : ""}</span>
-                  </div>
-                  <div className="app-actions">
-                    {custom && (
-                      <button
-                        className="icon-btn sm"
-                        aria-label="Reset to default"
-                        title="Reset to default"
-                        onClick={async () => {
-                          await backend.ruleDelete(ruleKey(e));
-                          useApp.getState().bumpData();
-                        }}
-                      >
-                        <RotateCcw />
-                      </button>
-                    )}
-                    {e.kind === "app" && (
-                      <button className="icon-btn sm" aria-label="Exclude from tracking" title="Exclude from tracking" onClick={() => void exclude(e)}>
-                        <EyeOff />
-                      </button>
-                    )}
-                  </div>
-                </li>
+                <button key={p} className={cx("apps-level", productivityClass(p))} aria-pressed={on} disabled={busy} onClick={() => setRule(e.category, p)}>
+                  {on ? <Check /> : <span className="apps-level-dot" aria-hidden />}
+                  {PRODUCTIVITY_LABEL[p]}
+                </button>
               );
             })}
-          </ul>
-        ) : (
-          <div className="empty">
-            <strong>{query || filter !== "all" ? "No matches" : "Nothing tracked in this period"}</strong>
-            {query || filter !== "all" ? "Try a different search or filter." : "Apps and sites show up here as you use them."}
+          </div>
+          <p className="apps-sheet-note">Changes apply to your whole history.</p>
+        </section>
+
+        <section aria-labelledby="apps-category">
+          <h3 className="apps-sheet-label" id="apps-category">
+            Category
+          </h3>
+          <div className="apps-cats" role="group" aria-labelledby="apps-category">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                className={cx("chip", "apps-cat", e.category === c.id && "active")}
+                aria-pressed={e.category === c.id}
+                disabled={busy}
+                onClick={() => setRule(c.id, defaultProductivity(c.id))}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {(custom || e.kind === "app") && (
+          <div className="apps-sheet-actions">
+            {custom && (
+              <button className="btn btn-soft" disabled={busy} onClick={reset}>
+                <RotateCcw /> Reset to default
+              </button>
+            )}
+            {e.kind === "app" && (
+              <button className="btn btn-danger" disabled={busy} onClick={() => void exclude()}>
+                <EyeOff /> Exclude & delete history
+              </button>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </Sheet>
   );
 }
