@@ -154,39 +154,39 @@
 
 .stacked.phase-short_break::before,
 .stacked.phase-short_break::after {
-  background: var(--phase-short-solid);
+  background: var(--phase-short-hi);
 }
 
 .stacked.phase-long_break::before,
 .stacked.phase-long_break::after {
-  background: var(--phase-long-solid);
+  background: var(--phase-long-hi);
 }
 
 /* Dark: solid steps toward the canvas, so the peeking cards never turn muddy */
 :root[data-theme="dark"] .stacked::before,
 :root[data-theme="dark"] .stacked::after {
   opacity: 1;
-  background: color-mix(in oklab, var(--brand) 30%, var(--canvas));
+  background: var(--stack-1);
 }
 
 :root[data-theme="dark"] .stacked::after {
-  background: color-mix(in oklab, var(--brand) 55%, var(--canvas));
+  background: var(--stack-2);
 }
 
 :root[data-theme="dark"] .stacked.phase-short_break::before {
-  background: color-mix(in oklab, var(--phase-short-solid) 30%, var(--canvas));
+  background: var(--stack-short-1);
 }
 
 :root[data-theme="dark"] .stacked.phase-short_break::after {
-  background: color-mix(in oklab, var(--phase-short-solid) 55%, var(--canvas));
+  background: var(--stack-short-2);
 }
 
 :root[data-theme="dark"] .stacked.phase-long_break::before {
-  background: color-mix(in oklab, var(--phase-long-solid) 30%, var(--canvas));
+  background: var(--stack-long-1);
 }
 
 :root[data-theme="dark"] .stacked.phase-long_break::after {
-  background: color-mix(in oklab, var(--phase-long-solid) 55%, var(--canvas));
+  background: var(--stack-long-2);
 }
 
 /* Focus rings stay visible on coloured cards */
@@ -270,6 +270,11 @@
 /* "See all"-style links in card headers */
 .btn.card-link {
   color: var(--brand-ink);
+}
+
+/* Text lines up with the card's right content edge; the padding only shows on hover */
+.card-head > .btn.card-link {
+  margin-right: -16px;
 }
 
 .btn.card-link:hover:not(:disabled) {
@@ -417,6 +422,7 @@
 /* ================================================================ Pill tabs */
 
 .pills {
+  position: relative;
   display: flex;
   gap: 10px;
   overflow-x: auto;
@@ -437,6 +443,7 @@
 }
 
 .pill {
+  position: relative;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -840,7 +847,7 @@
 
 :root[data-theme="dark"] .stepper button,
 :root[data-theme="dark"] .segmented button[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--ink) 12%, var(--surface-soft));
+  background: var(--control-lifted);
   box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 
@@ -1389,10 +1396,12 @@
     inset: -8px -4px;
   }
 
-  /* iOS zooms into inputs under 16px */
-  .input,
-  textarea,
-  select {
+  /* iOS zooms into inputs under 16px; :root :is() outranks the view-level sizes */
+  textarea {
+    font-size: 16px;
+  }
+
+  :root :is(.input, .select, select) {
     font-size: 16px;
   }
 }

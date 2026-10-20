@@ -31,6 +31,11 @@ const fmtShare = (ms: number, total: number) => {
 export function AppsView() {
   // Stats links here with its range (#/apps?r=30)
   const [range, setRange] = useState<Range>(() => (/[?&]r=30\b/.test(window.location.hash) ? 30 : /[?&]r=1\b/.test(window.location.hash) ? 1 : 7));
+  // Keep the hash in step so a reload keeps the chosen range.
+  const pickRange = (r: Range) => {
+    setRange(r);
+    window.history.replaceState(null, "", r === 7 ? "#/apps" : `#/apps?r=${r}`);
+  };
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
@@ -93,7 +98,7 @@ export function AppsView() {
         </div>
 
         <aside className="apps-side">
-          <Summary range={range} onRange={setRange} total={total} split={split} />
+          <Summary range={range} onRange={pickRange} total={total} split={split} />
         </aside>
 
         <div className="apps-controls">

@@ -471,8 +471,9 @@ function Hero({ model, onScore }: { model: Model | undefined; onScore: () => voi
 
         <div className="stats-hero-split">
           <ProportionBar p={split[0].ms} n={split[1].ms} d={split[2].ms} height={10} onBrand />
+          {/* The white segment is the headline above, so the legend names only the rest. */}
           <dl className="stats-hero-legend">
-            {split.map((s) => (
+            {split.slice(1).map((s) => (
               <div key={s.name}>
                 <dt>
                   <span className="swatch" style={{ background: s.color }} />

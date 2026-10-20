@@ -25,6 +25,7 @@
 }
 
 .scroll {
+  position: relative;
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
@@ -187,6 +188,8 @@
 }
 
 .nav-item.active {
+  /* fixed minimum so the nav keeps one width on every tab */
+  min-width: 134px;
   padding: 0 24px 0 20px;
   background: var(--brand);
   color: var(--on-brand);
@@ -272,6 +275,7 @@
   }
 
   .nav-item.active {
+    min-width: 122px;
     padding: 0 18px 0 15px;
   }
 
@@ -302,6 +306,24 @@
 
   .card.hero {
     border-radius: 34px;
+  }
+}
+
+/* Small phones (360dp): slimmer items so the nav keeps a gutter on both sides */
+@media (max-width: 380px) {
+  .nav {
+    gap: 4px;
+  }
+
+  .nav-item {
+    min-width: 46px;
+    height: 48px;
+    padding: 0 12px;
+  }
+
+  .nav-item.active {
+    min-width: 110px;
+    padding: 0 15px 0 13px;
   }
 }
 

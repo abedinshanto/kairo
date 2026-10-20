@@ -2,9 +2,8 @@ import { ChartColumn, Headphones, House, ListChecks, Settings as SettingsIcon, S
 import { useEffect, type ReactNode } from "react";
 import { Toasts, cx } from "./components/ui";
 import { isNative } from "./lib/backend";
-import { confirmDialog } from "./lib/dialogs";
 import { useMediaQuery } from "./lib/hooks";
-import { TAB_VIEWS, useApp, type View } from "./lib/store";
+import { TAB_VIEWS, skipPhase, useApp, type View } from "./lib/store";
 import { AppsView } from "./views/AppsView";
 import { HomeView } from "./views/HomeView";
 import { Onboarding } from "./views/Onboarding";
@@ -46,7 +45,7 @@ function useShortcuts() {
         e.preventDefault();
         return;
       }
-      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (typing || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
       if (e.key === "Escape" && st.deepFocus) st.setDeepFocus(false);
       if (st.view !== "home") return;
       if (e.code === "Space" && !el.closest("button, [role=button]")) {
@@ -55,15 +54,7 @@ function useShortcuts() {
       } else if (e.key === "f") {
         st.setDeepFocus(!st.deepFocus);
       } else if (e.key === "s") {
-        // A stray keypress shouldn't throw away a focus block that's under way.
-        const t = st.timer;
-        if (t?.phase === "focus" && t.startedAt !== null) {
-          void confirmDialog("The time so far won't count as a finished block.", { title: "Skip this focus block?", okLabel: "Skip" }).then(
-            (ok) => ok && void st.timerAction("skip"),
-          );
-        } else {
-          void st.timerAction("skip");
-        }
+        void skipPhase();
       }
     };
     window.addEventListener("keydown", onKey);

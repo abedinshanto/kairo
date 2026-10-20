@@ -55,6 +55,9 @@
   --phase-short-shadow: 0 30px 60px -22px rgba(8, 128, 95, 0.5);
   --phase-long: linear-gradient(155deg, #7a5cf0 0%, #6d4ae8 50%, #5537cc 100%);
   --phase-long-solid: #6d4ae8;
+  /* Lighter tints for the cards peeking behind a break hero (the break twin of --brand-hi) */
+  --phase-short-hi: #12a87e;
+  --phase-long-hi: #8f78ff;
   --phase-long-shadow: 0 30px 60px -22px rgba(109, 74, 232, 0.5);
 
   /* Data (validated: blue ↔ coral with a neutral gray between) */
@@ -150,6 +153,14 @@
   --good-ink: #4ade80;
   --warn-ink: #ff8a6b;
   --danger-ink: #f87171;
+  /* Peeking cards behind heroes, and lifted controls (plain hex: no color-mix needed) */
+  --stack-1: #1d2c51;
+  --stack-2: #2d478b;
+  --stack-short-1: #132c29;
+  --stack-short-2: #16483c;
+  --stack-long-1: #24204c;
+  --stack-long-2: #3d2f80;
+  --control-lifted: #353948;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 12px 32px -10px rgba(0, 0, 0, 0.55);

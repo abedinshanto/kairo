@@ -714,6 +714,22 @@ h2.task-hero-title {
   min-width: 30px;
 }
 
+@media (pointer: coarse) {
+  .task-menu-est .stepper {
+    height: 52px;
+  }
+
+  .task-menu-est .stepper button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* The hero's white focus ring would vanish inside the white task menu */
+.task-hero .task-menu :focus-visible {
+  outline-color: var(--brand);
+}
+
 /* ---------------------------------------------------------------- Responsive */
 
 @media (max-width: 1024px) {

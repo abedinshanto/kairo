@@ -212,8 +212,8 @@
 /* Same anatomy as the Apps & sites hero: swatch + label, value underneath, three columns. */
 .stats-hero-legend {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, max-content);
+  gap: 12px 32px;
   margin: 0;
 }
 

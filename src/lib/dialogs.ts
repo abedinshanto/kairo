@@ -11,5 +11,5 @@ export async function confirmDialog(message: string, opts: { title?: string; okL
       cancelLabel: "Cancel",
     });
   }
-  return window.confirm(message);
+  return window.confirm(opts.title ? `${opts.title}\n\n${message}` : message);
 }

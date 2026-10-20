@@ -404,6 +404,17 @@
   font-size: 15px;
 }
 
+@media (pointer: coarse) {
+  .onb-goal .stepper {
+    height: 54px;
+  }
+
+  .onb-goal .stepper button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 /* Platform notes */
 .onb-permission {
   display: flex;

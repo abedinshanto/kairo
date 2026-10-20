@@ -27,7 +27,7 @@ The UI was rebuilt to feel calm, clean and premium, following the owner's refere
 - Canvas `--canvas`; surfaces `--surface` (white cards), `--surface-soft`, `--surface-sunk`, `--surface-tint`, `--brand-tint`, `--brand-tint-2`.
 - Ink `--ink`, `--ink-2` (secondary; **all small text**, ≥4.5:1 on canvas and cards), `--ink-3` (icons and the dim half of large titles only), `--ink-4` (disabled/outline).
 - Brand `--brand` (#2058F5), `--brand-hi`, `--brand-deep`, `--brand-ink` (text on tint), hero fill `--hero` + `--hero-shadow`.
-- Phase fills `--phase-short`, `--phase-long` (+ `-solid`, `-shadow`). Every stop of every hero fill keeps white text at ≥4.5:1.
+- Phase fills `--phase-short`, `--phase-long` (+ `-solid`, `-hi` for peeking cards, `-shadow`). Every stop of every hero fill keeps white text at ≥4.5:1.
 - Glass on hero cards: `--hero-glass` / `--hero-glass-hover` (navy, so white labels keep their contrast). Never put white-on-white glass on a coloured card.
 - Data: `--productive` (blue), `--neutral` (gray), `--distracting` (coral, `--distracting-tint`). Validated for colour-blind separation in both themes.
 - Status: `--good`/`--good-tint`, `--warn`, `--danger`/`--danger-tint`; text on those tints uses `--good-ink`, `--warn-ink`, `--danger-ink`.
@@ -44,6 +44,8 @@ CSS classes (`src/styles/ui.css`, `src/styles/shell.css`):
 
 - Type: `.display` (40px two-tone, `.dim` span), `.title` (22px), `.label` (13px gray), `.big-number` (+ `<small>` unit), `.muted`, `.faint`.
 - Cards: `.card` (white, 32px), `.card.soft`, `.card.tint` (pale blue), `.card.hero` (royal blue gradient, white text, sheen), `.card.flush`, `.card-head`, `.card-title`, `.card-sub`. Wrap a hero in `<div className="stacked">` for the peeking cards behind it.
+- **Soundscape art is the one place colour families mix.** Preset tiles and the mix thumbnail use soft pastels (`.art-*`, `.sounds .preset.art-*`), like album art. Nowhere else.
+- **Say it once.** A number, state or action appears once per viewport: no hero legend repeating the headline, no second play button for the same thing, no badge restating a progress bar.
 - **One coloured hero per app, not per screen.** The stacked blue hero belongs to the moment that matters (the timer on Home, the current task on Tasks, Stats' headline number). Secondary screens (Apps, Settings) use white or tint cards.
 - Header links ("See all", "All tasks", "Show more"): `.btn.btn-ghost.btn-sm.card-link`.
 - Buttons: `.btn` + `.btn-primary | .btn-dark | .btn-soft | .btn-ghost | .btn-danger | .btn-on-brand | .btn-glass`, `.btn-sm`, `.btn-block`.

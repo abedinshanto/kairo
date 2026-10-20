@@ -9,7 +9,6 @@ import {
   Droplets,
   Flame,
   Headphones,
-  Layers,
   Moon,
   Orbit,
   Pause,
@@ -87,7 +86,9 @@ export function SoundsView() {
       <TopBar
         left={
           <>
-            <span className={cx("art sounds-thumb", `art-${preset?.id ?? "custom"}`)} aria-hidden />
+            <span className={cx("art sounds-thumb", `art-${preset?.id ?? "custom"}`)} aria-hidden>
+              {playing ? <Equalizer /> : ((preset && PRESET_ICONS[preset.id]) ?? <Headphones />)}
+            </span>
             <div style={{ minWidth: 0 }}>
               <div className="who-name">{preset?.name ?? (active.length ? "Your own mix" : "Nothing playing")}</div>
               <div className="who-sub">
@@ -96,16 +97,6 @@ export function SoundsView() {
               </div>
             </div>
           </>
-        }
-        right={
-          <button
-            className={cx("circle-btn", playing && "brand")}
-            aria-label={playing ? "Pause soundscape" : "Play soundscape"}
-            disabled={!active.length}
-            onClick={() => void soundEngine.toggle()}
-          >
-            {playing ? <Pause className="fill" /> : <Play className="fill" />}
-          </button>
         }
       />
       <PageTitle strong="Soundscapes," dim="tune out the noise." />
@@ -116,19 +107,6 @@ export function SoundsView() {
           <div className="sky-scenery" aria-hidden>
             <Cloud className="sky-bank left" />
             <Cloud className="sky-bank right" />
-          </div>
-
-          <div className="sky-top">
-            <span className="sky-chip">
-              {playing ? <Equalizer /> : <Moon />}
-              {playing ? "Now playing" : active.length ? "Paused" : "Quiet"}
-            </span>
-            {active.length > 0 && (
-              <span className="sky-chip">
-                <Layers />
-                {active.length} sound{active.length === 1 ? "" : "s"}
-              </span>
-            )}
           </div>
 
           <div className="sky-kai">

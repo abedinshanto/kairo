@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { soundEngine, type SoundId } from "./audio/engine";
 import { backend } from "./backend";
 import { DEFAULT_SETTINGS, withDefaults } from "./defaults";
+import { confirmDialog } from "./dialogs";
 import type { Phase, Settings, SoundPrefs, TimerAction, TimerSnapshot, TrackerStatus } from "./types";
 
 export type View = "home" | "stats" | "sounds" | "tasks" | "settings" | "apps";
@@ -207,6 +208,20 @@ function onTimer(prev: TimerSnapshot | null, next: TimerSnapshot) {
 }
 
 /** Remaining time for a snapshot at the current instant. */
+/**
+ * Skip to the next phase. A focus block that's under way asks first, because the time
+ * so far won't count as a finished block; nothing happens if the block changed meanwhile.
+ */
+export async function skipPhase(): Promise<void> {
+  const t = useApp.getState().timer;
+  if (t?.phase === "focus" && t.startedAt !== null) {
+    const ok = await confirmDialog("The time so far won't count as a finished block.", { title: "Skip this focus block?", okLabel: "Skip" });
+    const now = useApp.getState().timer;
+    if (!ok || now?.phase !== "focus" || now.startedAt !== t.startedAt) return;
+  }
+  await useApp.getState().timerAction("skip");
+}
+
 export function remainingNow(t: TimerSnapshot, skew: number): number {
   if (t.status !== "running" || t.endsAt === null) return t.remainingMs;
   return Math.max(0, t.endsAt - (Date.now() - skew));

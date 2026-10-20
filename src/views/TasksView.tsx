@@ -1,4 +1,4 @@
-import { Check, Clock, Ellipsis, Layers, ListChecks, Pencil, Play, Plus, RotateCcw, Timer, Trash2 } from "lucide-react";
+import { Check, Clock, Ellipsis, ListChecks, Pencil, Play, Plus, RotateCcw, Timer, Trash2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Buddy, type BuddyMood } from "../components/Buddy";
 import { PageTitle, PillTabs, SlideToConfirm, Stepper, TopBar, cx } from "../components/ui";
@@ -181,9 +181,6 @@ export function TasksView() {
                   <div className="card task-card">
                     <div className="task-card-head">
                       <div className="card-title">Up next</div>
-                      <div className="card-sub">
-                        {plural(rest.length, "more task")} · {plural(rest.reduce((a, t) => a + blocksLeft(t), 0), "block")} left
-                      </div>
                     </div>
                     <ul className="task-list">
                       {rest.map((t) => (
@@ -243,18 +240,15 @@ function HeroTask({ task }: { task: Task }) {
         </div>
 
         <div className="task-hero-text">
-          <div className="task-hero-tags">
-            <span className="badge white">
-              <Layers />
-              {plural(task.estimate, "block")}
-            </span>
-            {inFocus && (
+          {/* The block bar below carries the estimate; the tag only marks a task the timer is on. */}
+          {inFocus && (
+            <div className="task-hero-tags">
               <span className="badge glass">
                 <span className="live-dot" aria-hidden />
                 In focus
               </span>
-            )}
-          </div>
+            </div>
+          )}
           <TaskTitle task={task} editing={editing} setEditing={setEditing} variant="hero" />
         </div>
 

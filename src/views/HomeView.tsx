@@ -27,8 +27,8 @@ import { PRESETS, SOUNDS, soundEngine, type SoundId } from "../lib/audio/engine"
 import { backend, isNative } from "../lib/backend";
 import { entityName } from "../lib/categories";
 import { confirmDialog } from "../lib/dialogs";
-import { useNow, useQuery } from "../lib/hooks";
-import { remainingNow, useApp } from "../lib/store";
+import { useMediaQuery, useNow, useQuery } from "../lib/hooks";
+import { remainingNow, skipPhase, useApp } from "../lib/store";
 import { addDays, DAY, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
 import type { Phase, TimerSnapshot } from "../lib/types";
 import "../styles/views/home.css";
@@ -76,7 +76,8 @@ export function HomeView() {
   const deep = useApp((s) => s.deepFocus);
   const settings = useApp((s) => s.settings);
   const tracker = useApp((s) => s.tracker);
-  const playing = useApp((s) => s.soundPlaying);
+  // Phones get short mode labels so all three pills fit without scrolling.
+  const narrow = useMediaQuery("(max-width: 420px)");
   const { setPhase, setDeepFocus, setView } = useApp.getState();
   const running = timer.status === "running";
   useNow(250, running);
@@ -149,20 +150,9 @@ export function HomeView() {
           </>
         }
         right={
-          <>
-            <button
-              className={cx("circle-btn", playing && "brand")}
-              aria-label={playing ? "Pause soundscape" : "Play soundscape"}
-              title="Soundscape"
-              onClick={() => void soundEngine.toggle()}
-              disabled={!soundEngine.hasMix}
-            >
-              <Headphones />
-            </button>
-            <button className="circle-btn" aria-label="Deep focus mode" title="Deep focus (F)" onClick={() => setDeepFocus(true)}>
-              <Maximize2 />
-            </button>
-          </>
+          <button className="circle-btn" aria-label="Deep focus mode" title="Deep focus (F)" onClick={() => setDeepFocus(true)}>
+            <Maximize2 />
+          </button>
         }
       />
 
@@ -176,8 +166,8 @@ export function HomeView() {
               onChange={(p) => void pickPhase(p)}
               options={[
                 { value: "focus", label: "Focus", count: minutes(settings.focusMinutes) },
-                { value: "short_break", label: "Short break", count: minutes(settings.shortBreakMinutes) },
-                { value: "long_break", label: "Long break", count: minutes(settings.longBreakMinutes) },
+                { value: "short_break", label: narrow ? "Short" : "Short break", count: minutes(settings.shortBreakMinutes) },
+                { value: "long_break", label: narrow ? "Long" : "Long break", count: minutes(settings.longBreakMinutes) },
               ]}
             />
           </div>
@@ -255,17 +245,20 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
         {timer.phase === "focus" ? <Intention /> : <p className="timer-rest">Stand up, stretch, and look at something far away. Your next block will be sharper for it.</p>}
 
         <div className="timer-controls">
-          <div className="timer-secondary">
-            <button className="circle-btn glass" aria-label="Reset" title="Reset" disabled={timer.startedAt === null} onClick={() => void timerAction("stop")}>
-              <RotateCcw />
-            </button>
-            <button className="btn btn-glass" onClick={() => void extend(5)}>
-              <Plus /> 5 min
-            </button>
-            <button className="circle-btn glass" aria-label="Skip to next phase" title="Skip (S)" onClick={() => void timerAction("skip")}>
-              <SkipForward />
-            </button>
-          </div>
+          {/* Reset, +5 and skip only matter once a block is under way; idle shows just time, intention and play. */}
+          {timer.startedAt !== null && (
+            <div className="timer-secondary">
+              <button className="circle-btn glass" aria-label="Reset" title="Reset" onClick={() => void timerAction("stop")}>
+                <RotateCcw />
+              </button>
+              <button className="btn btn-glass" onClick={() => void extend(5)}>
+                <Plus /> 5 min
+              </button>
+              <button className="circle-btn glass" aria-label="Skip to next phase" title="Skip (S)" onClick={() => void skipPhase()}>
+                <SkipForward />
+              </button>
+            </div>
+          )}
           <button className="circle-btn on-brand xl play" aria-label={running ? "Pause" : "Start"} title="Start / pause (Space)" onClick={() => void timerAction("toggle")}>
             {running ? <Pause className="fill" /> : <Play className="fill" />}
           </button>

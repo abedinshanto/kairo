@@ -1,11 +1,11 @@
-import { ChevronRight, FileJson, FileSpreadsheet, Monitor, Moon, Play, ShieldCheck, Sun, Trash2, Volume1, X } from "lucide-react";
+import { ChevronRight, FileJson, FileSpreadsheet, Monitor, Moon, Play, Settings as SettingsIcon, ShieldCheck, Sun, Trash2, Volume1, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { PageTitle, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
 import { soundEngine } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
 import { confirmDialog } from "../lib/dialogs";
-import { useQuery } from "../lib/hooks";
+import { useMediaQuery, useQuery } from "../lib/hooks";
 import { isMac, isMobileOS, os, shortcutLabel } from "../lib/platform";
 import { useApp } from "../lib/store";
 import { fmtDuration, fmtShortDay, fmtTime } from "../lib/time";
@@ -79,8 +79,6 @@ function Row({
 
 // ------------------------------------------------------------------ View
 
-const resolvedTheme = () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
-
 export function SettingsView() {
   const s = useApp((st) => st.settings);
   const update = useApp((st) => st.updateSettings);
@@ -89,6 +87,10 @@ export function SettingsView() {
   const [autostart, setAutostart] = useState<boolean | null>(null);
   const { data: info } = useQuery(() => backend.dataInfo(), []);
   const desktop = !isMobileOS;
+  // Resolve the theme from settings (not the DOM, which updates after render).
+  const prefersLight = useMediaQuery("(prefers-color-scheme: light)");
+  const pref = s.theme ?? "light";
+  const theme = pref === "system" ? (prefersLight ? "light" : "dark") : pref;
 
   useEffect(() => {
     backend.autostartEnabled().then(setAutostart).catch(() => setAutostart(null));
@@ -102,22 +104,22 @@ export function SettingsView() {
         left={
           <>
             <span className="buddy-avatar set-topmark" aria-hidden>
-              <ShieldCheck />
+              <SettingsIcon />
             </span>
             <div style={{ minWidth: 0 }}>
               <div className="who-name">Kairo</div>
-              <div className="who-sub">Private · stored on this device</div>
+              <div className="who-sub">Timer, tracking and appearance</div>
             </div>
           </>
         }
         right={
           <button
             className="circle-btn"
-            aria-label={`Switch to ${resolvedTheme() === "dark" ? "light" : "dark"} theme`}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             title="Theme"
-            onClick={() => update({ theme: resolvedTheme() === "dark" ? "light" : "dark" })}
+            onClick={() => update({ theme: theme === "dark" ? "light" : "dark" })}
           >
-            {resolvedTheme() === "dark" ? <Sun /> : <Moon />}
+            {theme === "dark" ? <Sun /> : <Moon />}
           </button>
         }
       />
@@ -357,7 +359,7 @@ function ProfileCard() {
           onChange={(e) => update({ name: e.target.value })}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
         />
-        <p className="set-profile-note">Only used for greetings. It stays on this device.</p>
+        <p className="set-profile-note">Only used for greetings.</p>
       </div>
     </section>
   );
@@ -377,10 +379,6 @@ function PrivacyCard({ info }: { info: DataInfo | undefined }) {
   return (
     <section className="card tint set-privacy" aria-labelledby="set-privacy-title">
       <ShieldCheck className="set-privacy-mark" aria-hidden />
-
-      <span className="set-privacy-shield" aria-hidden>
-        <ShieldCheck />
-      </span>
 
       <div className="set-privacy-copy">
         <h2 id="set-privacy-title">Your data never leaves this device</h2>
