@@ -867,7 +867,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
             {entities.length} used {dayMode ? "that day" : `in ${model?.n} days`}
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={onSeeAll}>
+        <button className="btn btn-ghost btn-sm card-link" onClick={onSeeAll}>
           See all
         </button>
       </div>

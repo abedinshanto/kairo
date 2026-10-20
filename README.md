@@ -10,7 +10,7 @@ macOS · Windows · Linux · Android · iOS
 
 </div>
 
-![Kairo focus timer](docs/screenshots/focus.png)
+![Kairo home: focus timer, today's progress, soundscape and next tasks](docs/screenshots/home.png)
 
 Kairo combines a Pomodoro-style focus timer with automatic time tracking across your apps and websites. It then turns that history into plain-language insights: your sharpest hours, when distractions peak, and which apps cost you the most time. Everything is stored in a local SQLite database. Kairo has no account, no cloud and no analytics, and it never makes a network request.
 
@@ -19,6 +19,8 @@ Kairo combines a Pomodoro-style focus timer with automatic time tracking across 
 **Focus**
 - Focus, short break and long break phases. Long breaks come every *n* blocks, breaks and focus can start automatically, and you can add 5 minutes on the fly.
 - Set an intention for each block and link it to a task, so blocks count toward the work they were for.
+- **Kai**, a small focus buddy, keeps you company. Its face follows the timer: curious when idle, content while you focus and blissful on breaks.
+- **Tasks** are planned in focus blocks. The current task sits on its own card with a progress bar per block, and you slide to mark it done.
 - The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu has start, pause, skip, reset and break controls.
 - **Global shortcut** (default <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>Space</kbd>) starts or pauses the timer from any app.
 - **Deep focus mode** (<kbd>F</kbd>) leaves only the timer on screen.
@@ -32,8 +34,8 @@ Kairo combines a Pomodoro-style focus timer with automatic time tracking across 
 - **Android:** per-app usage through `UsageStatsManager` once you grant *Usage access*.
 
 **Understand**
-- **Today:** productive time, a productivity score, focus vs. goal, a distraction budget, app switches, a timeline of the day, hour-by-hour breakdown, top apps & sites, categories and focus blocks.
-- **Insights (7 / 30 / 90 days):** trends against the previous period, a daily breakdown, a weekday × hour *focus rhythm* heatmap, focus time vs. goal, *where time leaks*, and generated suggestions such as peak hours, distraction peaks, context switching, block follow-through, late nights and communication load.
+- **Stats, today:** productive time, a productivity score, focus vs. goal, a distraction budget, app switches, a timeline of the day, an hour-by-hour breakdown, top apps & sites, categories and focus blocks.
+- **Stats, 7 or 30 days:** trends against the previous period, a daily breakdown, a weekday × hour *focus rhythm* heatmap, focus time vs. goal, *where time leaks*, and generated suggestions such as peak hours, distraction peaks, context switching, block follow-through, late nights and communication load.
 - **Focus persona:** a summary of your working style (for example *Early Bird Deep Diver*), saved as a shareable image that contains no app names, sites or timestamps.
 - **Smart nudges:** *Focus guard* nudges you if you drift to a distracting app during a block. Kairo also suggests a block after a long distraction and a break after a long stretch.
 
@@ -45,15 +47,24 @@ Kairo combines a Pomodoro-style focus timer with automatic time tracking across 
 **Your data**
 - Export everything as JSON or CSV. Set a retention period, or delete everything in one click.
 
-| Today | Insights |
+| Stats | Tasks |
 | --- | --- |
-| ![Today](docs/screenshots/today.png) | ![Insights](docs/screenshots/insights.png) |
-| ![Sounds](docs/screenshots/sounds.png) | ![Apps & Sites](docs/screenshots/apps.png) |
+| ![Stats: productive time, score and top apps](docs/screenshots/stats.png) | ![Tasks: the current task card with slide to mark done](docs/screenshots/tasks.png) |
+| ![Soundscapes: player and presets](docs/screenshots/sounds.png) | ![Apps & sites: search, filters and time per app](docs/screenshots/apps.png) |
+| ![Settings: profile, privacy and preferences](docs/screenshots/settings.png) | ![Welcome: meet Kai](docs/screenshots/onboarding.png) |
+
+**Dark theme**
+
+| | |
+| --- | --- |
+| ![Home, dark theme](docs/screenshots/home-dark.png) | ![Stats, dark theme](docs/screenshots/stats-dark.png) |
 
 <p align="center">
-  <img src="docs/screenshots/mobile-focus.png" width="260" alt="Mobile focus" />
-  &nbsp;&nbsp;
-  <img src="docs/screenshots/mobile-today.png" width="260" alt="Mobile today, light theme" />
+  <img src="docs/screenshots/mobile-home.png" width="250" alt="Home on a phone" />
+  &nbsp;
+  <img src="docs/screenshots/mobile-stats.png" width="250" alt="Stats on a phone" />
+  &nbsp;
+  <img src="docs/screenshots/mobile-tasks.png" width="250" alt="Tasks on a phone" />
 </p>
 
 ## Platform support
@@ -148,7 +159,7 @@ The timer runs in Rust, not in the webview, so the countdown, tray title and not
 
 - **Name & identity:** set `productName` and `identifier` in `src-tauri/tauri.conf.json`, then regenerate icons with `npx tauri icon branding/icon-1024.png`.
 - **Default categories:** `src-tauri/src/categories.rs`. Users can override any app or site from the Apps & Sites screen.
-- **Design tokens:** `src/styles/tokens.css` (dark and light themes).
+- **Design:** the design system is described in [`docs/DESIGN.md`](docs/DESIGN.md). Tokens for the light and dark themes are in `src/styles/tokens.css`.
 
 ## Tests
 

@@ -322,7 +322,7 @@
 
 .stats .tile-foot {
   font-size: 12.5px;
-  color: var(--ink-3);
+  color: var(--ink-2);
   margin-top: auto;
 }
 
@@ -426,8 +426,14 @@
 .stats-apps .segmented button {
   flex: 1;
   white-space: nowrap;
-  height: 34px;
+  height: 36px;
   padding: 0 8px;
+}
+
+@media (pointer: coarse) {
+  .stats-apps .segmented button {
+    height: 44px;
+  }
 }
 
 .stats-apps-list {
@@ -598,7 +604,7 @@
 
 .persona-note {
   font-size: 12.5px;
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 /* ---------------------------------------------------------------- Responsive: one column, interleaved */

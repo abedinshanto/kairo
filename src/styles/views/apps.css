@@ -610,6 +610,7 @@ button.apps-cat.active:hover {
   }
 
   .apps-filters .pills {
+    margin-right: 0;
     padding-right: var(--gutter);
     mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
     -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);

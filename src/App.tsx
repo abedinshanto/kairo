@@ -2,6 +2,7 @@ import { ChartColumn, Headphones, House, ListChecks, Settings as SettingsIcon, S
 import { useEffect, type ReactNode } from "react";
 import { Toasts, cx } from "./components/ui";
 import { isNative } from "./lib/backend";
+import { confirmDialog } from "./lib/dialogs";
 import { useMediaQuery } from "./lib/hooks";
 import { TAB_VIEWS, useApp, type View } from "./lib/store";
 import { AppsView } from "./views/AppsView";
@@ -54,7 +55,15 @@ function useShortcuts() {
       } else if (e.key === "f") {
         st.setDeepFocus(!st.deepFocus);
       } else if (e.key === "s") {
-        void st.timerAction("skip");
+        // A stray keypress shouldn't throw away a focus block that's under way.
+        const t = st.timer;
+        if (t?.phase === "focus" && t.startedAt !== null) {
+          void confirmDialog("The time so far won't count as a finished block.", { title: "Skip this focus block?", okLabel: "Skip" }).then(
+            (ok) => ok && void st.timerAction("skip"),
+          );
+        } else {
+          void st.timerAction("skip");
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -111,6 +120,7 @@ export default function App() {
   const onboarded = useApp((s) => s.settings.onboarded);
   const view = useApp((s) => s.view);
   const deepFocus = useApp((s) => s.deepFocus);
+  const phase = useApp((s) => s.timer?.phase);
   useTheme();
   useShortcuts();
 
@@ -125,7 +135,7 @@ export default function App() {
   if (!ready) return <div className="boot" />;
 
   return (
-    <div className={cx("app", deepFocus && "deep")}>
+    <div className={cx("app", deepFocus && "deep")} data-phase={phase}>
       <div className="canvas-glow" aria-hidden />
       <main className="scroll">
         <div className={cx("page", `view-${view}`)} key={view}>

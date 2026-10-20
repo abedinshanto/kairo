@@ -29,7 +29,8 @@ const fmtShare = (ms: number, total: number) => {
 };
 
 export function AppsView() {
-  const [range, setRange] = useState<Range>(7);
+  // Stats links here with its range (#/apps?r=30)
+  const [range, setRange] = useState<Range>(() => (/[?&]r=30\b/.test(window.location.hash) ? 30 : /[?&]r=1\b/.test(window.location.hash) ? 1 : 7));
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
@@ -141,7 +142,7 @@ export function AppsView() {
                 </ul>
                 {!expanded && rows.length > PAGE && (
                   <div className="apps-more">
-                    <button className="btn btn-ghost btn-sm" onClick={() => setShowAll(true)}>
+                    <button className="btn btn-ghost btn-sm card-link" onClick={() => setShowAll(true)}>
                       Show all {rows.length}
                     </button>
                   </div>

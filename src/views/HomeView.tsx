@@ -481,7 +481,7 @@ function UpNext() {
     <div className="card">
       <div className="card-head" style={{ marginBottom: 6 }}>
         <div className="card-title">Up next</div>
-        <button className="btn btn-ghost btn-sm" onClick={() => setView("tasks")}>
+        <button className="btn btn-ghost btn-sm card-link" onClick={() => setView("tasks")}>
           All tasks
         </button>
       </div>

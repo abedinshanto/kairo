@@ -13,7 +13,7 @@ const TONES: Record<BuddyTone, { hi: string; mid: string; lo: string; cheek: str
 
 /**
  * Kai — Kairo's little focus buddy. A soft gradient blob whose face follows the
- * timer: curious when idle, heavy-lidded and steady while focusing, blissful on
+ * timer: curious when idle, calm and content while focusing, blissful on
  * breaks.
  */
 export function Buddy({ mood = "idle", tone = "blue", size = 96, still = false, label }: { mood?: BuddyMood; tone?: BuddyTone; size?: number; still?: boolean; label?: string }) {
@@ -79,9 +79,9 @@ export function Buddy({ mood = "idle", tone = "blue", size = 96, still = false, 
               <circle cx={mood === "paused" ? 69.5 : 74.5} cy={mood === "focus" ? 59 : 57} r="1.6" fill="#fff" />
               {mood === "focus" && (
                 <>
-                  {/* calm, heavy lids: steady concentration */}
-                  <path d="M33.5 57a11.5 13 0 0 1 23 0Z" fill={c.lid} />
-                  <path d="M63.5 57a11.5 13 0 0 1 23 0Z" fill={c.lid} />
+                  {/* relaxed lids and a small smile: content, steady concentration */}
+                  <path d="M33.5 55.5a11.5 12 0 0 1 23 0Z" fill={c.lid} />
+                  <path d="M63.5 55.5a11.5 12 0 0 1 23 0Z" fill={c.lid} />
                 </>
               )}
             </g>
@@ -91,7 +91,7 @@ export function Buddy({ mood = "idle", tone = "blue", size = 96, still = false, 
           {mood === "happy" ? (
             <path d="M51 76q9 10 18 0Z" fill={c.ink} />
           ) : mood === "focus" ? (
-            <path d="M55 78h10" stroke={c.ink} strokeWidth="3" strokeLinecap="round" />
+            <path d="M54 77q6 4.5 12 0" stroke={c.ink} strokeWidth="3" strokeLinecap="round" fill="none" />
           ) : mood === "paused" ? (
             <circle cx="60" cy="78" r="2.8" fill={c.ink} />
           ) : (

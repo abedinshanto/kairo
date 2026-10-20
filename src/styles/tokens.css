@@ -9,9 +9,9 @@
   --font: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Canvas & surfaces */
-  --canvas: #eef1f6;
-  --canvas-glow-1: rgba(120, 156, 255, 0.28);
-  --canvas-glow-2: rgba(186, 200, 255, 0.4);
+  --canvas: #edf1fb;
+  --canvas-glow-1: rgba(110, 148, 255, 0.36);
+  --canvas-glow-2: rgba(176, 194, 255, 0.5);
   --surface: #ffffff;
   --surface-soft: #f5f7fb;
   --surface-sunk: #eceff5;
@@ -27,12 +27,12 @@
 
   /* Ink */
   --ink: #0f1424;
-  --ink-2: #6b7280;
-  --ink-3: #9ca3af;
+  --ink-2: #5f6675;
+  /* Icons and large text only — small text uses --ink-2 */
+  --ink-3: #767d8b;
   --ink-4: #c7ccd6;
   --on-brand: #ffffff;
-  --on-brand-2: rgba(255, 255, 255, 0.72);
-  --on-brand-3: rgba(255, 255, 255, 0.24);
+  --on-brand-2: rgba(255, 255, 255, 0.86);
 
   /* Brand */
   --brand: #2058f5;
@@ -43,16 +43,19 @@
   --brand-ink: #1a4fe0;
   /* Brand ink on white chips sitting on hero cards — fixed in both themes. */
   --on-white: #1a4fe0;
-  --hero: linear-gradient(155deg, #4a7bff 0%, #2058f5 48%, #1543c9 100%);
+  --hero: linear-gradient(155deg, #3a6af8 0%, #2058f5 48%, #1543c9 100%);
   --hero-shadow: 0 30px 60px -22px rgba(32, 88, 245, 0.55);
 
   /* Phases (hero card fills) */
   --phase-focus: var(--hero);
   --phase-focus-shadow: var(--hero-shadow);
-  --phase-short: linear-gradient(155deg, #34d3a4 0%, #10b386 50%, #0b8f6b 100%);
-  --phase-short-shadow: 0 30px 60px -22px rgba(16, 179, 134, 0.5);
-  --phase-long: linear-gradient(155deg, #a08bff 0%, #7c5cf6 50%, #5b3fd6 100%);
-  --phase-long-shadow: 0 30px 60px -22px rgba(124, 92, 246, 0.5);
+  /* Deep enough for white text at every stop */
+  --phase-short: linear-gradient(155deg, #0a8a68 0%, #08805f 50%, #066a4f 100%);
+  --phase-short-solid: #08805f;
+  --phase-short-shadow: 0 30px 60px -22px rgba(8, 128, 95, 0.5);
+  --phase-long: linear-gradient(155deg, #7a5cf0 0%, #6d4ae8 50%, #5537cc 100%);
+  --phase-long-solid: #6d4ae8;
+  --phase-long-shadow: 0 30px 60px -22px rgba(109, 74, 232, 0.5);
 
   /* Data (validated: blue ↔ coral with a neutral gray between) */
   --productive: #2058f5;
@@ -69,6 +72,13 @@
   --warn-tint: #fef3c7;
   --danger: #dc2626;
   --danger-tint: #fee2e2;
+  /* Status text (meets 4.5:1 on its tint and on white) */
+  --good-ink: #15803d;
+  --warn-ink: #b8341a;
+  --danger-ink: #b91c1c;
+  /* Glass on hero cards: navy, so white text keeps its contrast */
+  --hero-glass: rgba(8, 24, 90, 0.22);
+  --hero-glass-hover: rgba(8, 24, 90, 0.32);
 
   /* Radii */
   --r-sm: 12px;
@@ -114,7 +124,7 @@
 
   --ink: #f2f4f8;
   --ink-2: #9aa3b5;
-  --ink-3: #6b7489;
+  --ink-3: #828ca2;
   --ink-4: #3c4356;
 
   --brand: #4c7dff;
@@ -123,13 +133,13 @@
   --brand-tint: #1f2c52;
   --brand-tint-2: #182240;
   --brand-ink: #8fb0ff;
-  --hero: linear-gradient(155deg, #5b88ff 0%, #2f63f4 50%, #1d47cf 100%);
+  --hero: linear-gradient(155deg, #3a6af8 0%, #2f63f4 50%, #1d47cf 100%);
   --hero-shadow: 0 30px 60px -24px rgba(47, 99, 244, 0.5);
 
   --productive: #4c7dff;
   --neutral: #4a5063;
   --distracting: #e8583a;
-  --distracting-tint: #3a1d17;
+  --distracting-tint: #3b2026;
 
   --good: #22c55e;
   --good-tint: #12301f;
@@ -137,6 +147,9 @@
   --warn-tint: #33250b;
   --danger: #ef4444;
   --danger-tint: #3a1515;
+  --good-ink: #4ade80;
+  --warn-ink: #ff8a6b;
+  --danger-ink: #f87171;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 12px 32px -10px rgba(0, 0, 0, 0.55);

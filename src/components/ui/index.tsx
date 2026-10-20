@@ -181,14 +181,35 @@ export function Stepper({
 // ------------------------------------------------------------------ Sheet (bottom sheet on phones, dialog on desktop)
 
 export function Sheet({ onClose, children, label, closable = true }: { onClose: () => void; children: ReactNode; label: string; closable?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && closable && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, closable]);
+  // Behave like a modal: everything outside the sheet is inert while it's open,
+  // focus moves into it, and goes back to whatever opened it on close.
+  useEffect(() => {
+    const sheet = ref.current;
+    if (!sheet) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const inerted: Element[] = [];
+    for (let node = sheet.parentElement; node && node !== document.body; node = node.parentElement) {
+      for (const sib of Array.from(node.parentElement?.children ?? [])) {
+        if (sib === node || sib.hasAttribute("inert") || sib.classList.contains("toasts")) continue;
+        sib.setAttribute("inert", "");
+        inerted.push(sib);
+      }
+    }
+    sheet.focus({ preventScroll: true });
+    return () => {
+      inerted.forEach((el) => el.removeAttribute("inert"));
+      opener?.focus({ preventScroll: true });
+    };
+  }, []);
   return (
     <div className="sheet-scrim" onMouseDown={(e) => closable && e.target === e.currentTarget && onClose()}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={label}>
+      <div ref={ref} className="sheet" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
         <div className="sheet-handle" aria-hidden />
         {closable && (
           <button className="circle-btn sm soft sheet-close" aria-label="Close" onClick={onClose}>

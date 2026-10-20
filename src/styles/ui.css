@@ -1,6 +1,7 @@
 /* ================================================================ Type */
 
 .display {
+  text-wrap: balance;
   font-size: 40px;
   line-height: 1.12;
   font-weight: 700;
@@ -30,7 +31,7 @@
 }
 
 .faint {
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .big-number {
@@ -89,7 +90,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(120% 80% at 0% 0%, rgba(255, 255, 255, 0.22), transparent 55%);
+  background: radial-gradient(120% 80% at 0% 0%, rgba(255, 255, 255, 0.1), transparent 55%);
   pointer-events: none;
 }
 
@@ -153,12 +154,46 @@
 
 .stacked.phase-short_break::before,
 .stacked.phase-short_break::after {
-  background: #34d3a4;
+  background: var(--phase-short-solid);
 }
 
 .stacked.phase-long_break::before,
 .stacked.phase-long_break::after {
-  background: #a08bff;
+  background: var(--phase-long-solid);
+}
+
+/* Dark: solid steps toward the canvas, so the peeking cards never turn muddy */
+:root[data-theme="dark"] .stacked::before,
+:root[data-theme="dark"] .stacked::after {
+  opacity: 1;
+  background: color-mix(in oklab, var(--brand) 30%, var(--canvas));
+}
+
+:root[data-theme="dark"] .stacked::after {
+  background: color-mix(in oklab, var(--brand) 55%, var(--canvas));
+}
+
+:root[data-theme="dark"] .stacked.phase-short_break::before {
+  background: color-mix(in oklab, var(--phase-short-solid) 30%, var(--canvas));
+}
+
+:root[data-theme="dark"] .stacked.phase-short_break::after {
+  background: color-mix(in oklab, var(--phase-short-solid) 55%, var(--canvas));
+}
+
+:root[data-theme="dark"] .stacked.phase-long_break::before {
+  background: color-mix(in oklab, var(--phase-long-solid) 30%, var(--canvas));
+}
+
+:root[data-theme="dark"] .stacked.phase-long_break::after {
+  background: color-mix(in oklab, var(--phase-long-solid) 55%, var(--canvas));
+}
+
+/* Focus rings stay visible on coloured cards */
+.card.hero :focus-visible,
+.sky :focus-visible,
+.timer-card :focus-visible {
+  outline-color: #fff;
 }
 
 /* ================================================================ Buttons */
@@ -232,9 +267,19 @@
   background: var(--surface-soft);
 }
 
+/* "See all"-style links in card headers */
+.btn.card-link {
+  color: var(--brand-ink);
+}
+
+.btn.card-link:hover:not(:disabled) {
+  color: var(--brand-ink);
+  background: var(--brand-tint-2);
+}
+
 .btn-danger {
   background: var(--danger-tint);
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 
 .btn-on-brand {
@@ -243,12 +288,13 @@
 }
 
 .btn-glass {
-  background: var(--on-brand-3);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   color: var(--on-brand);
 }
 
 .btn-glass:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.32);
+  background: var(--hero-glass-hover);
 }
 
 .btn-sm {
@@ -350,13 +396,13 @@
 }
 
 .circle-btn.glass {
-  background: var(--on-brand-3);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   color: var(--on-brand);
-  box-shadow: none;
 }
 
 .circle-btn.glass:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.32);
+  background: var(--hero-glass-hover);
 }
 
 .circle-btn.soft {
@@ -376,8 +422,9 @@
   overflow-x: auto;
   scrollbar-width: none;
   /* room for the active pill's glow inside the scroll container */
-  padding: 2px 2px 18px;
-  margin: -2px -2px -18px;
+  padding: 2px 14px 18px;
+  margin: -2px -14px -18px;
+  scroll-padding-inline: 14px;
 }
 
 .pills::-webkit-scrollbar {
@@ -412,7 +459,7 @@
 }
 
 .pill .pill-count {
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-weight: 600;
 }
 
@@ -495,7 +542,8 @@
 }
 
 .chip.on-brand {
-  background: var(--on-brand-3);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   color: var(--on-brand);
 }
 
@@ -525,12 +573,12 @@
 
 .badge.good {
   background: var(--good-tint);
-  color: var(--good);
+  color: var(--good-ink);
 }
 
 .badge.warn {
   background: var(--distracting-tint);
-  color: var(--distracting);
+  color: var(--warn-ink);
 }
 
 .badge.white {
@@ -558,12 +606,12 @@
 
 .icon-tile.good {
   background: var(--good-tint);
-  color: var(--good);
+  color: var(--good-ink);
 }
 
 .icon-tile.warn {
   background: var(--distracting-tint);
-  color: var(--distracting);
+  color: var(--warn-ink);
 }
 
 .icon-tile.gray {
@@ -600,7 +648,7 @@
 }
 
 .avatar.p--1 {
-  color: var(--distracting);
+  color: var(--warn-ink);
   background: var(--distracting-tint);
 }
 
@@ -620,7 +668,7 @@
 }
 
 .input::placeholder {
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 
 .input:focus {
@@ -758,7 +806,11 @@
 }
 
 .slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 5px var(--brand-tint), 0 2px 8px rgba(15, 20, 36, 0.25);
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--brand), 0 2px 8px rgba(15, 20, 36, 0.25);
+}
+
+.slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--brand);
 }
 
 .slider.on-brand::-webkit-slider-runnable-track {
@@ -767,6 +819,29 @@
 
 .slider.on-brand::-moz-range-track {
   background: linear-gradient(90deg, #fff var(--val), rgba(255, 255, 255, 0.28) var(--val));
+}
+
+.slider.on-brand:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(8, 24, 90, 0.35), 0 0 0 5px #fff;
+}
+
+.slider.on-brand:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(8, 24, 90, 0.35), 0 0 0 5px #fff;
+}
+
+/* Dark: controls lift with a hairline instead of a shadow that disappears */
+:root[data-theme="dark"] .slider:not(.on-brand)::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, var(--brand) var(--val), rgba(255, 255, 255, 0.08) var(--val));
+}
+
+:root[data-theme="dark"] .slider:not(.on-brand)::-moz-range-track {
+  background: linear-gradient(90deg, var(--brand) var(--val), rgba(255, 255, 255, 0.08) var(--val));
+}
+
+:root[data-theme="dark"] .stepper button,
+:root[data-theme="dark"] .segmented button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--ink) 12%, var(--surface-soft));
+  box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 
 .stepper {
@@ -938,16 +1013,17 @@
 
 .delta.good {
   background: var(--good-tint);
-  color: var(--good);
+  color: var(--good-ink);
 }
 
 .delta.bad {
   background: var(--danger-tint);
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 
 .hero .delta {
-  background: var(--on-brand-3);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   color: var(--on-brand);
 }
 
@@ -996,6 +1072,11 @@
   box-shadow: var(--shadow-lg);
   padding: 28px;
   animation: sheet-in 0.4s var(--spring);
+}
+
+/* The dialog itself takes focus on open; its controls get the rings */
+.sheet:focus {
+  outline: none;
 }
 
 .sheet-handle {
@@ -1057,7 +1138,8 @@
   position: relative;
   height: 64px;
   border-radius: var(--r-pill);
-  background: var(--on-brand-3);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   overflow: hidden;
   touch-action: none;
   user-select: none;
@@ -1281,8 +1363,36 @@
   background: linear-gradient(160deg, #dfe8ff 0%, #a7bfff 50%, #6d94ff 100%);
 }
 
+/* Touch: every control is at least 44px */
 @media (pointer: coarse) {
   .segmented button {
-    height: 40px;
+    height: 44px;
+  }
+
+  .pills.sm .pill,
+  .btn-sm {
+    height: 44px;
+  }
+
+  .stepper {
+    height: 52px;
+  }
+
+  .stepper button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .switch::before {
+    content: "";
+    position: absolute;
+    inset: -8px -4px;
+  }
+
+  /* iOS zooms into inputs under 16px */
+  .input,
+  textarea,
+  select {
+    font-size: 16px;
   }
 }

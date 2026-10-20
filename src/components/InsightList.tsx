@@ -102,7 +102,7 @@ export function InsightList({ insights, limit = 3, columns }: { insights: Insigh
         })}
       </ul>
       {insights.length > limit && (
-        <button type="button" className="btn btn-ghost btn-sm insights-more" aria-expanded={all} onClick={() => setAll((v) => !v)}>
+        <button type="button" className="btn btn-ghost btn-sm card-link insights-more" aria-expanded={all} onClick={() => setAll((v) => !v)}>
           {all ? "Show less" : `Show ${hidden} more`}
           <ChevronDown className={cx(all && "flip")} />
         </button>

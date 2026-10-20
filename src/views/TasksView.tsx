@@ -495,6 +495,15 @@ function TaskTitle({
 }) {
   const [value, setValue] = useState(task.title);
   const cancelled = useRef(false);
+  const area = useRef<HTMLTextAreaElement>(null);
+
+  // Grow the hero textarea with its text (WebKit has no field-sizing yet).
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value, editing]);
 
   useEffect(() => {
     if (editing) {
@@ -523,6 +532,7 @@ function TaskTitle({
   if (editing && variant === "hero") {
     return (
       <textarea
+        ref={area}
         className={cx("task-hero-title task-hero-edit", long && "is-long")}
         rows={1}
         value={value}

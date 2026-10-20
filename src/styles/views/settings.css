@@ -68,8 +68,11 @@
   color: var(--ink-2);
 }
 
-/* Privacy hero */
+/* Privacy card */
 .set-privacy {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 22px;

@@ -9,7 +9,7 @@ import { fmtDuration } from "../lib/time";
 import "../styles/views/onboarding.css";
 
 const STEPS = 3;
-const MOOD: BuddyMood[] = ["happy", "idle", "focus"];
+const MOOD: BuddyMood[] = ["happy", "idle", "happy"];
 
 interface Benefit {
   icon: ReactNode;
