@@ -1,7 +1,7 @@
 import { ChevronRight, FileJson, FileSpreadsheet, Monitor, Moon, Play, ShieldCheck, Sun, Trash2, Volume1, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
-import { PageTitle, Segmented, Slider, Stepper, Switch, cx } from "../components/ui";
+import { PageTitle, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
 import { soundEngine } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
 import { confirmDialog } from "../lib/dialogs";
@@ -79,6 +79,8 @@ function Row({
 
 // ------------------------------------------------------------------ View
 
+const resolvedTheme = () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+
 export function SettingsView() {
   const s = useApp((st) => st.settings);
   const update = useApp((st) => st.updateSettings);
@@ -96,6 +98,29 @@ export function SettingsView() {
 
   return (
     <div className="settings">
+      <TopBar
+        left={
+          <>
+            <span className="buddy-avatar set-topmark" aria-hidden>
+              <ShieldCheck />
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div className="who-name">Kairo</div>
+              <div className="who-sub">Private · stored on this device</div>
+            </div>
+          </>
+        }
+        right={
+          <button
+            className="circle-btn"
+            aria-label={`Switch to ${resolvedTheme() === "dark" ? "light" : "dark"} theme`}
+            title="Theme"
+            onClick={() => update({ theme: resolvedTheme() === "dark" ? "light" : "dark" })}
+          >
+            {resolvedTheme() === "dark" ? <Sun /> : <Moon />}
+          </button>
+        }
+      />
       <PageTitle strong="Settings," dim="make it yours." />
 
       <div className="set-top">
@@ -350,7 +375,7 @@ function PrivacyCard({ info }: { info: DataInfo | undefined }) {
   const mb = info ? (info.dbBytes / 1024 / 1024).toFixed(1) : null;
 
   return (
-    <section className="card hero set-privacy" aria-labelledby="set-privacy-title">
+    <section className="card tint set-privacy" aria-labelledby="set-privacy-title">
       <ShieldCheck className="set-privacy-mark" aria-hidden />
 
       <span className="set-privacy-shield" aria-hidden>
@@ -383,10 +408,10 @@ function PrivacyCard({ info }: { info: DataInfo | undefined }) {
       <div className="set-privacy-bar">
         <div className="set-export">
           <span className="set-export-label">Export</span>
-          <button className="btn btn-on-brand btn-sm" onClick={() => void exportAs("json")} aria-label="Export everything as JSON">
+          <button className="btn btn-soft btn-sm" onClick={() => void exportAs("json")} aria-label="Export everything as JSON">
             <FileJson /> JSON
           </button>
-          <button className="btn btn-on-brand btn-sm" onClick={() => void exportAs("csv")} aria-label="Export everything as CSV">
+          <button className="btn btn-soft btn-sm" onClick={() => void exportAs("csv")} aria-label="Export everything as CSV">
             <FileSpreadsheet /> CSV
           </button>
         </div>

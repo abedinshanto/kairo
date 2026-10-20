@@ -1,10 +1,10 @@
 /* ================================================================ Apps & sites — you decide what counts */
 
 .apps {
-  /* Data colours on the blue hero (white = productive, frosted = neutral, soft coral = distracting) */
-  --apps-on-productive: #ffffff;
-  --apps-on-neutral: rgba(255, 255, 255, 0.42);
-  --apps-on-distracting: #ffa48f;
+  /* Data colours for the summary bar and legend */
+  --apps-on-productive: var(--productive);
+  --apps-on-neutral: var(--neutral);
+  --apps-on-distracting: var(--distracting);
   /* Coral deep enough to carry white text (≥ 4.5:1) */
   --apps-distracting-strong: color-mix(in srgb, var(--distracting) 84%, #000);
 }
@@ -37,8 +37,8 @@
   top: 24px;
 }
 
-.apps-side .stacked {
-  margin-top: 30px;
+.apps-side .apps-hero {
+  margin-top: 6px;
 }
 
 .apps-controls {
@@ -117,29 +117,10 @@
 
 .apps-hero .segmented {
   display: flex;
-  padding: 4px;
-  background: rgba(255, 255, 255, 0.16);
 }
 
 .apps-hero .segmented button {
   flex: 1;
-  height: 38px;
-  font-size: 13.5px;
-  color: var(--on-brand-2);
-}
-
-.apps-hero .segmented button:hover:not([aria-pressed="true"]) {
-  color: var(--on-brand);
-}
-
-.apps-hero .segmented button[aria-pressed="true"] {
-  background: #fff;
-  color: var(--on-white);
-  box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.4);
-}
-
-.apps-hero :focus-visible {
-  outline-color: #fff;
 }
 
 .apps-hero-body {
@@ -161,7 +142,7 @@
 .apps-hero-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--ink-2);
 }
 
 .apps-total {
@@ -177,7 +158,7 @@
   font-size: 22px;
   font-weight: 650;
   letter-spacing: -0.01em;
-  color: var(--on-brand-2);
+  color: var(--ink-2);
   margin: 0 12px 0 3px;
 }
 
@@ -185,16 +166,12 @@
   margin-right: 0;
 }
 
-.apps-hero .badge.white {
+.apps-hero .badge {
   height: 30px;
   padding: 0 12px;
   font-size: 12.5px;
 }
 
-.apps-hero-buddy {
-  flex: none;
-  margin: -6px -4px 0 0;
-}
 
 .apps-split {
   transition: opacity 0.2s var(--ease);
@@ -231,7 +208,7 @@
 }
 
 .apps-seg.empty {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--surface-sunk);
 }
 
 .apps-legend {
@@ -247,7 +224,7 @@
   gap: 7px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--ink-2);
   white-space: nowrap;
 }
 
@@ -620,8 +597,8 @@ button.apps-cat.active:hover {
 }
 
 @media (max-width: 760px) {
-  .apps-side .stacked {
-    margin-top: 40px;
+  .apps-side .apps-hero {
+    margin-top: 16px;
   }
 
   .apps-controls {
@@ -647,9 +624,6 @@ button.apps-cat.active:hover {
     gap: 20px;
   }
 
-  .apps-hero .segmented button {
-    height: 40px;
-  }
 
   .apps-total {
     font-size: 46px;
@@ -660,10 +634,6 @@ button.apps-cat.active:hover {
     margin-right: 8px;
   }
 
-  .apps-hero-buddy svg {
-    width: 88px;
-    height: 88px;
-  }
 
   .apps-legend dd {
     font-size: 15.5px;

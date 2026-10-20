@@ -438,8 +438,7 @@ function Hero({ model, onScore }: { model: Model | undefined; onScore: () => voi
   const score = now?.score ?? null;
 
   return (
-    <div className="stacked">
-      <section className="card hero stats-hero" aria-label="Summary">
+    <section className="card hero stats-hero" aria-label="Summary">
         <div className="stats-hero-top">
           <span className="stats-hero-label">Productive time</span>
           {delta !== null && (
@@ -484,8 +483,7 @@ function Hero({ model, onScore }: { model: Model | undefined; onScore: () => voi
             ))}
           </dl>
         </div>
-      </section>
-    </div>
+    </section>
   );
 }
 

@@ -37,9 +37,8 @@
   margin-top: 26px;
 }
 
-/* 18px column gap + 26px − the 24px the peeking cards rise = 20px of air under the tabs, like Home. */
-.stats .stacked {
-  margin-top: 26px;
+.stats .stats-hero {
+  margin-top: 22px;
 }
 
 /* ---------------------------------------------------------------- Top bar */
@@ -621,9 +620,8 @@
     min-width: 0;
   }
 
-  /* 16px gap + 28px − 24px peeking rise = 20px under the tabs. */
-  .stats .stacked {
-    margin-top: 28px;
+  .stats .stats-hero {
+    margin-top: 18px;
   }
 
   .stats .o-1 {

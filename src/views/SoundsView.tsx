@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
-import { PageTitle, PillTabs, Slider, Switch, cx } from "../components/ui";
+import { PageTitle, PillTabs, Slider, Switch, TopBar, cx } from "../components/ui";
 import { PRESETS, SOUNDS, soundEngine, type Preset, type SoundId, type SoundMeta } from "../lib/audio/engine";
 import { useApp } from "../lib/store";
 import "../styles/views/sounds.css";
@@ -84,6 +84,30 @@ export function SoundsView() {
 
   return (
     <div className="sounds">
+      <TopBar
+        left={
+          <>
+            <span className={cx("art sounds-thumb", `art-${preset?.id ?? "custom"}`)} aria-hidden />
+            <div style={{ minWidth: 0 }}>
+              <div className="who-name">{preset?.name ?? (active.length ? "Your own mix" : "Nothing playing")}</div>
+              <div className="who-sub">
+                {playing ? "Playing" : active.length ? "Paused" : "Pick a sound to begin"}
+                {active.length > 0 && ` · ${active.length} sound${active.length === 1 ? "" : "s"}`}
+              </div>
+            </div>
+          </>
+        }
+        right={
+          <button
+            className={cx("circle-btn", playing && "brand")}
+            aria-label={playing ? "Pause soundscape" : "Play soundscape"}
+            disabled={!active.length}
+            onClick={() => void soundEngine.toggle()}
+          >
+            {playing ? <Pause className="fill" /> : <Play className="fill" />}
+          </button>
+        }
+      />
       <PageTitle strong="Soundscapes," dim="tune out the noise." />
 
       <div className="sounds-grid">

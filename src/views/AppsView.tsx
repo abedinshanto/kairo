@@ -180,15 +180,13 @@ export function AppsView() {
 
 function Summary({ range, onRange, total, split }: { range: Range; onRange: (r: Range) => void; total: number; split: Split }) {
   const share = total ? split["1"] / total : 0;
-  const mood = !total ? "sleep" : share >= 0.5 ? "happy" : "idle";
   const totalMin = Math.round(total / 60_000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   const described = LEVELS.map((p) => `${PRODUCTIVITY_LABEL[p]} ${fmtDuration(split[String(p) as keyof Split])}`).join(", ");
 
   return (
-    <div className="stacked">
-      <section className="card hero apps-hero" aria-label="Time summary">
+    <section className="card apps-hero" aria-label="Time summary">
         <Segmented<Range>
           label="Date range"
           value={range}
@@ -217,11 +215,8 @@ function Summary({ range, onRange, total, split }: { range: Range; onRange: (r: 
                 </>
               )}
             </div>
-            <span className="badge white">{total ? `${Math.round(share * 100)}% productive` : "Nothing yet"}</span>
+            <span className="badge brand">{total ? `${Math.round(share * 100)}% productive` : "Nothing yet"}</span>
           </div>
-          <span className="apps-hero-buddy">
-            <Buddy mood={mood} tone="cloud" size={108} />
-          </span>
         </div>
 
         <div className="apps-split">
@@ -254,8 +249,7 @@ function Summary({ range, onRange, total, split }: { range: Range; onRange: (r: 
             ))}
           </dl>
         </div>
-      </section>
-    </div>
+    </section>
   );
 }
 
