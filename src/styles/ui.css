@@ -233,7 +233,7 @@
 
 .btn-on-brand {
   background: #fff;
-  color: var(--brand-ink);
+  color: var(--on-white);
 }
 
 .btn-glass {
@@ -333,7 +333,7 @@
 
 .circle-btn.on-brand {
   background: #fff;
-  color: var(--brand-ink);
+  color: var(--on-white);
   box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.35);
 }
 
@@ -522,7 +522,7 @@ button.chip:hover {
 
 .badge.white {
   background: #fff;
-  color: var(--danger);
+  color: var(--on-white);
 }
 
 /* ================================================================ Icon tile & avatar */

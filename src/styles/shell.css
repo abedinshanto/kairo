@@ -149,7 +149,7 @@
   gap: 8px;
   padding: 8px;
   border-radius: var(--r-pill);
-  background: var(--glass);
+  background: var(--nav-glass);
   backdrop-filter: blur(24px) saturate(1.6);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
   box-shadow: var(--shadow-nav);
@@ -272,9 +272,7 @@
   }
 
   .preview-chip {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(var(--nav-h) + 26px + env(safe-area-inset-bottom));
+    display: none;
   }
 
   .grid-2,
