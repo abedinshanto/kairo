@@ -28,6 +28,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+      - name: Tag matches the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          app=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "${GITHUB_REF_NAME#v}" != "$app" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match the app version $app in src-tauri/tauri.conf.json"
+            exit 1
+          fi
       - run: npm ci
       - run: npm run typecheck
       - run: npx vite build
@@ -126,13 +134,53 @@ jobs:
         run: |
           npx tauri android init --ci
           cp -R src-tauri/icons/android/. src-tauri/gen/android/app/src/main/res/
-      - name: Build debug APK (installable, debug-signed)
-        run: npx tauri android build --debug --apk --target aarch64
+      - name: Build release APK (optimised, unsigned)
+        run: npx tauri android build --apk --target aarch64
+      - name: Sign and check the APK
+        env:
+          # Add these repository secrets to sign every release with the same key,
+          # so new versions install over old ones (see README, "Signing").
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)"
+          unsigned=$(find src-tauri/gen/android/app/build/outputs/apk -path '*release*' -name '*.apk' | head -n 1)
+          test -n "$unsigned"
+          ks="$RUNNER_TEMP/kairo-release.keystore"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$ks"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret, so this APK is signed with a one-off key. Later versions will not install over it."
+            KEYSTORE_PASSWORD=$(openssl rand -hex 16)
+            KEY_ALIAS=kairo
+            keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$ks" -storepass "$KEYSTORE_PASSWORD" \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Kairo"
+          fi
+          export KEYSTORE_PASSWORD
+          export KEY_PASSWORD="${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          mkdir -p dist-android
+          out="dist-android/Kairo_${version}_android_arm64.apk"
+          "$BT/zipalign" -f -p 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
+          "$BT/apksigner" sign --ks "$ks" --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" \
+            --key-pass env:KEY_PASSWORD --out "$out" "$RUNNER_TEMP/aligned.apk"
+          rm -f "$ks"
+          "$BT/apksigner" verify --print-certs "$out"
+          # Code shrinking must leave the usage-access plugin and its commands intact.
+          mkdir -p "$RUNNER_TEMP/dex"
+          unzip -o -q "$out" 'classes*.dex' -d "$RUNNER_TEMP/dex"
+          for f in "$RUNNER_TEMP"/dex/*.dex; do "$BT/dexdump" "$f"; done > "$RUNNER_TEMP/dex.txt"
+          grep -q "Lapp/kairo/screentime/ScreenTimePlugin;" "$RUNNER_TEMP/dex.txt"
+          for m in checkPermission requestPermission queryEvents; do grep -q "name *: '$m'" "$RUNNER_TEMP/dex.txt"; done
+          ls -la dist-android
       - uses: actions/upload-artifact@v4
         with:
-          name: kairo-android-debug
+          name: kairo-android
           if-no-files-found: error
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: dist-android/*.apk
 
   ios:
     name: iOS (simulator)
@@ -156,3 +204,37 @@ jobs:
         run: npx tauri ios init --ci
       - name: Build for the iOS simulator
         run: npx tauri ios build --debug --target aarch64-sim
+
+  release:
+    name: Publish release
+    # Push a tag like v0.1.0 (matching the app version) to publish the installers.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, android]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect installers
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find artifacts -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*-setup.exe' -o -name '*.AppImage' \
+            -o -name '*.deb' -o -name '*.rpm' -o -name '*.apk' \) -exec cp {} release/ \;
+          cd release
+          sha256sum -- * > SHA256SUMS.txt
+          ls -la
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" release/* --verify-tag --title "Kairo ${TAG#v}" --notes-file .github/release-notes.md
+          fi

@@ -14,6 +14,10 @@ macOS · Windows · Linux · Android · iOS
 
 Kairo combines a Pomodoro-style focus timer with automatic time tracking across your apps and websites. It then turns that history into plain-language insights: your sharpest hours, when distractions peak, and which apps cost you the most time. Everything is stored in a local SQLite database. Kairo has no account, no cloud and no analytics, and it never makes a network request.
 
+## Download
+
+Installers for macOS, Windows, Linux and Android are on the [Releases page](../../releases/latest). The release notes explain the one-time confirmation each system asks for, because these builds aren't signed with paid developer certificates yet.
+
 ## Features
 
 **Focus**
@@ -126,7 +130,17 @@ npm run tauri ios init
 npm run tauri ios dev
 ```
 
-CI (`.github/workflows/build.yml`) builds macOS (Apple silicon + Intel), Windows, Linux, a debug-signed Android APK and an iOS simulator build on every push. The installers are attached as workflow artifacts. Store releases need code signing (Apple Developer ID / notarisation, a Windows code-signing certificate, an Android keystore). See the [Tauri distribution guide](https://tauri.app/distribute/).
+CI (`.github/workflows/build.yml`) builds macOS (Apple silicon + Intel), Windows, Linux, a release Android APK and an iOS simulator build on every push, and keeps the installers as workflow artifacts.
+
+**Publishing a release:** push a tag that matches the version in `src-tauri/tauri.conf.json`, for example `git tag v0.1.0 && git push origin v0.1.0`. CI builds every platform and publishes a GitHub release with the installers, a `SHA256SUMS.txt` file and the notes from `.github/release-notes.md`.
+
+**Signing:** macOS builds are ad-hoc signed and Windows builds are unsigned. For store-ready builds you need an Apple Developer ID with notarisation and a Windows code-signing certificate; see the [Tauri distribution guide](https://tauri.app/distribute/). The Android APK is signed with the key in these repository secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and, if it differs from the store password, `ANDROID_KEY_PASSWORD`. Without them, each build is signed with a one-off key, and a new version won't install over an older one. Create a key once and keep a backup of it:
+
+```bash
+keytool -genkeypair -storetype PKCS12 -keystore kairo-release.keystore -alias kairo \
+  -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Kairo"
+base64 -w0 kairo-release.keystore   # paste the output into ANDROID_KEYSTORE_BASE64
+```
 
 ## Architecture
 
