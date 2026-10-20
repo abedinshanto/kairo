@@ -33,7 +33,7 @@ export interface TipData {
 /** Values lead, labels follow; series are keyed with a short line in their colour. */
 export function ChartTooltip({ tip, width }: { tip: TipData | null; width: number }) {
   if (!tip) return null;
-  const half = 92;
+  const half = 96;
   const left = Math.min(Math.max(tip.x, half), Math.max(half, width - half));
   return (
     <div className="chart-tip" style={{ left, top: tip.y }} role="presentation">
@@ -57,9 +57,9 @@ export function topRounded(x: number, y: number, w: number, h: number, r = 4) {
   return `M${x},${y + h}V${y + rr}Q${x},${y} ${x + rr},${y}H${x + w - rr}Q${x + w},${y} ${x + w},${y + rr}V${y + h}Z`;
 }
 
-/** Clean duration ticks for a time axis. */
+/** Clean duration ticks for a time axis (`count` = gridlines above the baseline, at most). */
 export function durationTicks(max: number, count = 4): number[] {
-  const steps = [5, 10, 15, 30, 60, 120, 180, 240, 360, 480, 720].map((m) => m * MINUTE);
+  const steps = [5, 10, 15, 20, 30, 60, 120, 180, 240, 360, 480, 720].map((m) => m * MINUTE);
   const step = steps.find((s) => max / s <= count) ?? Math.ceil(max / count / HOUR) * HOUR;
   const top = Math.max(step, Math.ceil(max / step) * step);
   const ticks: number[] = [];
@@ -67,8 +67,26 @@ export function durationTicks(max: number, count = 4): number[] {
   return ticks;
 }
 
+/** Legend row for ≥ 2 series: a swatch beside ink-coloured text. */
+export function Legend({ items, className }: { items: { name: string; color: string; value?: string }[]; className?: string }) {
+  return (
+    <div className={className ? `legend ${className}` : "legend"}>
+      {items.map((i) => (
+        <span key={i.name} className="legend-item">
+          <span className="swatch" style={{ background: i.color }} />
+          {i.name}
+          {i.value && <strong className="legend-value">{i.value}</strong>}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export const SERIES = {
   productive: { name: "Productive", color: "var(--productive)" },
   neutral: { name: "Neutral", color: "var(--neutral)" },
   distracting: { name: "Distracting", color: "var(--distracting)" },
 } as const;
+
+/** Focus sessions in charts: ink, so they never read as another productivity series. */
+export const FOCUS_COLOR = "var(--focus-mark)";

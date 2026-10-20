@@ -1,3 +1,14 @@
+/* ================================================================ Charts — quiet frame, loud data
+ * Thin rounded bars, 2–3 solid hairlines, ink text, one blue ramp for heat.
+ * Series colours come from the data tokens (--productive / --neutral / --distracting).
+ */
+
+:root {
+  --focus-mark: var(--ink);
+  --chart-grid: var(--line);
+  --chart-base: var(--line-strong);
+}
+
 .chart {
   position: relative;
   width: 100%;
@@ -9,60 +20,68 @@
 }
 
 .chart svg:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: 8px;
+  outline: 2px solid var(--brand);
+  outline-offset: 6px;
+  border-radius: 12px;
 }
 
 .chart-grid {
-  stroke: var(--grid);
+  stroke: var(--chart-grid);
   stroke-width: 1;
   shape-rendering: crispEdges;
 }
 
 .chart-baseline {
-  stroke: var(--axis);
+  stroke: var(--chart-base);
   stroke-width: 1;
   shape-rendering: crispEdges;
 }
 
 .chart-reference {
-  stroke: var(--text-3);
+  stroke: var(--ink-3);
   stroke-width: 1;
   shape-rendering: crispEdges;
 }
 
 .chart-axis {
-  fill: var(--text-3);
-  font-size: 11px;
+  fill: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
+.chart-axis.active {
+  fill: var(--ink);
+}
+
 .chart-ref-label {
-  fill: var(--text-2);
-  font-weight: 550;
+  fill: var(--ink-2);
+  font-weight: 650;
 }
 
 .chart-hover-band {
-  fill: var(--surface-3);
-  opacity: 0.6;
+  fill: var(--surface-soft);
 }
+
+.chart-col {
+  transition: opacity 0.18s var(--ease);
+}
+
+/* ---------------------------------------------------------------- Tooltip */
 
 .chart-tip {
   position: absolute;
   z-index: 10;
   transform: translate(-50%, -100%);
-  min-width: 150px;
-  max-width: 240px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--glass);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  box-shadow: var(--shadow-pop);
+  min-width: 156px;
+  max-width: 250px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg), inset 0 0 0 1px var(--line);
   pointer-events: none;
-  font-size: 12px;
-  animation: tip-in 0.12s var(--ease);
+  font-size: 12.5px;
+  animation: tip-in 0.14s var(--ease);
 }
 
 @keyframes tip-in {
@@ -73,8 +92,9 @@
 }
 
 .chart-tip-title {
-  font-weight: 600;
-  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
   margin-bottom: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -84,129 +104,460 @@
 .chart-tip-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  color: var(--text-2);
-  line-height: 1.7;
+  gap: 8px;
+  color: var(--ink-2);
+  line-height: 1.75;
 }
 
 .chart-tip-row strong {
-  color: var(--text-1);
-  font-weight: 620;
+  color: var(--ink);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .chart-tip-key {
-  width: 10px;
-  height: 2px;
-  border-radius: 2px;
+  width: 12px;
+  height: 3px;
+  border-radius: 3px;
   flex: none;
 }
 
 .chart-tip-note {
-  margin-top: 5px;
-  padding-top: 5px;
-  border-top: 1px solid var(--line-2);
-  color: var(--text-3);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
 }
 
-/* Timeline */
+/* ---------------------------------------------------------------- Legend extras */
+
+.legend-value {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- Day timeline */
 
 .timeline-track {
-  fill: var(--surface-2);
+  fill: var(--surface-sunk);
+}
+
+.timeline-rail {
+  fill: var(--surface-sunk);
+}
+
+.timeline-hour {
+  stroke: var(--surface);
+  stroke-width: 1;
+  opacity: 0.55;
+  shape-rendering: crispEdges;
 }
 
 .timeline-focus {
-  fill: var(--phase-focus);
+  fill: var(--focus-mark);
 }
 
 .timeline-focus.partial {
-  fill: color-mix(in srgb, var(--phase-focus) 45%, transparent);
+  fill: var(--focus-mark);
+  opacity: 0.35;
 }
 
-/* Heatmap — one hue, light → dark on light theme; anchored to the surface on dark. */
+/* ---------------------------------------------------------------- Heatmap: one blue ramp
+ * Built from --productive mixed into the surface, so dark mode re-steps itself
+ * (low = close to the card, high = full brand blue) instead of inverting.
+ */
 
 .heat {
   transition: opacity 0.15s;
 }
 
 .heat:hover {
-  stroke: var(--text-1);
+  stroke: var(--ink);
   stroke-width: 1.5;
 }
 
 .heat-0 {
-  fill: var(--heat-0);
-  background: var(--heat-0);
+  fill: var(--surface-sunk);
+  background: var(--surface-sunk);
 }
 .heat-1 {
-  fill: #0d366b;
-  background: #0d366b;
+  fill: color-mix(in oklab, var(--productive) 16%, var(--surface));
+  background: color-mix(in oklab, var(--productive) 16%, var(--surface));
 }
 .heat-2 {
-  fill: #184f95;
-  background: #184f95;
+  fill: color-mix(in oklab, var(--productive) 34%, var(--surface));
+  background: color-mix(in oklab, var(--productive) 34%, var(--surface));
 }
 .heat-3 {
-  fill: #256abf;
-  background: #256abf;
+  fill: color-mix(in oklab, var(--productive) 55%, var(--surface));
+  background: color-mix(in oklab, var(--productive) 55%, var(--surface));
 }
 .heat-4 {
-  fill: #3987e5;
-  background: #3987e5;
+  fill: color-mix(in oklab, var(--productive) 78%, var(--surface));
+  background: color-mix(in oklab, var(--productive) 78%, var(--surface));
 }
 .heat-5 {
-  fill: #6da7ec;
-  background: #6da7ec;
-}
-.heat-6 {
-  fill: #9ec5f4;
-  background: #9ec5f4;
+  fill: color-mix(in oklab, var(--productive) 100%, #000 14%);
+  background: color-mix(in oklab, var(--productive) 100%, #000 14%);
 }
 
-:root[data-theme="light"] .heat-1 {
-  fill: #cde2fb;
-  background: #cde2fb;
-}
-:root[data-theme="light"] .heat-2 {
-  fill: #9ec5f4;
-  background: #9ec5f4;
-}
-:root[data-theme="light"] .heat-3 {
-  fill: #6da7ec;
-  background: #6da7ec;
-}
-:root[data-theme="light"] .heat-4 {
-  fill: #3987e5;
-  background: #3987e5;
-}
-:root[data-theme="light"] .heat-5 {
-  fill: #256abf;
-  background: #256abf;
-}
-:root[data-theme="light"] .heat-6 {
-  fill: #184f95;
-  background: #184f95;
+:root[data-theme="dark"] .heat-5 {
+  fill: color-mix(in oklab, var(--productive) 100%, #fff 18%);
+  background: color-mix(in oklab, var(--productive) 100%, #fff 18%);
 }
 
 .heat-legend {
   display: flex;
   align-items: center;
-  gap: 3px;
-  margin-top: 12px;
-  font-size: 11.5px;
-  color: var(--text-3);
+  gap: 4px;
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
 }
 
 .heat-legend span:first-child {
-  margin-right: 5px;
+  margin-right: 6px;
 }
 
 .heat-legend span:last-child {
-  margin-left: 5px;
+  margin-left: 6px;
 }
 
 .heat-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 5px;
+}
+
+/* ---------------------------------------------------------------- Bar list (ranked rows) */
+
+.barlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.barlist li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+
+.barlist li + li {
+  border-top: 1px solid var(--line);
+}
+
+.barlist-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.barlist-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.barlist-label {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barlist-value {
+  flex: none;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.barlist-sub {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barlist-track {
+  height: 4px;
+  margin-top: 9px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.barlist-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s var(--ease);
+}
+
+.barlist-fill.productive {
+  background: var(--productive);
+}
+
+.barlist-fill.neutral {
+  background: var(--neutral);
+}
+
+.barlist-fill.distracting {
+  background: var(--distracting);
+}
+
+.barlist-trail {
+  flex: none;
+}
+
+/* ---------------------------------------------------------------- Proportion bar */
+
+.propbar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.propbar > span {
+  min-width: 4px;
+  transition: flex-grow 0.6s var(--ease);
+}
+
+.propbar .productive {
+  background: var(--productive);
+}
+
+.propbar .neutral {
+  background: var(--neutral);
+}
+
+.propbar .distracting {
+  background: var(--distracting);
+}
+
+.propbar.is-empty {
+  background: var(--surface-sunk);
+}
+
+/* On a blue hero card: white / translucent white / soft coral. */
+.propbar.on-brand {
+  gap: 3px;
+}
+
+.propbar.on-brand .productive {
+  background: #fff;
+}
+
+.propbar.on-brand .neutral {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.propbar.on-brand .distracting {
+  background: #ffae9b;
+}
+
+.propbar.on-brand.is-empty {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------------------------------------------------------------- Score ring */
+
+.score-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.score-ring svg {
+  position: absolute;
+  inset: 0;
+}
+
+.score-track {
+  fill: none;
+  stroke: var(--surface-sunk);
+}
+
+.score-fill {
+  fill: none;
+  stroke: var(--brand);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s var(--ease);
+}
+
+.score-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.score-value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.score-label {
+  margin-top: 5px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.score-ring.on-brand .score-track {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+.score-ring.on-brand .score-fill {
+  stroke: #fff;
+}
+
+.score-ring.on-brand .score-value {
+  color: #fff;
+}
+
+.score-ring.on-brand .score-label {
+  color: var(--on-brand-2);
+}
+
+/* ---------------------------------------------------------------- Timer ring (legacy countdown dial) */
+
+.ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.ring svg {
+  position: absolute;
+  inset: 0;
+}
+
+.ring-track {
+  stroke: var(--surface-sunk);
+}
+
+.ring-tick {
+  stroke: var(--ink-4);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.ring-tick.major {
+  stroke: var(--ink-3);
+}
+
+.ring-knob {
+  fill: #fff;
+}
+
+.ring-knob-halo {
+  opacity: 0.25;
+}
+
+.ring-center {
+  position: relative;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- Insight cards */
+
+.insights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insights.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px 16px 16px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition: box-shadow 0.25s var(--ease), transform 0.12s var(--ease);
+}
+
+.insight:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.insight:active {
+  transform: scale(0.99);
+}
+
+.insight .icon-tile {
+  width: 40px;
+  height: 40px;
+}
+
+.insight .icon-tile svg {
+  width: 18px;
+  height: 18px;
+}
+
+.insight-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 1px;
+}
+
+.insight-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.insight-body {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight.open .insight-body {
+  white-space: normal;
+}
+
+.insights-more {
+  margin-top: 8px;
+  padding: 0 12px;
+}
+
+.insights-more svg {
+  transition: transform 0.25s var(--ease);
+}
+
+.insights-more svg.flip {
+  transform: rotate(180deg);
 }

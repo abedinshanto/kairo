@@ -1,10 +1,11 @@
 import { useId, type ReactNode } from "react";
 import type { Phase, TimerStatus } from "../../lib/types";
 
+// Solid stops (the phase tokens are gradients, which SVG strokes can't take).
 const PHASE_COLORS: Record<Phase, [string, string]> = {
-  focus: ["var(--phase-focus)", "var(--phase-focus-hi)"],
-  short_break: ["var(--phase-short)", "var(--phase-short-hi)"],
-  long_break: ["var(--phase-long)", "var(--phase-long-hi)"],
+  focus: ["var(--brand)", "var(--brand-hi)"],
+  short_break: ["#10b386", "#34d3a4"],
+  long_break: ["#7c5cf6", "#a08bff"],
 };
 
 /** The countdown ring. `progress` is the elapsed fraction (0 → 1). */

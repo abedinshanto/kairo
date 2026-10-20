@@ -1,26 +1,36 @@
 import {
   AudioWaveform,
   Bird,
+  Brain,
   CloudLightning,
+  CloudMoonRain,
   CloudRain,
   Droplets,
   Flame,
   Headphones,
+  Layers,
   Moon,
   Orbit,
   Pause,
   Play,
   Radio,
+  Sparkles,
+  Sunrise,
+  Trees,
+  Volume1,
   Volume2,
   Waves,
   Wind,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { PageHeader } from "../components/PageHeader";
-import { Segmented, Slider, Switch, cx } from "../components/ui";
-import { PRESETS, SOUNDS, soundEngine, type SoundId } from "../lib/audio/engine";
+import { useId, useState, type ReactNode } from "react";
+import { Buddy } from "../components/Buddy";
+import { PageTitle, PillTabs, Slider, Switch, cx } from "../components/ui";
+import { PRESETS, SOUNDS, soundEngine, type Preset, type SoundId, type SoundMeta } from "../lib/audio/engine";
 import { useApp } from "../lib/store";
-import type { ChimeId } from "../lib/types";
+import "../styles/views/sounds.css";
+
+type Group = SoundMeta["group"];
+const GROUPS: Group[] = ["Nature", "Noise", "Tones"];
 
 const ICONS: Record<SoundId, ReactNode> = {
   rain: <CloudRain />,
@@ -38,6 +48,15 @@ const ICONS: Record<SoundId, ReactNode> = {
   drone: <Orbit />,
 };
 
+const PRESET_ICONS: Record<string, ReactNode> = {
+  "deep-work": <Brain />,
+  "rainy-night": <CloudMoonRain />,
+  "ocean-calm": <Waves />,
+  forest: <Trees />,
+  campfire: <Flame />,
+  flow: <Sparkles />,
+};
+
 export function SoundsView() {
   const sound = useApp((s) => s.settings.sound!);
   const playing = useApp((s) => s.soundPlaying);
@@ -48,6 +67,7 @@ export function SoundsView() {
     const keys = Object.keys(p.levels);
     return keys.length === active.length && keys.every((k) => (levels[k as SoundId] ?? 0) > 0);
   });
+  const [group, setGroup] = useState<Group>(() => active[0]?.group ?? "Nature");
 
   const setLevel = (id: SoundId, v: number) => {
     const next = { ...sound.levels, [id]: v };
@@ -56,121 +76,204 @@ export function SoundsView() {
     if (v > 0 && !soundEngine.playing) void soundEngine.play();
   };
 
+  const applyPreset = (p: Preset) => {
+    updateSound({ levels: p.levels as Record<string, number> });
+    if (!soundEngine.playing) void soundEngine.play();
+  };
+
   return (
-    <div>
-      <PageHeader title="Sounds" subtitle="Soundscapes are generated on your device as they play. No streaming, no downloads." />
+    <div className="sounds">
+      <PageTitle strong="Soundscapes," dim="made on your device." />
 
-      <div className={cx("card player", playing && "is-playing")}>
-        <div className="player-art" aria-hidden>
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
+      <div className="sounds-grid">
+        {/* ------------------------------------------------ Hero player */}
+        <section className={cx("sky", playing && "is-playing")} aria-label="Now playing">
+          <div className="sky-scenery" aria-hidden>
+            <Cloud className="sky-bank left" />
+            <Cloud className="sky-bank right" />
+          </div>
+
+          <div className="sky-top">
+            <span className="sky-chip">
+              {playing ? <Equalizer /> : <Moon />}
+              {playing ? "Now playing" : active.length ? "Paused" : "Quiet"}
+            </span>
+            {active.length > 0 && (
+              <span className="sky-chip">
+                <Layers />
+                {active.length} sound{active.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+
+          <div className="sky-kai">
+            <span className="sky-ring" aria-hidden />
+            <span className="sky-ring two" aria-hidden />
+            <Buddy tone="cloud" mood={playing ? "happy" : "sleep"} size={132} />
+            <Cloud className="sky-seat" />
+          </div>
+
+          <div className="sky-text">
+            <h2 className="sky-title">{preset?.name ?? (active.length ? "Your own mix" : "Pick a sound")}</h2>
+            <p className="sky-sub">{active.map((s) => s.label).join(" · ") || "Choose a preset or blend your own below."}</p>
+          </div>
+
+          <div className="sky-controls">
+            <div className="sky-volume">
+              <Volume1 aria-hidden />
+              <Slider onBrand label="Master volume" value={sound.master} onChange={(v) => updateSound({ master: v })} />
+              <Volume2 aria-hidden />
+            </div>
+            <button
+              className="circle-btn on-brand xl sky-play"
+              aria-label={playing ? "Pause soundscape" : "Play soundscape"}
+              disabled={!active.length}
+              onClick={() => void soundEngine.toggle()}
+            >
+              {playing ? <Pause className="fill" /> : <Play className="fill" />}
+            </button>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------ Behaviour toggles */}
+        <div className="card sounds-options">
+          <label className="opt">
+            <span className="icon-tile round">
+              <Sunrise />
+            </span>
+            <span className="opt-text">
+              <span className="opt-title">Play when a focus block starts</span>
+              <span className="opt-sub">Your mix fades in with the timer.</span>
+            </span>
+            <Switch label="Play when a focus block starts" checked={sound.autoPlay} onChange={(v) => updateSound({ autoPlay: v })} />
+          </label>
+          <label className="opt">
+            <span className="icon-tile round">
+              <Moon />
+            </span>
+            <span className="opt-text">
+              <span className="opt-title">Fade out during breaks</span>
+              <span className="opt-sub">A little silence while you rest.</span>
+            </span>
+            <Switch label="Fade out during breaks" checked={sound.pauseOnBreak} onChange={(v) => updateSound({ pauseOnBreak: v })} />
+          </label>
         </div>
-        <button className="player-btn" aria-label={playing ? "Pause" : "Play"} disabled={!active.length} onClick={() => void soundEngine.toggle()}>
-          {playing ? <Pause /> : <Play />}
-        </button>
-        <div className="player-info">
-          <div className="eyebrow">{playing ? "Now playing" : "Ready"}</div>
-          <div className="player-title">{preset?.name ?? (active.length ? "Custom mix" : "Pick a sound below")}</div>
-          <div className="faint player-sub">{active.map((s) => s.label).join(" · ") || "Mix any combination of sounds"}</div>
-        </div>
-        <div className="player-volume">
-          <Volume2 />
-          <Slider label="Master volume" value={sound.master} onChange={(v) => updateSound({ master: v })} />
-        </div>
-      </div>
 
-      <div className="player-options">
-        <label className="option">
-          <Switch label="Play automatically when a focus block starts" checked={sound.autoPlay} onChange={(v) => updateSound({ autoPlay: v })} />
-          <span>Play when a focus block starts</span>
-        </label>
-        <label className="option">
-          <Switch label="Fade out during breaks" checked={sound.pauseOnBreak} onChange={(v) => updateSound({ pauseOnBreak: v })} />
-          <span>Fade out during breaks</span>
-        </label>
-      </div>
-
-      <h2 className="section-title">Presets</h2>
-      <div className="presets">
-        {PRESETS.map((p) => (
-          <button
-            key={p.id}
-            className={cx("preset", `preset-${p.id}`, preset?.id === p.id && "active")}
-            onClick={() => {
-              updateSound({ levels: p.levels as Record<string, number> });
-              if (!soundEngine.playing) void soundEngine.play();
-            }}
-          >
-            <span className="preset-name">{p.name}</span>
-            <span className="preset-desc">{p.description}</span>
-            {preset?.id === p.id && playing && <span className="eq" aria-hidden><i /><i /><i /></span>}
-          </button>
-        ))}
-      </div>
-
-      {(["Nature", "Noise", "Tones"] as const).map((group) => (
-        <section key={group}>
-          <h2 className="section-title">{group}</h2>
-          <div className="mixer">
-            {SOUNDS.filter((s) => s.group === group).map((s) => {
-              const level = levels[s.id] ?? 0;
+        {/* ------------------------------------------------ Presets */}
+        <section className="sounds-presets" aria-labelledby="presets-title">
+          <h2 className="section-title" id="presets-title">
+            Presets
+          </h2>
+          <div className="preset-grid">
+            {PRESETS.map((p) => {
+              const on = preset?.id === p.id;
               return (
-                <div key={s.id} className={cx("mix-tile", level > 0 && "on")}>
-                  <button className="mix-toggle" aria-pressed={level > 0} onClick={() => setLevel(s.id, level > 0 ? 0 : 0.5)}>
-                    <span className="mix-icon">{ICONS[s.id]}</span>
-                    <span className="mix-text">
-                      <span className="mix-label">{s.label}</span>
-                      <span className="mix-hint">{s.hint}</span>
+                <button key={p.id} className={cx("preset art", `art-${p.id}`, on && "active")} aria-pressed={on} onClick={() => applyPreset(p)}>
+                  <span className="preset-top">
+                    <span className="preset-icon" aria-hidden>
+                      {PRESET_ICONS[p.id] ?? <Headphones />}
                     </span>
-                  </button>
-                  <Slider label={`${s.label} volume`} value={level} onChange={(v) => setLevel(s.id, v)} />
-                </div>
+                    {on && playing ? (
+                      <span className="preset-state" aria-hidden>
+                        <Equalizer />
+                      </span>
+                    ) : (
+                      <span className="preset-state hint" aria-hidden>
+                        <Play className="fill" />
+                      </span>
+                    )}
+                  </span>
+                  <span className="preset-text">
+                    <span className="preset-name">{p.name}</span>
+                    <span className="preset-desc">{p.description}</span>
+                  </span>
+                </button>
               );
             })}
           </div>
         </section>
-      ))}
-
-      <h2 className="section-title">Timer chime</h2>
-      <div className="card">
-        <div className="rows">
-          <div className="row">
-            <div>
-              <div className="row-label">Sound</div>
-              <div className="row-desc">Plays when a focus block or break ends.</div>
-            </div>
-            <div className="row-control">
-              <Segmented<ChimeId>
-                label="Chime"
-                size="sm"
-                value={sound.chime}
-                onChange={(chime) => {
-                  updateSound({ chime });
-                  void soundEngine.chime(chime, sound.chimeVolume);
-                }}
-                options={[
-                  { value: "bell", label: "Bell" },
-                  { value: "soft", label: "Soft" },
-                  { value: "digital", label: "Digital" },
-                  { value: "none", label: "None" },
-                ]}
-              />
-            </div>
-          </div>
-          <div className="row">
-            <div className="row-label">Volume</div>
-            <div className="row-control" style={{ width: 220 }}>
-              <Slider label="Chime volume" value={sound.chimeVolume} onChange={(v) => updateSound({ chimeVolume: v })} />
-              <button className="btn btn-secondary btn-sm" onClick={() => void soundEngine.chime(sound.chime, sound.chimeVolume)}>
-                Test
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {/* ------------------------------------------------ Mixer */}
+      <section className="sounds-mixer" aria-labelledby="mixer-title">
+        <div className="mixer-head">
+          <div>
+            <h2 className="section-title" id="mixer-title">
+              Mix your own
+            </h2>
+            <p className="mixer-sub">Tap a sound to add it, then slide to blend.</p>
+          </div>
+          <PillTabs<Group>
+            label="Sound group"
+            size="sm"
+            value={group}
+            onChange={setGroup}
+            options={GROUPS.map((g) => {
+              const n = active.filter((s) => s.group === g).length;
+              return { value: g, label: g, count: n || undefined };
+            })}
+          />
+        </div>
+
+        <div className="mixer-grid">
+          {SOUNDS.filter((s) => s.group === group).map((s) => {
+            const level = levels[s.id] ?? 0;
+            const on = level > 0;
+            return (
+              <div key={s.id} className={cx("card mix-tile", on && "on")}>
+                <button className="mix-toggle" aria-pressed={on} onClick={() => setLevel(s.id, on ? 0 : 0.5)}>
+                  <span className="mix-top">
+                    <span className="mix-icon">{ICONS[s.id]}</span>
+                    {on && <span className="badge brand mix-level">{Math.round(level * 100)}%</span>}
+                  </span>
+                  <span className="mix-label">{s.label}</span>
+                  <span className="mix-hint">{s.hint}</span>
+                </button>
+                {on && (
+                  <div className="mix-slider">
+                    <Slider label={`${s.label} volume`} value={level} onChange={(v) => setLevel(s.id, v)} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
+  );
+}
+
+/** Three little bars that dance while a mix plays. */
+function Equalizer() {
+  return (
+    <span className="eq" aria-hidden>
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}
+
+/** A soft, fluffy cloud (Kai's seat and the hero's scenery). */
+function Cloud({ className }: { className?: string }) {
+  const id = useId().replace(/:/g, "");
+  return (
+    <svg className={cx("cloud", className)} viewBox="0 0 220 92" aria-hidden focusable="false">
+      <defs>
+        <linearGradient id={`c${id}`} x1="0" y1="8" x2="0" y2="92" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.6" stopColor="#f6f4ff" />
+          <stop offset="1" stopColor="#e4e6ff" />
+        </linearGradient>
+      </defs>
+      <g fill={`url(#c${id})`}>
+        <circle cx="62" cy="54" r="30" />
+        <circle cx="106" cy="42" r="36" />
+        <circle cx="150" cy="52" r="29" />
+        <circle cx="182" cy="66" r="20" />
+        <circle cx="36" cy="68" r="20" />
+        <rect x="30" y="60" width="164" height="30" rx="15" />
+      </g>
+    </svg>
   );
 }

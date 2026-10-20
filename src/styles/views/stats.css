@@ -1,0 +1,646 @@
+/* ================================================================ Stats — a calm personal summary */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 36px;
+  align-items: start;
+  transition: opacity 0.2s var(--ease);
+}
+
+.stats.refreshing .stats-grid {
+  opacity: 0.55;
+}
+
+.stats-main,
+.stats-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.stats-main > *,
+.stats-side > * {
+  min-width: 0;
+}
+
+.stats-side {
+  padding-top: 6px;
+}
+
+.stats-intro .display {
+  max-width: 520px;
+}
+
+.stats-tabs {
+  margin-top: 26px;
+}
+
+.stats .stacked {
+  margin-top: 8px;
+}
+
+/* ---------------------------------------------------------------- Top bar */
+
+.stats-when {
+  min-width: 0;
+}
+
+.stats-when .who-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-back {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--brand-ink) 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+.stats-daynav {
+  display: flex;
+  gap: 10px;
+  margin-right: 6px;
+}
+
+/* ---------------------------------------------------------------- Durations ("4h 12m", units set small) */
+
+.dur {
+  white-space: nowrap;
+}
+
+.stats .dur small {
+  font-size: 0.42em;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0 0.34em 0 0.14em;
+  color: inherit;
+  opacity: 0.6;
+}
+
+.stats .dur small:last-child {
+  margin-right: 0;
+}
+
+/* ---------------------------------------------------------------- Hero */
+
+.stats-hero {
+  padding: 26px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stats-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stats-hero-top .chip {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 13.5px;
+}
+
+.stats-hero-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-brand-2);
+}
+
+.stats-hero-delta .delta {
+  height: 30px;
+  padding: 0 11px 0 9px;
+  background: #fff;
+  color: var(--brand-ink);
+}
+
+.stats-hero-delta .delta.good {
+  color: #15803d;
+}
+
+.stats-hero-delta .delta.bad {
+  color: #d23a1c;
+}
+
+.stats-hero-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stats-hero-figure {
+  min-width: 0;
+}
+
+.stats-hero-number {
+  font-size: 84px;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  margin-left: -3px;
+}
+
+.stats-hero .dur small {
+  opacity: 0.72;
+}
+
+.stats-hero-sub {
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--on-brand-2);
+}
+
+.stats-hero-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  margin-right: 2px;
+}
+
+.stats-hero-score-delta {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--on-brand-2);
+  white-space: nowrap;
+}
+
+.stats-hero-split {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 18px 16px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.legend.on-brand {
+  color: var(--on-brand-2);
+  gap: 8px 20px;
+}
+
+.legend.on-brand .legend-value {
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------- Tiles */
+
+.stats-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stats .tile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+}
+
+.stats .tile-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.stats .tile-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.stats .tile-foot {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: auto;
+}
+
+.stats .tile .meter {
+  margin-top: 2px;
+}
+
+.stats .icon-tile.brand-solid {
+  background: var(--brand);
+  color: #fff;
+}
+
+.stats .tile .big-number small {
+  color: var(--ink-2);
+}
+
+.stats .tile-wide {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+.tile-wide-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stats .tile-wide .big-number {
+  font-size: 28px;
+}
+
+.stats .tile-wide .tile-foot {
+  margin-top: 4px;
+}
+
+.stats .tile-wide .badge {
+  align-self: flex-start;
+}
+
+/* ---------------------------------------------------------------- Chart card */
+
+.stats-chart .card-head {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.stats-legend {
+  margin-bottom: 20px;
+}
+
+.stats-chart-gap {
+  height: 26px;
+}
+
+.stats-empty {
+  padding: 18px 16px 26px;
+}
+
+/* ---------------------------------------------------------------- Top apps & sites */
+
+.stats-apps .card-head {
+  margin-bottom: 16px;
+}
+
+.stats-apps .segmented {
+  display: flex;
+  width: 100%;
+}
+
+.stats-apps .segmented button {
+  flex: 1;
+  white-space: nowrap;
+  height: 34px;
+  padding: 0 8px;
+}
+
+.stats-apps-list {
+  margin-top: 8px;
+  margin-bottom: -6px;
+}
+
+/* ---------------------------------------------------------------- Insights */
+
+.stats-insights .section-title {
+  margin: 0 0 14px;
+  padding-left: 4px;
+}
+
+.stats-insights-empty {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+}
+
+.stats-insights-empty .insight-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- Focus blocks */
+
+.stats-blocks .card-head {
+  margin-bottom: 6px;
+}
+
+.block-row {
+  padding: 13px 0;
+}
+
+.block-check {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--ink-4);
+}
+
+.block-check.done {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: none;
+}
+
+.block-check svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 3;
+}
+
+.stats-more {
+  margin-top: 6px;
+  padding: 0 12px;
+  margin-left: -12px;
+}
+
+/* ---------------------------------------------------------------- Persona */
+
+.persona-card {
+  overflow: hidden;
+  isolation: isolate;
+  padding: 26px;
+  background:
+    radial-gradient(70% 60% at 100% 0%, color-mix(in srgb, #8a6ffa 22%, transparent), transparent 70%),
+    radial-gradient(60% 50% at 0% 100%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 70%),
+    var(--surface);
+}
+
+.persona-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: -6px 0 0 -8px;
+}
+
+.persona-id {
+  min-width: 0;
+}
+
+.persona-name {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 2px;
+}
+
+.persona-tagline {
+  margin-top: 14px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.persona-traits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.persona-trait {
+  padding: 14px 14px 12px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.persona-trait-value {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.persona-trait-label {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.persona-tips {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.persona-tips li {
+  display: flex;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.persona-tips svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 2px;
+  color: var(--brand);
+  stroke-width: 2.6;
+}
+
+.persona-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.persona-note {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------- Responsive: one column, interleaved */
+
+@media (max-width: 1024px) {
+  .stats-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .stats-main,
+  .stats-side {
+    display: contents;
+  }
+
+  .stats-grid [class*="o-"] {
+    min-width: 0;
+  }
+
+  .stats .o-1 {
+    order: 1;
+  }
+  .stats .o-2 {
+    order: 2;
+  }
+  .stats .o-3 {
+    order: 3;
+  }
+  .stats .o-4 {
+    order: 4;
+  }
+  .stats .o-5 {
+    order: 5;
+    margin-top: 12px;
+  }
+  .stats .o-6 {
+    order: 6;
+    margin-top: 12px;
+  }
+  .stats .o-7 {
+    order: 7;
+  }
+  .stats .o-8 {
+    order: 8;
+  }
+}
+
+@media (max-width: 760px) {
+  .stats-tabs {
+    margin-top: 20px;
+  }
+
+  .stats-daynav {
+    gap: 8px;
+    margin-right: 2px;
+  }
+
+  .stats .topbar-right {
+    gap: 8px;
+  }
+
+  .stats .topbar-right .circle-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .stats-hero {
+    padding: 22px;
+    gap: 20px;
+  }
+
+  .stats-hero-top {
+    gap: 8px;
+  }
+
+  .stats-hero-top .chip {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .stats-hero-top .chip svg {
+    display: none;
+  }
+
+  .stats-hero-delta {
+    gap: 6px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  .stats-hero-delta .delta {
+    height: 28px;
+  }
+
+  .stats-hero-number {
+    font-size: 58px;
+  }
+
+  .stats-hero-sub {
+    font-size: 13.5px;
+    margin-top: 10px;
+  }
+
+  .stats-hero-split {
+    padding: 16px 16px 14px;
+    border-radius: 20px;
+  }
+
+  .legend.on-brand {
+    gap: 6px 14px;
+    font-size: 12.5px;
+  }
+
+  .stats-tiles {
+    gap: 12px;
+  }
+
+  .stats .tile {
+    padding: 18px;
+  }
+
+  .stats .tile .big-number {
+    font-size: 30px;
+  }
+
+  .stats .tile-wide {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .stats .tile-wide .big-number {
+    font-size: 26px;
+  }
+
+  .stats-legend {
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    gap: 6px 14px;
+  }
+
+  .stats-chart .card-head {
+    flex-wrap: wrap;
+  }
+
+  .persona-card {
+    padding: 22px;
+  }
+
+  .persona-traits {
+    gap: 8px;
+  }
+
+  .persona-trait {
+    padding: 12px 10px 10px;
+    border-radius: 16px;
+  }
+
+  .persona-trait-value {
+    font-size: 16px;
+  }
+
+  .persona-trait-label {
+    font-size: 11.5px;
+  }
+}

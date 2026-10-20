@@ -58,6 +58,8 @@
   --neutral: #c9cfdb;
   --distracting: #f25c3b;
   --distracting-tint: #ffe9e3;
+  /* Focus blocks drawn in charts (ink, so they never read as a productivity series) */
+  --focus-mark: var(--ink);
 
   /* Status */
   --good: #16a34a;
