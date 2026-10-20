@@ -132,7 +132,7 @@ npm run tauri ios dev
 
 CI (`.github/workflows/build.yml`) builds macOS (Apple silicon + Intel), Windows, Linux, a release Android APK and an iOS simulator build on every push, and keeps the installers as workflow artifacts.
 
-**Publishing a release:** push a tag that matches the version in `src-tauri/tauri.conf.json`, for example `git tag v0.1.0 && git push origin v0.1.0`. CI builds every platform and publishes a GitHub release with the installers, a `SHA256SUMS.txt` file and the notes from `.github/release-notes.md`.
+**Publishing a release:** bump `version` in `src-tauri/tauri.conf.json` (and `package.json`) and push to the default branch. Once every platform builds, CI publishes `v<version>` as a GitHub release with the installers, a `SHA256SUMS.txt` file and the notes from `.github/release-notes.md`. Pushes that don't change the version skip publishing. Pushing a `v<version>` tag publishes too.
 
 **Signing:** macOS builds are ad-hoc signed and Windows builds are unsigned. For store-ready builds you need an Apple Developer ID with notarisation and a Windows code-signing certificate; see the [Tauri distribution guide](https://tauri.app/distribute/). The Android APK is signed with the key in these repository secrets: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and, if it differs from the store password, `ANDROID_KEY_PASSWORD`. Without them, each build is signed with a one-off key, and a new version won't install over an older one. Create a key once and keep a backup of it:
 

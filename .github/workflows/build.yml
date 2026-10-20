@@ -207,18 +207,42 @@ jobs:
 
   release:
     name: Publish release
-    # Push a tag like v0.1.0 (matching the app version) to publish the installers.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Publishes v<version> from src-tauri/tauri.conf.json once every build passes:
+    # on a push to the default branch when that version has no release yet, or on a v* tag.
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref_name == github.event.repository.default_branch)
     needs: [desktop, android]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+      - name: Decide what to publish
+        id: plan
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="$GITHUB_REF_NAME"
+            publish=true
+          else
+            tag="v$version"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "$tag is already released; bump the version in src-tauri/tauri.conf.json to publish a new one."
+              publish=false
+            else
+              publish=true
+            fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
+        if: steps.plan.outputs.publish == 'true'
         with:
           path: artifacts
       - name: Collect installers
+        if: steps.plan.outputs.publish == 'true'
         run: |
           set -euo pipefail
           mkdir -p release
@@ -228,13 +252,16 @@ jobs:
           sha256sum -- * > SHA256SUMS.txt
           ls -la
       - name: Publish the GitHub release
+        if: steps.plan.outputs.publish == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.plan.outputs.tag }}
         run: |
           set -euo pipefail
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" release/* --clobber
           else
-            gh release create "$TAG" release/* --verify-tag --title "Kairo ${TAG#v}" --notes-file .github/release-notes.md
+            if [ "$GITHUB_REF_TYPE" = tag ]; then where=(--verify-tag); else where=(--target "$GITHUB_SHA"); fi
+            # A concurrent run may have created it first; then just upload.
+            gh release create "$TAG" release/* "${where[@]}" --title "Kairo ${TAG#v}" --notes-file .github/release-notes.md \
+              || gh release upload "$TAG" release/* --clobber
           fi
