@@ -23,7 +23,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 **Focus**
 - Focus, short break and long break phases. Long breaks come every *n* blocks, breaks and focus can start automatically, and you can add 5 minutes on the fly.
 - Set an intention for each block and link it to a task, so blocks count toward the work they were for.
-- **Kai**, a small focus buddy, keeps you company. Its face follows the timer: curious when idle, content while you focus and blissful on breaks.
+- **Kai**, a small focus buddy, keeps you company. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks and asleep when nothing's playing.
 - **Tasks** are planned in focus blocks. The current task sits on its own card with a progress bar per block, and you slide to mark it done.
 - The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu has start, pause, skip, reset and break controls.
 - **Global shortcut** (default <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>Space</kbd>) starts or pauses the timer from any app.

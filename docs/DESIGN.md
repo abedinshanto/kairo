@@ -20,6 +20,7 @@ The UI was rebuilt to feel calm, clean and premium, following the owner's refere
 4. **Round and soft.** Cards 32px radius (hero 40px), pills/buttons fully round, icons inside circles.
 5. **Two-tone headings.** Every screen opens with `<PageTitle strong="…" dim="…" />`.
 6. **Friendly.** Kai the buddy (`<Buddy />`) appears where it adds warmth (hero cards, empty states, onboarding). Copy is short, human, encouraging.
+   Kai is a plump clay bean with bear-cub ears and stubby feet: solid navy eyes with crisp catchlights, soft blush, light from the top-left (base gradient, a core shadow at the bottom, a faint rim light, one small highlight) and no halos. The face carries the mood and the ears add body language. It must read at 40px, so keep details bold. The app icon (`branding/logo.svg`) is the white Kai on brand blue.
 7. **Light-first.** Design in light; dark must also look right (tokens handle it — never hard-code `#fff` backgrounds for surfaces; white text on hero cards is fine).
 
 ## Tokens (src/styles/tokens.css — do not edit)
