@@ -1,6 +1,6 @@
 [package]
 name = "kairo"
-version = "0.1.0"
+version = "0.1.1"
 description = "Kairo — private, on-device focus timer and time intelligence"
 authors = ["Kairo"]
 edition = "2021"

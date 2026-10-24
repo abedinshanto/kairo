@@ -1,5 +1,11 @@
 Kairo is a calm focus timer that shows where your time goes, privately and on your own device. It has no account, no cloud and no analytics, and it never makes a network request.
 
+## What's new
+
+- **A new Kai.** Your focus buddy is now a soft clay bean with little ears. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks and asleep when nothing's playing.
+- **A new app icon:** Kai on Kairo blue.
+- **Android:** this build is signed with a new key, so it won't install over an earlier version. Export your data in **Settings → Privacy & data** if you want a copy, uninstall the old app, then install this one.
+
 ## Downloads
 
 | Platform | File |
