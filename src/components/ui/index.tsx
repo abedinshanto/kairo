@@ -1,6 +1,7 @@
 import { ArrowDownRight, ArrowUpRight, Bell, Check, ChevronsRight, Minus, Plus, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useAppIcon } from "../../lib/icons";
+import { appMark, siteMark } from "../../lib/siteMarks";
 import { useApp } from "../../lib/store";
 
 export function cx(...xs: (string | false | null | undefined)[]) {
@@ -225,20 +226,70 @@ export function Sheet({ onClose, children, label, closable = true }: { onClose: 
 /** @deprecated use Sheet */
 export const Modal = Sheet;
 
-// ------------------------------------------------------------------ Avatar (app / site initials)
+// ------------------------------------------------------------------ Avatar (app, site or category)
+
+/** Light brand colours (yellow, white…) get a dark mark so it stays visible. */
+const isLight = (hex: string) => {
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.68;
+};
 
 /**
- * An app or site: the app's real icon when the core has one (with a small dot for
- * productive / distracting), otherwise initials tinted by productivity.
+ * An app, site or category. In order of preference: a known site's brand mark,
+ * the real icon the core extracted (an app's own icon, or a site's favicon saved
+ * by the browser), a category glyph, and finally initials. A small dot marks
+ * productive (blue) or distracting (coral) on icons and marks.
  */
-export function Avatar({ name, productivity, size = 44, iconKey }: { name: string; productivity?: number; size?: number; iconKey?: string }) {
-  const icon = useAppIcon(iconKey);
+export function Avatar({
+  name,
+  productivity,
+  size = 44,
+  iconKey,
+  siteKey,
+  glyph,
+}: {
+  name: string;
+  productivity?: number;
+  size?: number;
+  /** An app's id, for its real icon. */
+  iconKey?: string;
+  /** A site's domain, for its brand mark or saved favicon. */
+  siteKey?: string;
+  glyph?: ReactNode;
+}) {
+  // Sites: the bundled brand mark, else the browser's saved favicon.
+  // Apps: their own icon, else a brand mark for well-known apps.
+  const siteBrand = siteKey ? siteMark(siteKey) : undefined;
+  const icon = useAppIcon(iconKey ?? (siteKey && !siteBrand ? `site:${siteKey}` : undefined));
+  const mark = siteBrand ?? (iconKey && !icon ? appMark(name) : undefined);
   const p = productivity === undefined ? 1 : Math.sign(productivity);
+  const dot = p !== 0 && <span className="avatar-dot" />;
+  if (mark) {
+    return (
+      <span
+        className={cx("avatar brand-mark", `p-${p}`, isLight(mark.hex) && "light")}
+        style={{ width: size, height: size, ["--mark" as string]: `#${mark.hex}` }}
+        aria-hidden
+      >
+        <svg viewBox="0 0 24 24">
+          <path d={mark.path} />
+        </svg>
+        {dot}
+      </span>
+    );
+  }
   if (icon) {
     return (
       <span className={cx("avatar has-icon", `p-${p}`)} style={{ width: size, height: size }} aria-hidden>
         <img src={icon} alt="" draggable={false} />
-        {p !== 0 && <span className="avatar-dot" />}
+        {dot}
+      </span>
+    );
+  }
+  if (glyph) {
+    return (
+      <span className={cx("avatar has-glyph", `p-${p}`)} style={{ width: size, height: size }} aria-hidden>
+        {glyph}
       </span>
     );
   }

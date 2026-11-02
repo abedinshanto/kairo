@@ -33,7 +33,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 
 **Tracking (on-device)**
 - Samples the foreground app about once a second, merges the samples into spans and skips idle time (the idle threshold is configurable). **Open at login** (offered during setup) starts Kairo quietly in the menu bar, so the whole day is tracked, not just while the window is open.
-- Shows each app's **real icon**, read from the app on your computer (or the launcher on Android) and kept in the local database.
+- Shows each app's **real icon**, read from the app on your computer (or the launcher on Android) and kept in the local database. Well-known sites show their logo (bundled brand marks from [Simple Icons](https://simpleicons.org), CC0); other sites use the favicon your Chromium-based browser already saved, read from its local cache. Categories have their own icons.
 - Detects websites in browsers. Window titles map to known sites on Windows and Linux. On macOS, Kairo reads the current tab's domain from Safari, Chrome, Arc, Edge, Brave and others once you allow it (macOS asks once per browser).
 - Classifies hundreds of apps and sites into 15 categories, each scored *productive*, *neutral* or *distracting*. You can re-categorise any app or site, and the change rewrites your whole history.
 - Pause tracking for 30 or 60 minutes. Excluding an app deletes its history and stops recording it.
@@ -88,7 +88,8 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 ## Privacy
 
 - **No network access.** The app has no server, telemetry, crash reporting or update pings. The Content Security Policy in `src-tauri/tauri.conf.json` blocks all remote connections.
-- **One local file.** Data lives in `kairo.db` in the OS app-data folder. Settings → Privacy & data shows the path and size.
+- **One local file.** Data lives in `kairo.db` in the OS app-data folder. Settings shows the path and size.
+- **No fetched logos.** Site logos are bundled with the app or copied from your browser's own favicon cache on this computer, never downloaded.
 - **Minimal by default.** Kairo stores app names and website domains. Window titles are off unless you turn them on, and full URLs are never stored.
 - **Least-privilege permissions.** The webview can only write files to a path you just picked in a save dialog.
 - **You're in control.** Pause tracking, exclude apps (which deletes their history), choose a retention period, export, or delete everything.

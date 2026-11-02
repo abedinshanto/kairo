@@ -34,15 +34,14 @@ const SHORTCUTS = ["CommandOrControl+Shift+Space", "CommandOrControl+Shift+F", "
 
 // ------------------------------------------------------------------ Building blocks
 
-/** A titled group: section title outside, rows inside one white card, optional footnote. */
-function Group({ id, title, foot, children }: { id: string; title: string; foot?: ReactNode; children: ReactNode }) {
+/** A titled group: section title outside, rows inside one white card. */
+function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section className="set-group" aria-labelledby={`set-${id}`}>
       <h2 className="section-title" id={`set-${id}`}>
         {title}
       </h2>
       <div className="card set-card">{children}</div>
-      {foot && <p className="set-foot">{foot}</p>}
     </section>
   );
 }
@@ -50,7 +49,8 @@ function Group({ id, title, foot, children }: { id: string; title: string; foot?
 /**
  * One settings row: label (+ an optional line only where behaviour needs explaining), control on the right.
  * Controls stay inline on phones too; only `wide` ones (segmented, slider) drop onto their own line.
- * `below` content always sits under the text.
+ * `below` content always sits under the text. `off` dims the row and disables its control
+ * (rows that depend on a switch stay in place, so the page doesn't jump).
  */
 /** Minutes after midnight as "HH:MM" for a time input. */
 const clockTime = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -61,20 +61,26 @@ function Row({
   children,
   below,
   wide,
+  off,
 }: {
   label: ReactNode;
   desc?: ReactNode;
   children?: ReactNode;
   below?: ReactNode;
   wide?: boolean;
+  off?: boolean;
 }) {
   return (
-    <div className={cx("set-row", wide && "wide", below !== undefined && "has-below")}>
+    <div className={cx("set-row", wide && "wide", below !== undefined && "has-below", off && "is-off")}>
       <div className="set-text">
         <div className="set-label">{label}</div>
         {desc && <div className="set-desc">{desc}</div>}
       </div>
-      {children && <div className="set-control">{children}</div>}
+      {children && (
+        <fieldset className="set-control" disabled={off}>
+          {children}
+        </fieldset>
+      )}
       {below !== undefined && <div className="set-below">{below}</div>}
     </div>
   );
@@ -133,212 +139,207 @@ export function SettingsView() {
         <PrivacyCard info={info} />
       </div>
 
-      <div className="set-cols">
-        <div className="set-col">
-          <Group id="timer" title="Focus timer">
-            <Row label="Focus block">
-              <Stepper label="focus minutes" value={s.focusMinutes} onChange={(v) => update({ focusMinutes: v })} min={5} max={120} step={5} format={mins} />
-            </Row>
-            <Row label="Short break">
-              <Stepper label="short break minutes" value={s.shortBreakMinutes} onChange={(v) => update({ shortBreakMinutes: v })} min={1} max={30} format={mins} />
-            </Row>
-            <Row label="Long break">
-              <Stepper label="long break minutes" value={s.longBreakMinutes} onChange={(v) => update({ longBreakMinutes: v })} min={5} max={60} step={5} format={mins} />
-            </Row>
-            <Row label="Long break after">
-              <Stepper
-                label="blocks before long break"
-                value={s.longBreakEvery}
-                onChange={(v) => update({ longBreakEvery: v })}
-                min={2}
-                max={8}
-                format={(v) => `${v} blocks`}
-              />
-            </Row>
-            <Row label="Start breaks automatically">
-              <Switch label="Start breaks automatically" checked={s.autoStartBreaks} onChange={(v) => update({ autoStartBreaks: v })} />
-            </Row>
-            <Row label="Start focus after breaks">
-              <Switch label="Start focus automatically after breaks" checked={s.autoStartFocus} onChange={(v) => update({ autoStartFocus: v })} />
-            </Row>
-            <ChimeRows />
-          </Group>
+      {/* Groups pair up row by row (timer | nudges, tracking | system, goals | data),
+          so headings line up and each pair of cards ends together. */}
+      <div className={cx("set-cols", !desktop && "loose")}>
+        <Group id="timer" title="Focus timer">
+          <Row label="Focus block">
+            <Stepper label="focus minutes" value={s.focusMinutes} onChange={(v) => update({ focusMinutes: v })} min={5} max={120} step={5} format={mins} />
+          </Row>
+          <Row label="Short break">
+            <Stepper label="short break minutes" value={s.shortBreakMinutes} onChange={(v) => update({ shortBreakMinutes: v })} min={1} max={30} format={mins} />
+          </Row>
+          <Row label="Long break">
+            <Stepper label="long break minutes" value={s.longBreakMinutes} onChange={(v) => update({ longBreakMinutes: v })} min={5} max={60} step={5} format={mins} />
+          </Row>
+          <Row label="Long break after">
+            <Stepper
+              label="blocks before long break"
+              value={s.longBreakEvery}
+              onChange={(v) => update({ longBreakEvery: v })}
+              min={2}
+              max={8}
+              format={(v) => `${v} blocks`}
+            />
+          </Row>
+          <Row label="Start breaks automatically">
+            <Switch label="Start breaks automatically" checked={s.autoStartBreaks} onChange={(v) => update({ autoStartBreaks: v })} />
+          </Row>
+          <Row label="Start focus after breaks">
+            <Switch label="Start focus automatically after breaks" checked={s.autoStartFocus} onChange={(v) => update({ autoStartFocus: v })} />
+          </Row>
+          <ChimeRows />
+        </Group>
 
-          <Group id="goals" title="Goals">
-            <Row label="Daily focus goal">
-              <Stepper label="daily focus goal" value={s.dailyFocusGoalMinutes} onChange={(v) => update({ dailyFocusGoalMinutes: v })} min={30} max={600} step={30} format={hm} />
+        <Group id="nudges" title="Notifications & nudges">
+          <Row label="Notifications">
+            <Switch label="Notifications" checked={s.notificationsEnabled} onChange={(v) => update({ notificationsEnabled: v })} />
+          </Row>
+          <Row label="Daily summary" desc="What you got done and where the time went, once a day.">
+            <Switch label="Daily summary" checked={s.dailySummary} onChange={(v) => update({ dailySummary: v })} />
+          </Row>
+          <Row label="Summary time" desc="Pick the end of your working day." off={!s.dailySummary}>
+            <input
+              className="input pill set-time"
+              type="time"
+              aria-label="Summary time"
+              value={clockTime(s.dailySummaryMinutes)}
+              onChange={(e) => {
+                const [h, m] = e.target.value.split(":").map(Number);
+                if (Number.isFinite(h) && Number.isFinite(m)) update({ dailySummaryMinutes: h * 60 + m });
+              }}
+            />
+          </Row>
+          {desktop && (
+            <Row label="Focus guard" desc="A nudge if you drift mid-block.">
+              <Switch label="Focus guard" checked={s.focusGuard} onChange={(v) => update({ focusGuard: v })} />
             </Row>
-            <Row label="Distraction budget" desc="A daily allowance for distracting apps.">
-              <Stepper
-                label="distraction budget"
-                value={s.distractionBudgetMinutes}
-                onChange={(v) => update({ distractionBudgetMinutes: v })}
-                min={0}
-                max={300}
-                step={15}
-                format={(v) => (v ? hm(v) : "Off")}
-              />
+          )}
+          {desktop && (
+            <Row label="Smart nudges">
+              <Switch label="Smart nudges" checked={s.nudgesEnabled} onChange={(v) => update({ nudgesEnabled: v })} />
             </Row>
-          </Group>
+          )}
+          {desktop && (
+            <>
+              <Row label="Nudge to focus after" desc="Time on distracting apps." off={!s.nudgesEnabled}>
+                <Stepper label="distraction nudge" value={s.nudgeDistractionMinutes} onChange={(v) => update({ nudgeDistractionMinutes: v })} min={5} max={60} step={5} format={mins} />
+              </Row>
+              <Row label="Suggest a break after" desc="Time working without a pause." off={!s.nudgesEnabled}>
+                <Stepper label="break reminder" value={s.nudgeBreakMinutes} onChange={(v) => update({ nudgeBreakMinutes: v })} min={30} max={240} step={15} format={hm} />
+              </Row>
+            </>
+          )}
+        </Group>
 
-          <Group id="system" title="Appearance & system">
-            <Row label="Theme" wide>
-              <Segmented<ThemePref>
-                label="Theme"
-                value={s.theme ?? "light"}
-                onChange={(theme) => update({ theme })}
-                options={[
-                  { value: "light", label: <><Sun aria-hidden /> Light</> },
-                  { value: "dark", label: <><Moon aria-hidden /> Dark</> },
-                  { value: "system", label: <><Monitor aria-hidden /> System</> },
-                ]}
-              />
-            </Row>
-            {desktop && autostart !== null && (
-              <Row label="Open at login" desc={`Starts quietly in the ${isMac ? "menu bar" : "tray"}.`}>
-                <Switch
-                  label="Open at login"
-                  checked={autostart}
-                  onChange={async (v) => {
-                    await backend.setAutostart(v);
-                    setAutostart(await backend.autostartEnabled());
-                  }}
-                />
-              </Row>
-            )}
-            {desktop && isNative && (
-              <Row label={isMac ? "Timer in menu bar" : "Timer in tray tooltip"}>
-                <Switch label={isMac ? "Show timer in menu bar" : "Show timer in tray"} checked={s.showTimerInTray} onChange={(v) => update({ showTimerInTray: v })} />
-              </Row>
-            )}
-            {isMac && isNative && (
-              <Row label="Hide Dock icon" desc="Kairo stays in the menu bar.">
-                <Switch label="Hide Dock icon" checked={s.hideDockIcon} onChange={(v) => update({ hideDockIcon: v })} />
-              </Row>
-            )}
-            {desktop && (
-              <Row label="Global shortcut" desc="Start or pause from any app.">
-                <select className="select" value={s.globalShortcut} onChange={(e) => update({ globalShortcut: e.target.value })} aria-label="Global shortcut">
-                  {SHORTCUTS.map((a) => (
-                    <option key={a} value={a}>
-                      {a ? shortcutLabel(a) : "Off"}
-                    </option>
-                  ))}
-                </select>
-              </Row>
-            )}
-          </Group>
-        </div>
-
-        <div className="set-col">
-          <Group
-            id="tracking"
-            title="Activity tracking"
-            foot={
+        <Group id="tracking" title="Activity tracking">
+          <Row
+            label="Track app & website time"
+            desc={
               isMobileOS
                 ? os === "ios"
-                  ? "iOS doesn't let apps read other apps' usage, so on iPhone Kairo tracks your focus blocks only."
-                  : "Android shares per-app usage with Kairo once you grant Usage access. It's read on-device only."
-                : "Kairo checks which app is in front about once a second. Idle time is skipped."
+                  ? "iOS keeps other apps' usage private, so Kairo tracks focus blocks only."
+                  : "Read on this device only, once you grant Usage access."
+                : "Checks the app in front about once a second. Idle time is skipped."
             }
           >
-            <Row label="Track app & website time">
-              <Switch label="Track app and website time" checked={s.trackingEnabled} onChange={(v) => update({ trackingEnabled: v })} disabled={!tracker?.supported} />
+            <Switch label="Track app and website time" checked={s.trackingEnabled} onChange={(v) => update({ trackingEnabled: v })} disabled={!tracker?.supported} />
+          </Row>
+          {os === "android" && isNative && (
+            <Row label="Usage access" desc={tracker?.needsPermission ? "Needed to see which apps you use." : "Granted. Thank you!"}>
+              <button className="btn btn-soft btn-sm" onClick={() => void backend.usagePermissionRequest()}>
+                {tracker?.needsPermission ? "Grant access" : "Open settings"}
+              </button>
             </Row>
-            {os === "android" && isNative && (
-              <Row label="Usage access" desc={tracker?.needsPermission ? "Needed to see which apps you use." : "Granted. Thank you!"}>
-                <button className="btn btn-soft btn-sm" onClick={() => void backend.usagePermissionRequest()}>
-                  {tracker?.needsPermission ? "Grant access" : "Open settings"}
+          )}
+          {desktop && (
+            <Row label="Pause tracking" desc={paused ? `Paused until ${fmtTime(tracker!.pausedUntil!)}` : undefined}>
+              {paused ? (
+                <button className="btn btn-soft btn-sm" onClick={() => void pauseTracking(null)}>
+                  Resume now
                 </button>
-              </Row>
-            )}
-            {desktop && (
-              <Row label="Pause tracking" desc={paused ? `Paused until ${fmtTime(tracker!.pausedUntil!)}` : undefined}>
-                {paused ? (
-                  <button className="btn btn-soft btn-sm" onClick={() => void pauseTracking(null)}>
-                    Resume now
+              ) : (
+                <div className="set-btns">
+                  <button className="btn btn-soft btn-sm" onClick={() => void pauseTracking(30)}>
+                    30 min
                   </button>
-                ) : (
-                  <div className="set-btns">
-                    <button className="btn btn-soft btn-sm" onClick={() => void pauseTracking(30)}>
-                      30 min
-                    </button>
-                    <button className="btn btn-soft btn-sm" onClick={() => void pauseTracking(60)}>
-                      1 hour
-                    </button>
-                  </div>
-                )}
-              </Row>
-            )}
-            {desktop && (
-              <Row label="Idle after" desc="Stop counting when you step away.">
-                <select className="select" value={s.idleThresholdSeconds} onChange={(e) => update({ idleThresholdSeconds: Number(e.target.value) })} aria-label="Idle threshold">
-                  {[60, 120, 180, 300, 600, 900].map((v) => (
-                    <option key={v} value={v}>
-                      {v / 60} min
-                    </option>
-                  ))}
-                </select>
-              </Row>
-            )}
-            {desktop && isMac && (
-              <Row label="Read website from browser" desc="Safari, Chrome, Arc, Edge, Brave. Domain only.">
-                <Switch label="Read website from browser" checked={s.trackBrowserUrls} onChange={(v) => update({ trackBrowserUrls: v })} />
-              </Row>
-            )}
-            {desktop && (
-              <Row label="Store window titles" desc="Off by default. Titles can be private.">
-                <Switch label="Store window titles" checked={s.storeWindowTitles} onChange={(v) => update({ storeWindowTitles: v })} />
-              </Row>
-            )}
-            <ExcludedApps />
-          </Group>
-
-          <Group id="nudges" title="Notifications & nudges">
-            <Row label="Notifications">
-              <Switch label="Notifications" checked={s.notificationsEnabled} onChange={(v) => update({ notificationsEnabled: v })} />
+                  <button className="btn btn-soft btn-sm" onClick={() => void pauseTracking(60)}>
+                    1 hour
+                  </button>
+                </div>
+              )}
             </Row>
-            <Row label="Daily summary" desc="What you got done and where the time went, once a day.">
-              <Switch label="Daily summary" checked={s.dailySummary} onChange={(v) => update({ dailySummary: v })} />
+          )}
+          {desktop && (
+            <Row label="Idle after" desc="Stop counting when you step away.">
+              <select className="select" value={s.idleThresholdSeconds} onChange={(e) => update({ idleThresholdSeconds: Number(e.target.value) })} aria-label="Idle threshold">
+                {[60, 120, 180, 300, 600, 900].map((v) => (
+                  <option key={v} value={v}>
+                    {v / 60} min
+                  </option>
+                ))}
+              </select>
             </Row>
-            {s.dailySummary && (
-              <Row label="Summary time" desc="Pick the end of your working day.">
-                <input
-                  className="input pill set-time"
-                  type="time"
-                  aria-label="Summary time"
-                  value={clockTime(s.dailySummaryMinutes)}
-                  onChange={(e) => {
-                    const [h, m] = e.target.value.split(":").map(Number);
-                    if (Number.isFinite(h) && Number.isFinite(m)) update({ dailySummaryMinutes: h * 60 + m });
-                  }}
-                />
-              </Row>
-            )}
-            {desktop && (
-              <Row label="Focus guard" desc="A nudge if you drift mid-block.">
-                <Switch label="Focus guard" checked={s.focusGuard} onChange={(v) => update({ focusGuard: v })} />
-              </Row>
-            )}
-            {desktop && (
-              <Row label="Smart nudges">
-                <Switch label="Smart nudges" checked={s.nudgesEnabled} onChange={(v) => update({ nudgesEnabled: v })} />
-              </Row>
-            )}
-            {desktop && s.nudgesEnabled && (
-              <>
-                <Row label="Nudge to focus after" desc="Time on distracting apps.">
-                  <Stepper label="distraction nudge" value={s.nudgeDistractionMinutes} onChange={(v) => update({ nudgeDistractionMinutes: v })} min={5} max={60} step={5} format={mins} />
-                </Row>
-                <Row label="Suggest a break after" desc="Time working without a pause.">
-                  <Stepper label="break reminder" value={s.nudgeBreakMinutes} onChange={(v) => update({ nudgeBreakMinutes: v })} min={30} max={240} step={15} format={hm} />
-                </Row>
-              </>
-            )}
-          </Group>
+          )}
+          {desktop && isMac && (
+            <Row label="Read website from browser" desc="Safari, Chrome, Arc, Edge, Brave. Domain only.">
+              <Switch label="Read website from browser" checked={s.trackBrowserUrls} onChange={(v) => update({ trackBrowserUrls: v })} />
+            </Row>
+          )}
+          {desktop && (
+            <Row label="Store window titles" desc="Off by default. Titles can be private.">
+              <Switch label="Store window titles" checked={s.storeWindowTitles} onChange={(v) => update({ storeWindowTitles: v })} />
+            </Row>
+          )}
+          <ExcludedApps />
+        </Group>
 
-          <DataGroup info={info} />
-        </div>
+        <Group id="system" title="Appearance & system">
+          <Row label="Theme" wide>
+            <Segmented<ThemePref>
+              label="Theme"
+              value={s.theme ?? "light"}
+              onChange={(theme) => update({ theme })}
+              options={[
+                { value: "light", label: <><Sun aria-hidden /> Light</> },
+                { value: "dark", label: <><Moon aria-hidden /> Dark</> },
+                { value: "system", label: <><Monitor aria-hidden /> System</> },
+              ]}
+            />
+          </Row>
+          {desktop && autostart !== null && (
+            <Row label="Open at login" desc={`Starts quietly in the ${isMac ? "menu bar" : "tray"}.`}>
+              <Switch
+                label="Open at login"
+                checked={autostart}
+                onChange={async (v) => {
+                  await backend.setAutostart(v);
+                  setAutostart(await backend.autostartEnabled());
+                }}
+              />
+            </Row>
+          )}
+          {desktop && (
+            <Row label={isMac ? "Timer in menu bar" : "Timer in tray tooltip"}>
+              <Switch label={isMac ? "Show timer in menu bar" : "Show timer in tray"} checked={s.showTimerInTray} onChange={(v) => update({ showTimerInTray: v })} />
+            </Row>
+          )}
+          {isMac && isNative && (
+            <Row label="Hide Dock icon" desc="Kairo stays in the menu bar.">
+              <Switch label="Hide Dock icon" checked={s.hideDockIcon} onChange={(v) => update({ hideDockIcon: v })} />
+            </Row>
+          )}
+          {desktop && (
+            <Row label="Global shortcut" desc="Start or pause from any app.">
+              <select className="select" value={s.globalShortcut} onChange={(e) => update({ globalShortcut: e.target.value })} aria-label="Global shortcut">
+                {SHORTCUTS.map((a) => (
+                  <option key={a} value={a}>
+                    {a ? shortcutLabel(a) : "Off"}
+                  </option>
+                ))}
+              </select>
+            </Row>
+          )}
+        </Group>
+
+        <Group id="goals" title="Goals">
+          <Row label="Daily focus goal">
+            <Stepper label="daily focus goal" value={s.dailyFocusGoalMinutes} onChange={(v) => update({ dailyFocusGoalMinutes: v })} min={30} max={600} step={30} format={hm} />
+          </Row>
+          <Row label="Distraction budget" desc="A daily allowance for distracting apps.">
+            <Stepper
+              label="distraction budget"
+              value={s.distractionBudgetMinutes}
+              onChange={(v) => update({ distractionBudgetMinutes: v })}
+              min={0}
+              max={300}
+              step={15}
+              format={(v) => (v ? hm(v) : "Off")}
+            />
+          </Row>
+        </Group>
+
+        <DataGroup />
       </div>
 
       <footer className="set-footer">
@@ -434,13 +435,17 @@ function PrivacyCard({ info }: { info: DataInfo | undefined }) {
           </button>
         </div>
       </div>
+
+      <p className="set-stored">
+        Stored at <span className="set-path" title={info?.dbPath}>{info?.dbPath ?? "…"}</span>
+      </p>
     </section>
   );
 }
 
 // ------------------------------------------------------------------ Your data (retention, location, delete)
 
-function DataGroup({ info }: { info: DataInfo | undefined }) {
+function DataGroup() {
   const retention = useApp((st) => st.settings.retentionDays);
   const update = useApp((st) => st.updateSettings);
   const toast = useApp((st) => st.toast);
@@ -467,7 +472,6 @@ function DataGroup({ info }: { info: DataInfo | undefined }) {
           ))}
         </select>
       </Row>
-      <Row label="Stored at" desc={<span className="set-path" title={info?.dbPath}>{info?.dbPath ?? "…"}</span>} />
       <Row label="Delete all data" desc="Erases activity, focus history, tasks and rules. Settings stay.">
         <button className="btn btn-danger btn-sm" onClick={() => void wipe()}>
           <Trash2 aria-hidden /> Delete
@@ -486,31 +490,26 @@ function ChimeRows() {
 
   return (
     <>
-      <Row
-        label="Chime"
-        below={
-          <Segmented<ChimeId>
-            label="Chime sound"
-            value={sound.chime}
-            onChange={(chime) => {
-              updateSound({ chime });
-              preview(chime);
-            }}
-            options={CHIMES}
-          />
-        }
-      />
-      {sound.chime !== "none" && (
-        <Row label="Chime volume" wide>
-          <div className="set-volume">
-            <Volume1 aria-hidden className="set-volume-icon" />
-            <Slider label="Chime volume" value={sound.chimeVolume} onChange={(v) => updateSound({ chimeVolume: v })} />
-            <button className="btn btn-soft btn-sm" onClick={() => preview()} disabled={sound.chimeVolume <= 0}>
-              <Play className="fill" /> Test
-            </button>
-          </div>
-        </Row>
-      )}
+      <Row label="Chime" wide>
+        <Segmented<ChimeId>
+          label="Chime sound"
+          value={sound.chime}
+          onChange={(chime) => {
+            updateSound({ chime });
+            preview(chime);
+          }}
+          options={CHIMES}
+        />
+      </Row>
+      <Row label="Chime volume" wide off={sound.chime === "none"}>
+        <div className="set-volume">
+          <Volume1 aria-hidden className="set-volume-icon" />
+          <Slider label="Chime volume" value={sound.chimeVolume} onChange={(v) => updateSound({ chimeVolume: v })} />
+          <button className="btn btn-soft btn-sm" onClick={() => preview()} disabled={sound.chimeVolume <= 0}>
+            <Play className="fill" /> Test
+          </button>
+        </div>
+      </Row>
     </>
   );
 }

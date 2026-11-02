@@ -24,6 +24,7 @@ pub struct Icon {
     pub data: Vec<u8>,
 }
 
+mod favicons;
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "macos")]
@@ -58,27 +59,42 @@ fn extract<R: Runtime>(_app: &AppHandle<R>, _process_path: &Path, _app_name: &st
     None
 }
 
-/// The tracker hands every app it sees to this worker (once per run); the
-/// worker fetches the icon in the background if we don't have a fresh one.
+enum Job {
+    App { id: String, path: PathBuf, name: String },
+    /// Stored under `site:<domain>`.
+    Site { domain: String },
+}
+
+/// The tracker hands every app and site it sees to this worker (once per run);
+/// the worker fetches the icon in the background if we don't have a fresh one.
 pub struct IconWorker {
-    tx: mpsc::Sender<(String, PathBuf, String)>,
+    tx: mpsc::Sender<Job>,
     seen: HashSet<String>,
 }
 
 impl IconWorker {
     pub fn spawn<R: Runtime>(app: AppHandle<R>) -> Self {
-        let (tx, rx) = mpsc::channel::<(String, PathBuf, String)>();
+        let (tx, rx) = mpsc::channel::<Job>();
         let worker = thread::Builder::new().name("kairo-icons".into()).spawn(move || {
-            for (app_id, path, name) in rx {
+            let mut favicons = favicons::Favicons::default();
+            for job in rx {
                 let state = app.state::<AppState>();
-                if state.db.has_app_icon(&app_id, REFRESH_MS).unwrap_or(true) {
+                let key = match &job {
+                    Job::App { id, .. } => id.clone(),
+                    Job::Site { domain } => format!("site:{domain}"),
+                };
+                if state.db.has_app_icon(&key, REFRESH_MS).unwrap_or(true) {
                     continue;
                 }
-                let Some(icon) = extract(&app, &path, &name) else {
+                let icon = match &job {
+                    Job::App { path, name, .. } => extract(&app, path, name),
+                    Job::Site { domain } => favicons.lookup(domain),
+                };
+                let Some(icon) = icon else {
                     continue;
                 };
-                if state.db.set_app_icon(&app_id, icon.mime, &icon.data).is_ok() {
-                    let _ = app.emit("icons://changed", &app_id);
+                if state.db.set_app_icon(&key, icon.mime, &icon.data).is_ok() {
+                    let _ = app.emit("icons://changed", &key);
                 }
             }
         });
@@ -94,9 +110,20 @@ impl IconWorker {
     /// Cheap after the first call for an app.
     pub fn see(&mut self, app_id: &str, process_path: &Path, app_name: &str) {
         if self.seen.insert(app_id.to_owned()) {
-            let _ = self
-                .tx
-                .send((app_id.to_owned(), process_path.to_owned(), app_name.to_owned()));
+            let _ = self.tx.send(Job::App {
+                id: app_id.to_owned(),
+                path: process_path.to_owned(),
+                name: app_name.to_owned(),
+            });
+        }
+    }
+
+    /// A website seen in a browser; its icon comes from the browser's own cache.
+    pub fn see_site(&mut self, domain: &str) {
+        if self.seen.insert(format!("site:{domain}")) {
+            let _ = self.tx.send(Job::Site {
+                domain: domain.to_owned(),
+            });
         }
     }
 }

@@ -52,6 +52,7 @@ export function createDemoBackend(): Backend {
   let tasks = SEED_TASKS.map((t) => ({ ...t, createdAt: Date.now() - 6 * 86_400_000 }));
   let nextTaskId = tasks.length + 1;
   const rules = new Map<string, Rule>();
+  let autostart = false;
   const timer = new TimerEngine(settings);
   const listeners = new Set<(e: BackendEvent) => void>();
   let pausedUntil: number | null = null;
@@ -341,8 +342,11 @@ export function createDemoBackend(): Backend {
       emit({ type: "data" });
     },
 
-    autostartEnabled: async () => null,
-    setAutostart: async () => {},
+    // The preview shows the desktop app's "Open at login" row; it just remembers the choice.
+    autostartEnabled: async () => autostart,
+    async setAutostart(enabled) {
+      autostart = enabled;
+    },
     async ensureNotificationPermission() {
       if (!("Notification" in window)) return false;
       if (Notification.permission === "granted") return true;

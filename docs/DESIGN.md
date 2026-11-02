@@ -38,7 +38,7 @@ The UI was rebuilt to feel calm, clean and premium, following the owner's refere
 
 ## Building blocks
 
-React (`src/components/ui/index.tsx`): `PageTitle`, `TopBar`, `PillTabs`, `Segmented`, `Switch`, `Slider` (`onBrand` for hero cards), `Stepper`, `Sheet` (bottom sheet on phones, dialog on desktop), `Avatar` (initials, tinted by productivity), `Delta` (pill), `SlideToConfirm`, `Toasts`, `cx`.
+React (`src/components/ui/index.tsx`): `PageTitle`, `TopBar`, `PillTabs`, `Segmented`, `Switch`, `Slider` (`onBrand` for hero cards), `Stepper`, `Sheet` (bottom sheet on phones, dialog on desktop), `Avatar` (brand mark for known sites and apps, else the real app icon or saved favicon, else a category glyph or initials; tinted by productivity), `Delta` (pill), `SlideToConfirm`, `Toasts`, `cx`.
 `<Buddy mood="idle|focus|break|paused|happy|sleep" tone="blue|mint|violet|cloud" size={…} />` in `src/components/Buddy.tsx` (use `tone="cloud"` on blue cards).
 
 CSS classes (`src/styles/ui.css`, `src/styles/shell.css`):

@@ -266,7 +266,7 @@ function Row({ e, total, custom, onOpen }: { e: EntityTotal; total: number; cust
   return (
     <li>
       <button className="apps-row" aria-haspopup="dialog" onClick={onOpen}>
-        <Avatar name={name} productivity={e.productivity} size={46} iconKey={e.kind === "app" ? e.key : undefined} />
+        <Avatar name={name} productivity={e.productivity} size={46} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />
         <span className="apps-row-main">
           <span className="apps-row-title">
             <span className="apps-row-name">{name}</span>
@@ -337,7 +337,7 @@ function EntitySheet({ e, custom, total, range, onClose }: { e: EntityTotal; cus
     <Sheet label={`${name} details`} onClose={onClose}>
       <div className={cx("apps-sheet", busy && "busy")}>
         <header className="apps-sheet-head">
-          <Avatar name={name} productivity={e.productivity} size={phone ? 60 : 72} iconKey={e.kind === "app" ? e.key : undefined} />
+          <Avatar name={name} productivity={e.productivity} size={phone ? 60 : 72} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />
           <h2 className="title apps-sheet-name">{name}</h2>
           <p className="apps-sheet-where">
             {where} · {e.visits} visit{e.visits === 1 ? "" : "s"}

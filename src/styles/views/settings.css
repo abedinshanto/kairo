@@ -190,18 +190,24 @@
 
 /* ---------------------------------------------------------------- Grouped lists */
 
+/* Groups pair up row by row: headings line up, and the shorter card of a pair
+   stretches to its partner, its rows sharing the extra height evenly. */
 .set-cols {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 32px 24px;
-  align-items: start;
+  align-items: stretch;
   margin-top: 40px;
 }
 
-.set-col {
+/* Phones and tablets: groups differ too much there to pair up */
+.set-cols.loose {
+  align-items: start;
+}
+
+.set-group {
   display: flex;
   flex-direction: column;
-  gap: 32px;
   min-width: 0;
 }
 
@@ -210,6 +216,9 @@
 }
 
 .set-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   padding: 4px 24px;
 }
 
@@ -221,7 +230,9 @@
     "text control"
     "below below";
   align-items: center;
+  align-content: center;
   column-gap: 16px;
+  flex: 1 0 auto;
   min-height: 72px;
   padding: 14px 0;
 }
@@ -262,6 +273,16 @@
   justify-content: flex-end;
   gap: 8px;
   min-width: 0;
+  /* a fieldset, so a row that's off disables its controls in one go */
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Rows that depend on a switch that's off */
+.set-row.is-off .set-text,
+.set-row.is-off .set-control {
+  opacity: 0.45;
 }
 
 .set-below {
@@ -300,9 +321,8 @@
   overflow-wrap: anywhere;
 }
 
-.set-foot {
-  margin: 12px 6px 0;
-  font-size: 13px;
+.set-stored {
+  font-size: 12.5px;
   line-height: 1.5;
   color: var(--ink-2);
 }
@@ -445,10 +465,6 @@
   .set-cols {
     gap: 28px;
     margin-top: 32px;
-  }
-
-  .set-col {
-    gap: 28px;
   }
 
   /* Profile */

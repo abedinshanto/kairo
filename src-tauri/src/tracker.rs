@@ -120,6 +120,9 @@ fn sample<R: Runtime>(
     } else {
         None
     };
+    if let Some(domain) = &domain {
+        icons.see_site(domain);
+    }
     let title = (settings.store_window_titles && !win.title.trim().is_empty())
         .then(|| win.title.chars().take(300).collect::<String>());
     let key = (app_id.clone(), domain.clone(), title.clone());

@@ -602,6 +602,33 @@
   user-select: none;
 }
 
+/* Well-known sites and apps: the brand's mark on its colour, shaped like an app icon */
+.avatar.brand-mark {
+  border-radius: 28%;
+  background: var(--mark);
+  color: #fff;
+}
+
+.avatar.brand-mark.light {
+  color: #0f1424;
+}
+
+.avatar.brand-mark svg {
+  width: 56%;
+  height: 56%;
+  fill: currentColor;
+}
+
+:root[data-theme="dark"] .avatar.brand-mark {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Categories: a glyph in the productivity-tinted disc */
+.avatar.has-glyph svg {
+  width: 46%;
+  height: 46%;
+}
+
 /* Productive (blue) or distracting (coral) at a glance */
 .avatar-dot {
   position: absolute;

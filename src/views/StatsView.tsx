@@ -15,6 +15,7 @@ import { categoryLabel, entityName, PRODUCTIVITY_LABEL } from "../lib/categories
 import { useMediaQuery, useQuery } from "../lib/hooks";
 import { focusPersona, generateInsights, type Insight, type Persona } from "../lib/insights";
 import { exportPersonaCard } from "../lib/shareCard";
+import { categoryIcon } from "../lib/categoryIcons";
 import { useApp } from "../lib/store";
 import { addDays, dayBuckets, fmtDuration, fmtHour, fmtShortDay, fmtTime, fmtWeekday, hourBuckets, HOUR, MINUTE, relativeDayLabel, startOfDay } from "../lib/time";
 import type { ActivitySpan, BucketTotals, EntityTotal, FocusSession } from "../lib/types";
@@ -828,7 +829,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
       const name = entityName(e.kind, e.key, e.name);
       return {
         key: `${e.kind}:${e.key}`,
-        icon: <Avatar name={name} productivity={e.productivity} size={42} iconKey={e.kind === "app" ? e.key : undefined} />,
+        icon: <Avatar name={name} productivity={e.productivity} size={42} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />,
         label: name,
         sub: categoryLabel(e.category),
         value: e.ms,
@@ -840,7 +841,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
       .slice(0, 5)
       .map((c) => ({
         key: c.category,
-        icon: <Avatar name={categoryLabel(c.category)} productivity={c.productivity} size={42} />,
+        icon: <Avatar name={categoryLabel(c.category)} productivity={c.productivity} size={42} glyph={categoryIcon(c.category)} />,
         label: categoryLabel(c.category),
         sub: PRODUCTIVITY_LABEL[Math.sign(c.productivity) as -1 | 0 | 1],
         value: c.ms,
@@ -855,7 +856,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
         const prev = model?.prevEntities.find((p) => p.key === e.key && p.kind === e.kind);
         return {
           key: `${e.kind}:${e.key}`,
-          icon: <Avatar name={name} productivity={e.productivity} size={42} iconKey={e.kind === "app" ? e.key : undefined} />,
+          icon: <Avatar name={name} productivity={e.productivity} size={42} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />,
           label: name,
           sub: dayMode ? categoryLabel(e.category) : `${categoryLabel(e.category)} · ${fmtDuration(e.ms / activeDays)} a day`,
           value: e.ms,

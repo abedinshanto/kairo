@@ -293,7 +293,7 @@ function WhereItWent({ data }: { data: Day }) {
           const name = entityName(e.kind, e.key, e.name);
           return (
             <li key={`${e.kind}:${e.key}`} className="list-row">
-              <Avatar name={name} productivity={e.productivity} size={38} iconKey={e.kind === "app" ? e.key : undefined} />
+              <Avatar name={name} productivity={e.productivity} size={38} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />
               <span className="list-main">
                 <span className="list-title">{name}</span>
                 <span className={cx("summary-bar", e.productivity > 0 ? "productive" : e.productivity < 0 ? "distracting" : "neutral")}>

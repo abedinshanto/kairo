@@ -163,10 +163,7 @@ export function SoundsView() {
         </div>
 
         {/* ------------------------------------------------ Presets */}
-        <section className="sounds-presets" aria-labelledby="presets-title">
-          <h2 className="section-title" id="presets-title">
-            Presets
-          </h2>
+        <section className="sounds-presets" aria-label="Presets">
           <div className="preset-grid">
             {PRESETS.map((p) => {
               const on = preset?.id === p.id;
