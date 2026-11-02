@@ -2273,7 +2273,7 @@ dependencies = [
 
 [[package]]
 name = "kairo"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "active-win-pos-rs",
  "base64 0.22.1",
