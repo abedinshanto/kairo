@@ -80,7 +80,7 @@ const APP_RULES: &[(&str, &[&str])] = &[
             "omnifocus", "ticktick", "reminders", "=notes", "=calendar", "fantastical",
             "microsoft excel", "=excel", "=numbers", "keynote", "powerpoint", "powerpnt",
             "airtable", "=craft", "logseq", "=linear", "=jira", "asana", "trello", "clickup",
-            "=monday", "basecamp", "chatgpt", "=claude", "kairo", "=akiflow", "sunsama",
+            "=monday", "basecamp", "chatgpt", "=claude", "=akiflow", "sunsama",
             "=amie", "=cron", "notion calendar", "=superlist", "=anytype", "=heptabase",
             "=tana", "=miro", "=whimsical", "google keep", "microsoft to do", "=outlook calendar",
             "=perplexity", "=gemini", "=copilot", "=acrobat", "acrord32", "adobe acrobat",

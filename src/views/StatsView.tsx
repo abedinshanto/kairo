@@ -232,6 +232,7 @@ export function StatsView() {
   const today = startOfDay(Date.now());
   const isToday = day === today;
   const goalMs = settings.dailyFocusGoalMinutes * 60_000;
+  const focusGuard = settings.focusGuard;
   const budgetMs = settings.distractionBudgetMinutes * 60_000;
 
   useEffect(() => writeHash(range, day), [range, day]);
@@ -251,6 +252,7 @@ export function StatsView() {
       prevEntities: data.prevEntities,
       sessions: data.sessions,
       goalMs,
+      focusGuard,
       periodLabel: dayMode ? (data.first === today ? "today" : "that day") : data.n === 7 ? "this week" : `in ${data.n} days`,
     });
     // The hero already carries the productive-time trend.
@@ -275,7 +277,7 @@ export function StatsView() {
       grid: dayMode ? null : rhythmMatrix(data.hourly),
       streak: goalStreak(data.days, goalMs),
     };
-  }, [data, goalMs, today]);
+  }, [data, goalMs, today, focusGuard]);
 
   const go = (d: number) => setDay(Math.min(today, d));
   const pickRange = (r: Range) => {

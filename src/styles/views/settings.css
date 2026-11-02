@@ -365,8 +365,12 @@
 }
 
 .set-chip {
-  gap: 2px;
-  padding: 0 5px 0 14px;
+  gap: 6px;
+  padding: 0 5px 0 8px;
+}
+
+.set-chip .avatar {
+  font-size: 9px !important;
 }
 
 .set-chip button {

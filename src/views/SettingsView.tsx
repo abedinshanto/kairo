@@ -1,7 +1,7 @@
 import { ChevronRight, FileJson, FileSpreadsheet, Monitor, Moon, Play, Settings as SettingsIcon, ShieldCheck, Sun, Trash2, Volume1, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
-import { PageTitle, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
+import { Avatar, PageTitle, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
 import { soundEngine } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
 import { confirmDialog } from "../lib/dialogs";
@@ -517,6 +517,9 @@ function ChimeRows() {
 
 // ------------------------------------------------------------------ Excluded apps
 
+/** Excluded apps are stored by their lowercase id ("google chrome"); show them as names. */
+const appLabel = (id: string) => id.replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
+
 function ExcludedApps() {
   const excluded = useApp((st) => st.settings.excludedApps);
   const update = useApp((st) => st.updateSettings);
@@ -530,8 +533,9 @@ function ExcludedApps() {
           <div className="set-chips">
             {excluded.map((a) => (
               <span key={a} className="chip set-chip">
-                {a}
-                <button aria-label={`Track ${a} again`} title="Track again" onClick={() => update({ excludedApps: excluded.filter((x) => x !== a) })}>
+                <Avatar name={appLabel(a)} size={20} iconKey={a} />
+                {appLabel(a)}
+                <button aria-label={`Track ${appLabel(a)} again`} title="Track again" onClick={() => update({ excludedApps: excluded.filter((x) => x !== a) })}>
                   <X />
                 </button>
               </span>

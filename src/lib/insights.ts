@@ -30,6 +30,8 @@ export interface InsightInput {
   sessions: FocusSession[];
   goalMs: number;
   periodLabel: string;
+  /** Whether Focus guard is already on, so the advice fits. */
+  focusGuard?: boolean;
 }
 
 const pct = (x: number) => `${Math.round(Math.abs(x) * 100)}%`;
@@ -149,7 +151,9 @@ export function generateInsights(input: InsightInput): Insight[] {
       out.push({
         id: "interruptions", tone: "warning", icon: "alert", weight: 55,
         title: `About ${interrupts.toFixed(1)} detours per focus block`,
-        body: "You often drift to distracting apps mid-block. Turn on Focus guard so Kairo nudges you back the moment it happens.",
+        body: input.focusGuard
+          ? "You often drift to distracting apps mid-block. Try closing chat and social apps before you start, so there's less to drift to."
+          : "You often drift to distracting apps mid-block. Turn on Focus guard so Kairo nudges you back the moment it happens.",
       });
     }
   }

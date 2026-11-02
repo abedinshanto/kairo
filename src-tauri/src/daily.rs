@@ -12,6 +12,7 @@ const MIN_ACTIVE_MS: i64 = 30 * 60_000;
 /// Distractions shorter than this aren't worth naming.
 const MIN_LEAK_MS: i64 = 5 * 60_000;
 const SUMMARY_SENT: &str = "summary_sent_day";
+const BUDGET_SENT: &str = "budget_sent_day";
 const PURGED: &str = "purged_day";
 pub const SUMMARY_TITLE: &str = "Your day in Kairo";
 #[cfg(mobile)]
@@ -27,7 +28,58 @@ pub fn tick<R: Runtime>(app: &AppHandle<R>, last_run: &mut i64) {
     *last_run = now;
     let today = start_of_today();
     purge_old_data(app, today);
+    refresh_tray_today(app, today, now);
+    warn_when_budget_used(app, today, now);
     send_summary_if_due(app, today, now);
+}
+
+#[cfg(desktop)]
+fn refresh_tray_today<R: Runtime>(app: &AppHandle<R>, today: i64, now: i64) {
+    let state = app.state::<AppState>();
+    let Some(t) = state.db.bucket_totals(&[(today, now)]).ok().and_then(|t| t.into_iter().next()) else {
+        return;
+    };
+    let active = t.productive_ms + t.neutral_ms + t.distracting_ms;
+    let focus = state.db.focus_ms_since(today).unwrap_or(0);
+    let text = if active < 60_000 {
+        "Today · nothing tracked yet".to_string()
+    } else {
+        let mut text = format!("Today {} · {}% productive", fmt_duration(active), t.productive_ms * 100 / active);
+        if focus >= 60_000 {
+            text.push_str(&format!(" · focus {}", fmt_duration(focus)));
+        }
+        text
+    };
+    crate::tray::update_today(app, &text);
+}
+
+/// One gentle heads-up the moment today's distracting time reaches the budget.
+#[cfg(desktop)]
+fn warn_when_budget_used<R: Runtime>(app: &AppHandle<R>, today: i64, now: i64) {
+    let state = app.state::<AppState>();
+    let (budget, nudges) = {
+        let s = state.settings.read();
+        (s.distraction_budget_minutes as i64 * 60_000, s.nudges_enabled)
+    };
+    let key = today.to_string();
+    if budget == 0 || !nudges || state.db.kv_get(BUDGET_SENT).ok().flatten().as_deref() == Some(key.as_str()) {
+        return;
+    }
+    let Some(t) = state.db.bucket_totals(&[(today, now)]).ok().and_then(|t| t.into_iter().next()) else {
+        return;
+    };
+    if t.distracting_ms < budget {
+        return;
+    }
+    let _ = state.db.kv_set(BUDGET_SENT, &key);
+    crate::notify(
+        app,
+        "Distraction budget used",
+        &format!(
+            "{} on distracting apps and sites today. The rest of the day is yours to protect.",
+            fmt_duration(t.distracting_ms)
+        ),
+    );
 }
 
 #[cfg(desktop)]

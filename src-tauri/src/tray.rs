@@ -15,6 +15,7 @@ use crate::{
 pub struct Tray<R: Runtime> {
     icon: TrayIcon<R>,
     status: MenuItem<R>,
+    today: MenuItem<R>,
     toggle: MenuItem<R>,
     finish: MenuItem<R>,
     skip: MenuItem<R>,
@@ -24,6 +25,7 @@ pub struct Tray<R: Runtime> {
 
 pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let status = MenuItem::with_id(app, "status", "Ready to focus", false, None::<&str>)?;
+    let today = MenuItem::with_id(app, "today", "Today · nothing tracked yet", true, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "Start focus", true, None::<&str>)?;
     let finish = MenuItem::with_id(app, "finish", "Finish block now", false, None::<&str>)?;
     let skip = MenuItem::with_id(app, "skip", "Skip to break", true, None::<&str>)?;
@@ -38,7 +40,8 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let menu = Menu::with_items(
         app,
         &[
-            &status, &sep()?, &toggle, &finish, &skip, &stop, &sep()?, &short, &long, &sep()?, &tracking,
+            &status, &today, &sep()?, &toggle, &finish, &skip, &stop, &sep()?, &short, &long,
+            &sep()?, &tracking,
             &sep()?, &open, &quit,
         ],
     )?;
@@ -79,7 +82,7 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
                     .is_some_and(|t| t > now_ms());
                 crate::commands::set_tracking_pause(app, if paused { None } else { Some(60) });
             }
-            "open" => show_main_window(app),
+            "open" | "today" => show_main_window(app),
             "quit" => app.exit(0),
             _ => {}
         })
@@ -100,6 +103,7 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     app.manage(Tray {
         icon,
         status,
+        today,
         toggle,
         finish,
         skip,
@@ -160,6 +164,13 @@ pub fn update_timer<R: Runtime>(app: &AppHandle<R>, snap: &TimerSnapshot) {
         Phase::Focus => "Skip to break",
         _ => "Skip break",
     });
+}
+
+/// The day at a glance in the menu: "Today 5h 12m · 74% productive · focus 1h 40m".
+pub fn update_today<R: Runtime>(app: &AppHandle<R>, text: &str) {
+    if let Some(tray) = app.try_state::<Tray<R>>() {
+        let _ = tray.today.set_text(text);
+    }
 }
 
 pub fn update_tracking<R: Runtime>(app: &AppHandle<R>, paused: bool) {
