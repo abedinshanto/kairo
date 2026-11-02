@@ -7,9 +7,14 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Path
+import android.graphics.RectF
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
+import android.util.Base64
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
@@ -17,6 +22,7 @@ import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSArray
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
+import java.io.ByteArrayOutputStream
 
 @InvokeArg
 class QueryArgs {
@@ -24,7 +30,15 @@ class QueryArgs {
     var to: Long = 0
 }
 
+@InvokeArg
+class IconArgs {
+    var packages: Array<String> = arrayOf()
+}
+
 private class Span(val pkg: String, val start: Long, var end: Long)
+
+// Launcher icons are rendered at this size and clipped to a rounded square.
+private const val ICON_PX = 128
 
 // UsageEvents.Event type ids, inlined so minSdk 24 builds without API-level lint noise.
 private const val ACTIVITY_RESUMED = 1 // MOVE_TO_FOREGROUND before API 29
@@ -138,6 +152,39 @@ class ScreenTimePlugin(private val activity: Activity) : Plugin(activity) {
         }
         val ret = JSObject()
         ret.put("spans", out)
+        invoke.resolve(ret)
+    }
+
+    /** Each package's launcher icon as a base64 PNG; unknown packages are skipped. */
+    @Command
+    fun appIcons(invoke: Invoke) {
+        val args = invoke.parseArgs(IconArgs::class.java)
+        val pm = activity.packageManager
+        val out = JSArray()
+        for (pkg in args.packages.take(100)) {
+            val drawable = try {
+                pm.getApplicationIcon(pkg)
+            } catch (e: PackageManager.NameNotFoundException) {
+                continue
+            }
+            val bitmap = Bitmap.createBitmap(ICON_PX, ICON_PX, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val radius = ICON_PX * 0.24f
+            val clip = Path()
+            clip.addRoundRect(RectF(0f, 0f, ICON_PX.toFloat(), ICON_PX.toFloat()), radius, radius, Path.Direction.CW)
+            canvas.clipPath(clip)
+            drawable.setBounds(0, 0, ICON_PX, ICON_PX)
+            drawable.draw(canvas)
+            val png = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, png)
+            bitmap.recycle()
+            val o = JSObject()
+            o.put("package", pkg)
+            o.put("png", Base64.encodeToString(png.toByteArray(), Base64.NO_WRAP))
+            out.put(o)
+        }
+        val ret = JSObject()
+        ret.put("icons", out)
         invoke.resolve(ret)
     }
 }

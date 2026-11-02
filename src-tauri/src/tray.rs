@@ -16,6 +16,7 @@ pub struct Tray<R: Runtime> {
     icon: TrayIcon<R>,
     status: MenuItem<R>,
     toggle: MenuItem<R>,
+    finish: MenuItem<R>,
     skip: MenuItem<R>,
     stop: MenuItem<R>,
     tracking: MenuItem<R>,
@@ -24,6 +25,7 @@ pub struct Tray<R: Runtime> {
 pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let status = MenuItem::with_id(app, "status", "Ready to focus", false, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "Start focus", true, None::<&str>)?;
+    let finish = MenuItem::with_id(app, "finish", "Finish block now", false, None::<&str>)?;
     let skip = MenuItem::with_id(app, "skip", "Skip to next phase", true, None::<&str>)?;
     let stop = MenuItem::with_id(app, "stop", "Reset timer", false, None::<&str>)?;
     let short = MenuItem::with_id(app, "short_break", "Take a short break", true, None::<&str>)?;
@@ -36,7 +38,7 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let menu = Menu::with_items(
         app,
         &[
-            &status, &sep()?, &toggle, &skip, &stop, &sep()?, &short, &long, &sep()?, &tracking,
+            &status, &sep()?, &toggle, &finish, &skip, &stop, &sep()?, &short, &long, &sep()?, &tracking,
             &sep()?, &open, &quit,
         ],
     )?;
@@ -50,6 +52,9 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .on_menu_event(|app, event| match event.id().as_ref() {
             "toggle" => {
                 timer::perform(app, timer::Action::Toggle);
+            }
+            "finish" => {
+                timer::perform(app, timer::Action::Finish);
             }
             "skip" => {
                 timer::perform(app, timer::Action::Skip);
@@ -96,6 +101,7 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         icon,
         status,
         toggle,
+        finish,
         skip,
         stop,
         tracking,
@@ -146,6 +152,9 @@ pub fn update_timer<R: Runtime>(app: &AppHandle<R>, snap: &TimerSnapshot) {
     let _ = tray.status.set_text(status);
     let _ = tray.toggle.set_text(toggle);
     let _ = tray.stop.set_enabled(snap.started_at.is_some());
+    let _ = tray
+        .finish
+        .set_enabled(snap.phase == Phase::Focus && snap.started_at.is_some());
     let _ = tray.skip.set_enabled(true);
 }
 

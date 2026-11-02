@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { soundEngine, type SoundId } from "./audio/engine";
 import { backend } from "./backend";
 import { DEFAULT_SETTINGS, withDefaults } from "./defaults";
-import { confirmDialog } from "./dialogs";
+import { iconChanged } from "./icons";
+import { fmtDuration } from "./time";
 import type { Phase, Settings, SoundPrefs, TimerAction, TimerSnapshot, TrackerStatus } from "./types";
 
 export type View = "home" | "stats" | "sounds" | "tasks" | "settings" | "apps";
@@ -88,10 +89,16 @@ export const useApp = create<State>((set, get) => ({
         case "completed": {
           const sound = get().settings.sound!;
           void soundEngine.chime(sound.chime, sound.chimeVolume, e.completed.next === "focus");
+          // Fires before the new timer state, so `timer` still describes the block that ended.
+          const ended = get().timer;
+          const what = ended?.intention.trim() ? ` on “${ended.intention.trim()}”` : "";
+          const breakNote = e.completed.autoStarted ? "Your break has started." : "Time for a break.";
           get().toast(
-            e.completed.phase === "focus"
-              ? { title: "Focus block complete", body: e.completed.autoStarted ? "Your break has started. Step away for a moment." : "Time for a break.", tone: "success" }
-              : { title: "Break's over", body: e.completed.autoStarted ? "Next focus block started." : "Ready when you are.", tone: "default" },
+            e.completed.phase !== "focus"
+              ? { title: "Break's over", body: e.completed.autoStarted ? "Next focus block started." : "Ready when you are.", tone: "default" }
+              : e.completed.early
+                ? { title: "Block finished", body: `${fmtDuration(e.completed.actualMs)}${what} logged. ${breakNote}`, tone: "success" }
+                : { title: "Focus block complete", body: e.completed.autoStarted ? "Your break has started. Step away for a moment." : "Time for a break.", tone: "success" },
           );
           get().bumpData();
           break;
@@ -107,6 +114,9 @@ export const useApp = create<State>((set, get) => ({
           break;
         case "data":
           get().bumpData();
+          break;
+        case "icon":
+          iconChanged(e.key);
           break;
       }
     });
@@ -207,21 +217,16 @@ function onTimer(prev: TimerSnapshot | null, next: TimerSnapshot) {
   if (enteredBreak && sound.pauseOnBreak && soundEngine.playing) soundEngine.pause();
 }
 
-/** Remaining time for a snapshot at the current instant. */
 /**
- * Skip to the next phase. A focus block that's under way asks first, because the time
- * so far won't count as a finished block; nothing happens if the block changed meanwhile.
+ * The S key: finish a running focus block (its time is logged as a finished
+ * block and the break begins), or skip ahead from a break or an untouched block.
  */
-export async function skipPhase(): Promise<void> {
+export async function finishOrSkip(): Promise<void> {
   const t = useApp.getState().timer;
-  if (t?.phase === "focus" && t.startedAt !== null) {
-    const ok = await confirmDialog("The time so far won't count as a finished block.", { title: "Skip this focus block?", okLabel: "Skip" });
-    const now = useApp.getState().timer;
-    if (!ok || now?.phase !== "focus" || now.startedAt !== t.startedAt) return;
-  }
-  await useApp.getState().timerAction("skip");
+  await useApp.getState().timerAction(t?.phase === "focus" && t.startedAt !== null ? "finish" : "skip");
 }
 
+/** Remaining time for a snapshot at the current instant. */
 export function remainingNow(t: TimerSnapshot, skew: number): number {
   if (t.status !== "running" || t.endsAt === null) return t.remainingMs;
   return Math.max(0, t.endsAt - (Date.now() - skew));

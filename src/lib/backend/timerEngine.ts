@@ -94,13 +94,29 @@ export class TimerEngine {
   }
 
   complete(now: number, s: Settings): Effects {
+    return this.wrapUp(this.startedAt ?? this.endsAt - this.durationMs, this.endsAt, this.durationMs, false, now, s);
+  }
+
+  /** End a focus block now and count it as done; on a break, move on to focus. */
+  private finish(now: number, s: Settings): Effects {
+    if (this.phase !== "focus") return this.act("skip", now, s);
+    if (this.startedAt === null) return {};
+    const actual = Math.max(0, this.durationMs - this.remaining(now));
+    if (actual < MIN_RECORDED_MS) {
+      this.enter("focus", s);
+      return {};
+    }
+    return this.wrapUp(this.startedAt, now, actual, true, now, s);
+  }
+
+  private wrapUp(start: number, end: number, actual: number, early: boolean, now: number, s: Settings): Effects {
     const finished = this.phase;
     const record: SessionRecord = {
       kind: finished,
-      start: this.startedAt ?? this.endsAt - this.durationMs,
-      end: this.endsAt,
+      start,
+      end,
       plannedMs: this.durationMs,
-      actualMs: this.durationMs,
+      actualMs: actual,
       completed: true,
       intention: this.intention,
       taskId: this.taskId,
@@ -121,7 +137,7 @@ export class TimerEngine {
     if (auto) this.run(now);
     return {
       record,
-      completed: { phase: finished, next, autoStarted: auto, actualMs: record.actualMs },
+      completed: { phase: finished, next, autoStarted: auto, actualMs: actual, early },
     };
   }
 
@@ -142,6 +158,8 @@ export class TimerEngine {
     } else if (action === "stop") {
       fx.record = this.abandon(now);
       this.enter(this.phase, s);
+    } else if (action === "finish") {
+      return this.finish(now, s);
     }
     return fx;
   }

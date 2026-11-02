@@ -3,7 +3,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toasts, cx } from "./components/ui";
 import { isNative } from "./lib/backend";
 import { useMediaQuery } from "./lib/hooks";
-import { TAB_VIEWS, skipPhase, useApp, type View } from "./lib/store";
+import { TAB_VIEWS, finishOrSkip, useApp, type View } from "./lib/store";
 import { AppsView } from "./views/AppsView";
 import { HomeView } from "./views/HomeView";
 import { Onboarding } from "./views/Onboarding";
@@ -54,7 +54,7 @@ function useShortcuts() {
       } else if (e.key === "f") {
         st.setDeepFocus(!st.deepFocus);
       } else if (e.key === "s") {
-        void skipPhase();
+        void finishOrSkip();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -128,6 +128,8 @@ export default function App() {
   return (
     <div className={cx("app", deepFocus && "deep")} data-phase={phase}>
       <div className="canvas-glow" aria-hidden />
+      {/* macOS hides the title bar, so this strip is where the window is dragged from. */}
+      <div className="drag-strip" data-tauri-drag-region aria-hidden />
       <main className="scroll">
         <div className={cx("page", `view-${view}`)} key={view}>
           <CurrentView />

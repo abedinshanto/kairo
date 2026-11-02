@@ -224,7 +224,7 @@ function HeroTask({ task }: { task: Task }) {
     inFocus && timer.status === "running" && timer.phase === "focus" ? "focus" : task.pomodoros >= task.estimate ? "happy" : "idle";
 
   return (
-    <div className="stacked task-stack">
+    <div className="task-stack">
       <article className="card hero task-hero" aria-label={`Up first: ${task.title}`}>
         <div className="task-hero-top">
           <span className="task-hero-buddy">
@@ -289,7 +289,7 @@ function HeroTask({ task }: { task: Task }) {
 
 function EmptyHero({ cleared }: { cleared: boolean }) {
   return (
-    <div className="stacked task-stack">
+    <div className="task-stack">
       <div className="card hero task-hero task-hero-empty">
         <Buddy mood={cleared ? "happy" : "idle"} tone="cloud" size={128} />
         <h2 className="task-empty-title">{cleared ? "All clear!" : "A fresh page"}</h2>

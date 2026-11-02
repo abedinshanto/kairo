@@ -2,7 +2,7 @@
 
 export type Phase = "focus" | "short_break" | "long_break";
 export type TimerStatus = "idle" | "running" | "paused";
-export type TimerAction = "start" | "pause" | "resume" | "toggle" | "skip" | "stop";
+export type TimerAction = "start" | "pause" | "resume" | "toggle" | "skip" | "stop" | "finish";
 export type Productivity = -1 | 0 | 1;
 export type ThemePref = "system" | "dark" | "light";
 export type ChimeId = "bell" | "soft" | "digital" | "none";
@@ -67,6 +67,8 @@ export interface TimerCompleted {
   next: Phase;
   autoStarted: boolean;
   actualMs: number;
+  /** Finished by the user before the countdown ran out. */
+  early: boolean;
 }
 
 export interface ActivitySpan {
@@ -171,7 +173,9 @@ export type BackendEvent =
   | { type: "current"; current: CurrentActivity | null }
   | { type: "tracker"; status: TrackerStatus }
   | { type: "settings"; settings: Settings }
-  | { type: "data" };
+  | { type: "data" }
+  /** The core just stored a real icon for this app. */
+  | { type: "icon"; key: string };
 
 export interface Backend {
   kind: "native" | "demo";
@@ -188,6 +192,8 @@ export interface Backend {
   bucketTotals(buckets: [number, number][]): Promise<BucketTotals[]>;
   entityTotals(from: number, to: number): Promise<EntityTotal[]>;
   focusSessions(from: number, to: number): Promise<FocusSession[]>;
+  /** Real app icons as data URLs, by app key. Apps without one are left out. */
+  appIcons(keys: string[]): Promise<Record<string, string>>;
 
   tasksList(): Promise<Task[]>;
   taskCreate(title: string, estimate: number): Promise<number>;

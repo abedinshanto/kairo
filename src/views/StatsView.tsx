@@ -820,7 +820,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
       const name = entityName(e.kind, e.key, e.name);
       return {
         key: `${e.kind}:${e.key}`,
-        icon: <Avatar name={name} productivity={e.productivity} size={42} />,
+        icon: <Avatar name={name} productivity={e.productivity} size={42} iconKey={e.kind === "app" ? e.key : undefined} />,
         label: name,
         sub: categoryLabel(e.category),
         value: e.ms,
@@ -847,7 +847,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
         const prev = model?.prevEntities.find((p) => p.key === e.key && p.kind === e.kind);
         return {
           key: `${e.kind}:${e.key}`,
-          icon: <Avatar name={name} productivity={e.productivity} size={42} />,
+          icon: <Avatar name={name} productivity={e.productivity} size={42} iconKey={e.kind === "app" ? e.key : undefined} />,
           label: name,
           sub: dayMode ? categoryLabel(e.category) : `${categoryLabel(e.category)} · ${fmtDuration(e.ms / activeDays)} a day`,
           value: e.ms,

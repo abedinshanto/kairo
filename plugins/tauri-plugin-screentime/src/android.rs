@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::{plugin::PluginHandle, Runtime};
 
-use crate::{Error, Result, UsageSpan};
+use crate::{AppIcon, Error, Result, UsageSpan};
 
 #[derive(Deserialize)]
 struct Granted {
@@ -38,5 +38,21 @@ pub fn request_permission<R: Runtime>(h: &PluginHandle<R>) -> Result<()> {
 pub fn query<R: Runtime>(h: &PluginHandle<R>, from: i64, to: i64) -> Result<Vec<UsageSpan>> {
     h.run_mobile_plugin::<QueryResult>("queryEvents", QueryArgs { from, to })
         .map(|r| r.spans)
+        .map_err(err)
+}
+
+#[derive(Serialize)]
+struct IconArgs<'a> {
+    packages: &'a [String],
+}
+
+#[derive(Deserialize)]
+struct IconResult {
+    icons: Vec<AppIcon>,
+}
+
+pub fn app_icons<R: Runtime>(h: &PluginHandle<R>, packages: &[String]) -> Result<Vec<AppIcon>> {
+    h.run_mobile_plugin::<IconResult>("appIcons", IconArgs { packages })
+        .map(|r| r.icons)
         .map_err(err)
 }

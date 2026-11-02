@@ -119,76 +119,6 @@
   color: var(--on-brand-2);
 }
 
-/* Cards stacked behind a hero card (reference: layered task cards) */
-.stacked {
-  position: relative;
-  isolation: isolate;
-  margin-top: 44px;
-}
-
-.stacked > * {
-  position: relative;
-  z-index: 1;
-}
-
-.stacked::before,
-.stacked::after {
-  content: "";
-  position: absolute;
-  left: 9%;
-  right: 9%;
-  top: -24px;
-  height: 80px;
-  z-index: 0;
-  border-radius: var(--r-2xl);
-  background: var(--brand-hi);
-  opacity: 0.3;
-}
-
-.stacked::after {
-  left: 4.5%;
-  right: 4.5%;
-  top: -12px;
-  opacity: 0.55;
-}
-
-.stacked.phase-short_break::before,
-.stacked.phase-short_break::after {
-  background: var(--phase-short-hi);
-}
-
-.stacked.phase-long_break::before,
-.stacked.phase-long_break::after {
-  background: var(--phase-long-hi);
-}
-
-/* Dark: solid steps toward the canvas, so the peeking cards never turn muddy */
-:root[data-theme="dark"] .stacked::before,
-:root[data-theme="dark"] .stacked::after {
-  opacity: 1;
-  background: var(--stack-1);
-}
-
-:root[data-theme="dark"] .stacked::after {
-  background: var(--stack-2);
-}
-
-:root[data-theme="dark"] .stacked.phase-short_break::before {
-  background: var(--stack-short-1);
-}
-
-:root[data-theme="dark"] .stacked.phase-short_break::after {
-  background: var(--stack-short-2);
-}
-
-:root[data-theme="dark"] .stacked.phase-long_break::before {
-  background: var(--stack-long-1);
-}
-
-:root[data-theme="dark"] .stacked.phase-long_break::after {
-  background: var(--stack-long-2);
-}
-
 /* Focus rings stay visible on coloured cards */
 .card.hero :focus-visible,
 .sky :focus-visible,
@@ -657,6 +587,39 @@
 .avatar.p--1 {
   color: var(--warn-ink);
   background: var(--distracting-tint);
+}
+
+/* Real app icons: the icon carries its own shape, so no tinted disc behind it */
+.avatar.has-icon {
+  background: none;
+  border-radius: 0;
+}
+
+.avatar.has-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+/* Productive (blue) or distracting (coral) at a glance */
+.avatar-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 30%;
+  height: 30%;
+  min-width: 9px;
+  min-height: 9px;
+  max-width: 14px;
+  max-height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--productive);
+}
+
+.avatar.p--1 .avatar-dot {
+  background: var(--distracting);
 }
 
 /* ================================================================ Inputs */

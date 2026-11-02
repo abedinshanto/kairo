@@ -1,19 +1,26 @@
 /* ================================================================ Home */
 
-.home-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 36px;
-  align-items: start;
+/* Greeting + timer mode span the page; the cards below sit on one grid */
+.home-head {
+  margin-bottom: 28px;
 }
 
-.home-main > .display {
-  max-width: 600px;
+.home-head > .display {
+  max-width: 640px;
   text-wrap: balance;
 }
 
 .home-tabs {
-  margin: 26px 0 0;
+  margin: 22px 0 0;
+}
+
+/* Two rows on shared columns: the timer card and the side column start and end
+   on the same lines, and so do Up next and Screen time below them. */
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
 }
 
 /* One accent per screen: in a break the active pill follows the hero's colour. */
@@ -58,7 +65,18 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-top: 6px;
+  min-width: 0;
+}
+
+/* The tiles take up whatever height the timer card leaves: icon at the top,
+   the numbers settle at the bottom, so any height looks intentional. */
+.home-side > .grid-2 {
+  flex: 1;
+}
+
+.home-side .tile .big-number {
+  margin-top: auto;
+  padding-top: 12px;
 }
 
 /* ---------------------------------------------------------------- Timer hero card */
@@ -336,6 +354,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  /* stays at the bottom when the card stretches to its row */
+  margin-top: auto;
   padding-top: 4px;
 }
 
@@ -387,6 +407,30 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--ink-2);
+}
+
+/* Last seven days at the meter's height, so both tiles' numbers line up */
+.week-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 8px;
+}
+
+.week-dots span {
+  flex: 1;
+  max-width: 22px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-sunk);
+}
+
+.week-dots span.hit {
+  background: var(--warn);
+}
+
+.week-dots span.today:not(.hit) {
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
 }
 
 .tile-foot {
@@ -568,31 +612,23 @@
   -webkit-backdrop-filter: blur(16px);
 }
 
-.stacked.is-deep .timer-card {
+.timer-card.is-deep {
   padding: 36px;
 }
 
-.stacked.is-deep .timer-digits {
+.timer-card.is-deep .timer-digits {
   font-size: 128px;
 }
 
 /* Deep focus is the calmest screen: one big number, Kai, the intention and play.
-   No peeking cards; the rest fades in on hover or keyboard focus. */
-.stacked.is-deep {
-  margin-top: 0;
-}
-
-.stacked.is-deep::before,
-.stacked.is-deep::after {
-  display: none;
-}
+   The rest fades in on hover or keyboard focus. */
 
 .is-deep :is(.timer-top, .intention-link, .intention-linked, .timer-secondary) {
   transition: opacity 0.3s var(--ease), visibility 0.3s;
 }
 
 @media (hover: hover) {
-  .stacked.is-deep:not(:hover):not(:focus-within) :is(.timer-top, .intention-link, .intention-linked, .timer-secondary) {
+  .timer-card.is-deep:not(:hover):not(:focus-within) :is(.timer-top, .intention-link, .intention-linked, .timer-secondary) {
     opacity: 0;
   }
 }
@@ -605,12 +641,44 @@
   }
 }
 
+/* ---------------------------------------------------------------- Screen time today */
+
+.screen-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.screen-card .card-head {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.screen-total {
+  margin-top: 2px;
+}
+
+.screen-top {
+  margin-top: 2px;
+}
+
+.screen-top .list-row {
+  gap: 12px;
+}
+
+.screen-empty {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
 /* ---------------------------------------------------------------- Responsive */
 
 @media (max-width: 1024px) {
   .home-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 28px;
+    gap: 20px;
   }
 }
 
@@ -674,11 +742,11 @@
   }
 
   /* digits + gap + Kai must fit the phone card: 198 + 16 + 84 <= 358 - 2 × 26 */
-  .stacked.is-deep .timer-card {
+  .timer-card.is-deep {
     padding: 26px;
   }
 
-  .stacked.is-deep .timer-digits {
+  .timer-card.is-deep .timer-digits {
     font-size: 80px;
   }
 }

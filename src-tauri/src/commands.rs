@@ -1,7 +1,7 @@
 //! IPC surface for the UI. Everything here reads or writes the local database;
 //! there are no network calls anywhere in the app.
 
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
@@ -108,6 +108,19 @@ pub fn entity_totals(state: State<AppState>, from: i64, to: i64) -> CmdResult<Ve
 #[tauri::command]
 pub fn focus_sessions(state: State<AppState>, from: i64, to: i64) -> CmdResult<Vec<FocusSession>> {
     state.db.sessions(from, to)
+}
+
+/// Real app icons as data URLs, by app id. Apps without one are left out.
+#[tauri::command]
+pub fn app_icons(state: State<AppState>, keys: Vec<String>) -> CmdResult<HashMap<String, String>> {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    let keys: Vec<String> = keys.into_iter().take(500).collect();
+    Ok(state
+        .db
+        .app_icons(&keys)?
+        .into_iter()
+        .map(|(id, mime, data)| (id, format!("data:{mime};base64,{}", STANDARD.encode(data))))
+        .collect())
 }
 
 // ------------------------------------------------------------------ tasks
@@ -246,7 +259,11 @@ pub fn usage_sync(app: AppHandle) -> CmdResult<usize> {
         .query(from - 6 * 3_600_000, now)
         .map_err(|e| e.to_string())?;
     let mut added = 0;
+    let mut seen: Vec<String> = Vec::new();
     for s in spans {
+        if !seen.contains(&s.package) {
+            seen.push(s.package.clone());
+        }
         let (start, end) = (s.start.max(from), s.end.min(now));
         if end - start < 1000 || excluded.contains(&s.package.to_lowercase()) {
             continue;
@@ -267,8 +284,41 @@ pub fn usage_sync(app: AppHandle) -> CmdResult<usize> {
     if added > 0 {
         let _ = app.emit("data://changed", ());
     }
+    fetch_android_icons(&app, &seen);
     Ok(added)
 }
+
+/// Launcher icons for apps we don't have a fresh icon for yet (Android).
+#[cfg(target_os = "android")]
+fn fetch_android_icons(app: &AppHandle, packages: &[String]) {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    use tauri_plugin_screentime::ScreenTimeExt;
+    const REFRESH_MS: i64 = 30 * 24 * 3_600_000;
+    let state = app.state::<AppState>();
+    let missing: Vec<String> = packages
+        .iter()
+        .filter(|p| !state.db.has_app_icon(&p.to_lowercase(), REFRESH_MS).unwrap_or(true))
+        .take(50)
+        .cloned()
+        .collect();
+    if missing.is_empty() {
+        return;
+    }
+    let Ok(icons) = app.screentime().app_icons(&missing) else {
+        return;
+    };
+    for icon in icons {
+        let id = icon.package.to_lowercase();
+        if let Ok(png) = STANDARD.decode(icon.png.as_bytes()) {
+            if state.db.set_app_icon(&id, "image/png", &png).is_ok() {
+                let _ = app.emit("icons://changed", &id);
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+fn fetch_android_icons(_app: &AppHandle, _packages: &[String]) {}
 
 // ------------------------------------------------------------------ data control
 

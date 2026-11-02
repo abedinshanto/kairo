@@ -29,6 +29,7 @@ export function createNativeBackend(): Backend {
     activitySpans: (from, to) => invoke("activity_spans", { from, to }),
     bucketTotals: (buckets) => invoke("bucket_totals", { buckets }),
     entityTotals: (from, to) => invoke("entity_totals", { from, to }),
+    appIcons: (keys) => invoke("app_icons", { keys }),
     focusSessions: (from, to) => invoke("focus_sessions", { from, to }),
 
     tasksList: () => invoke("tasks_list"),
@@ -99,6 +100,7 @@ export function createNativeBackend(): Backend {
           listener({ type: "settings", settings: e.payload }),
         ),
         listen("data://changed", () => listener({ type: "data" })),
+        listen<string>("icons://changed", (e) => listener({ type: "icon", key: e.payload })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },

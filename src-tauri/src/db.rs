@@ -22,7 +22,7 @@ use crate::{
 /// stay index-bound (`start_ts >= from - MAX_SPAN_MS`).
 pub const MAX_SPAN_MS: i64 = 60 * 60 * 1000;
 
-const SCHEMA_VERSION: i32 = 1;
+const SCHEMA_VERSION: i32 = 2;
 
 pub type DbResult<T> = Result<T, String>;
 
@@ -122,6 +122,17 @@ impl Db {
             )
             .map_err(e)?;
         }
+        if version < 2 {
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS app_icons (
+                    app_id TEXT PRIMARY KEY,
+                    mime TEXT NOT NULL,
+                    data BLOB NOT NULL,
+                    updated_at INTEGER NOT NULL
+                 );",
+            )
+            .map_err(e)?;
+        }
         conn.pragma_update(None, "user_version", SCHEMA_VERSION)
             .map_err(e)?;
 
@@ -153,6 +164,54 @@ impl Db {
             )
             .map(|_| ())
             .map_err(e)
+    }
+
+    // ---------------------------------------------------------------- app icons
+
+    /// Whether we already hold an icon for `app_id` that is newer than `max_age_ms`.
+    pub fn has_app_icon(&self, app_id: &str, max_age_ms: i64) -> DbResult<bool> {
+        self.conn
+            .lock()
+            .query_row(
+                "SELECT 1 FROM app_icons WHERE app_id = ?1 AND updated_at >= ?2",
+                params![app_id, crate::now_ms() - max_age_ms],
+                |_| Ok(()),
+            )
+            .optional()
+            .map(|hit| hit.is_some())
+            .map_err(e)
+    }
+
+    pub fn set_app_icon(&self, app_id: &str, mime: &str, data: &[u8]) -> DbResult<()> {
+        self.conn
+            .lock()
+            .execute(
+                "INSERT INTO app_icons(app_id, mime, data, updated_at) VALUES(?1, ?2, ?3, ?4)
+                 ON CONFLICT(app_id) DO UPDATE SET mime = excluded.mime, data = excluded.data,
+                                                   updated_at = excluded.updated_at",
+                params![app_id, mime, data, crate::now_ms()],
+            )
+            .map(|_| ())
+            .map_err(e)
+    }
+
+    /// `(app_id, mime, bytes)` for each of `app_ids` that has an icon.
+    pub fn app_icons(&self, app_ids: &[String]) -> DbResult<Vec<(String, String, Vec<u8>)>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn
+            .prepare_cached("SELECT app_id, mime, data FROM app_icons WHERE app_id = ?1")
+            .map_err(e)?;
+        let mut out = Vec::new();
+        for id in app_ids {
+            if let Some(row) = stmt
+                .query_row([id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+                .optional()
+                .map_err(e)?
+            {
+                out.push(row);
+            }
+        }
+        Ok(out)
     }
 
     pub fn load_settings(&self) -> Settings {
@@ -642,7 +701,8 @@ impl Db {
             .lock()
             .execute_batch(
                 "DELETE FROM activity; DELETE FROM sessions; DELETE FROM tasks;
-                 DELETE FROM rules; DELETE FROM kv WHERE key != 'settings'; VACUUM;",
+                 DELETE FROM rules; DELETE FROM app_icons; DELETE FROM kv WHERE key != 'settings';
+                 VACUUM;",
             )
             .map_err(e)?;
         self.reload_rules()

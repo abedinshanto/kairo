@@ -24,6 +24,14 @@ pub struct UsageSpan {
     pub end: i64,
 }
 
+/// An app's launcher icon.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AppIcon {
+    pub package: String,
+    /// Base64-encoded PNG.
+    pub png: String,
+}
+
 #[derive(Debug)]
 pub struct Error(pub String);
 
@@ -82,6 +90,21 @@ impl<R: Runtime> ScreenTime<R> {
         #[cfg(not(target_os = "android"))]
         {
             let _ = (from, to);
+            Ok(Vec::new())
+        }
+    }
+}
+
+impl<R: Runtime> ScreenTime<R> {
+    /// Launcher icons for `packages` (unknown ones are left out).
+    pub fn app_icons(&self, packages: &[String]) -> Result<Vec<AppIcon>> {
+        #[cfg(target_os = "android")]
+        {
+            android::app_icons(&self.handle, packages)
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            let _ = packages;
             Ok(Vec::new())
         }
     }

@@ -12,6 +12,7 @@ use tauri::{AppHandle, Emitter, Manager, Runtime};
 use crate::{
     categories,
     db::{NewSpan, MAX_SPAN_MS},
+    icons::IconWorker,
     models::{CurrentActivity, Settings},
     notify, now_ms, sites, timer, AppState,
 };
@@ -57,9 +58,10 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
             let mut open: Option<OpenSpan> = None;
             let mut nudges = Nudges::default();
             let mut urls = UrlCache::default();
+            let mut icons = IconWorker::spawn(app.clone());
             loop {
                 thread::sleep(POLL);
-                sample(&app, &mut open, &mut nudges, &mut urls);
+                sample(&app, &mut open, &mut nudges, &mut urls, &mut icons);
             }
         })
         .expect("failed to start tracker thread");
@@ -70,6 +72,7 @@ fn sample<R: Runtime>(
     open: &mut Option<OpenSpan>,
     nudges: &mut Nudges,
     urls: &mut UrlCache,
+    icons: &mut IconWorker,
 ) {
     let state = app.state::<AppState>();
     let settings = state.settings.read().clone();
@@ -110,6 +113,7 @@ fn sample<R: Runtime>(
         close(app, open, None);
         return;
     }
+    icons.see(&app_id, &win.process_path, &app_name);
 
     let domain = if categories::is_browser(&app_id, &app_name) {
         detect_domain(&settings, &app_name, &win.title, urls)

@@ -1,5 +1,6 @@
 import {
   Brain,
+  Check,
   ChevronDown,
   Clock,
   CloudMoonRain,
@@ -22,13 +23,14 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Buddy, type BuddyMood, type BuddyTone } from "../components/Buddy";
-import { PageTitle, PillTabs, TopBar, cx } from "../components/ui";
+import { ProportionBar } from "../components/charts/Bars";
+import { Avatar, PageTitle, PillTabs, TopBar, cx } from "../components/ui";
 import { PRESETS, SOUNDS, soundEngine, type SoundId } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
 import { entityName } from "../lib/categories";
 import { confirmDialog } from "../lib/dialogs";
 import { useMediaQuery, useNow, useQuery } from "../lib/hooks";
-import { remainingNow, skipPhase, useApp } from "../lib/store";
+import { remainingNow, useApp } from "../lib/store";
 import { addDays, DAY, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
 import type { Phase, TimerSnapshot } from "../lib/types";
 import "../styles/views/home.css";
@@ -156,29 +158,31 @@ export function HomeView() {
         }
       />
 
-      <div className="home-grid">
-        <section className="home-main">
-          <PageTitle strong={strong} dim={dim} />
-          <div className="home-tabs">
-            <PillTabs<Phase>
-              label="Timer mode"
-              value={timer.phase}
-              onChange={(p) => void pickPhase(p)}
-              options={[
-                { value: "focus", label: "Focus", count: minutes(settings.focusMinutes) },
-                { value: "short_break", label: narrow ? "Short" : "Short break", count: minutes(settings.shortBreakMinutes) },
-                { value: "long_break", label: narrow ? "Long" : "Long break", count: minutes(settings.longBreakMinutes) },
-              ]}
-            />
-          </div>
-          <TimerCard />
-        </section>
+      <header className="home-head">
+        <PageTitle strong={strong} dim={dim} />
+        <div className="home-tabs">
+          <PillTabs<Phase>
+            label="Timer mode"
+            value={timer.phase}
+            onChange={(p) => void pickPhase(p)}
+            options={[
+              { value: "focus", label: "Focus", count: minutes(settings.focusMinutes) },
+              { value: "short_break", label: narrow ? "Short" : "Short break", count: minutes(settings.shortBreakMinutes) },
+              { value: "long_break", label: narrow ? "Long" : "Long break", count: minutes(settings.longBreakMinutes) },
+            ]}
+          />
+        </div>
+      </header>
 
-        <aside className="home-side">
+      {/* Two rows on a shared two-column grid: every card in a row starts and ends on the same lines. */}
+      <div className="home-grid">
+        <TimerCard />
+        <div className="home-side">
           <TodayTiles />
           <SoundCard />
-          <UpNext />
-        </aside>
+        </div>
+        <UpNext />
+        <ScreenTimeCard />
       </div>
     </div>
   );
@@ -206,63 +210,68 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
   const progress = timer.durationMs > 0 ? Math.min(1, Math.max(0, 1 - remaining / timer.durationMs)) : 0;
   const running = timer.status === "running";
   const detours = timer.phase === "focus" ? timer.interruptions : 0;
+  const elapsed = Math.max(0, timer.durationMs - remaining);
 
   return (
-    <div className={cx("stacked", `phase-${timer.phase}`, deep && "is-deep")}>
-      <div className={cx("card hero timer-card", `phase-${timer.phase}`)}>
-        <div className="timer-top">
-          <SessionDots timer={timer} />
-          <div className="timer-top-end">
-            {detours > 0 && (
-              <span className="badge white warn" title="Times you switched to a distracting app during this block">
-                <Flag />
-                {detours} detour{detours > 1 ? "s" : ""}
-              </span>
-            )}
-            {timer.status !== "idle" && (
-              <span className="chip on-brand">
-                <Clock />
-                {running ? `Ends ${fmtTime(Date.now() + remaining)}` : "Paused"}
-              </span>
-            )}
+    <div className={cx("card hero timer-card", `phase-${timer.phase}`, deep && "is-deep")}>
+      <div className="timer-top">
+        <SessionDots timer={timer} />
+        <div className="timer-top-end">
+          {detours > 0 && (
+            <span className="badge white warn" title="Times you switched to a distracting app during this block">
+              <Flag />
+              {detours} detour{detours > 1 ? "s" : ""}
+            </span>
+          )}
+          {timer.status !== "idle" && (
+            <span className="chip on-brand">
+              <Clock />
+              {running ? `Ends ${fmtTime(Date.now() + remaining)}` : "Paused"}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="timer-body">
+        <div className="timer-text">
+          <div className="timer-digits tabular" aria-live="off">
+            {fmtClock(remaining)}
+          </div>
+          <div className="timer-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-label="Block progress">
+            <span style={{ width: `${progress * 100}%` }} />
           </div>
         </div>
-
-        <div className="timer-body">
-          <div className="timer-text">
-            <div className="timer-digits tabular" aria-live="off">
-              {fmtClock(remaining)}
-            </div>
-            <div className="timer-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-label="Block progress">
-              <span style={{ width: `${progress * 100}%` }} />
-            </div>
-          </div>
-          <div className="timer-buddy">
-            <Buddy mood={moodFor(timer)} tone={TONE[timer.phase]} size={deep ? 150 : 118} />
-          </div>
+        <div className="timer-buddy">
+          <Buddy mood={moodFor(timer)} tone={TONE[timer.phase]} size={deep ? 150 : 118} />
         </div>
+      </div>
 
-        {timer.phase === "focus" ? <Intention /> : <p className="timer-rest">Stand up, stretch, and look at something far away. Your next block will be sharper for it.</p>}
+      {timer.phase === "focus" ? <Intention /> : <p className="timer-rest">Stand up, stretch, and look at something far away. Your next block will be sharper for it.</p>}
 
-        <div className="timer-controls">
-          {/* Reset, +5 and skip only matter once a block is under way; idle shows just time, intention and play. */}
-          {timer.startedAt !== null && (
-            <div className="timer-secondary">
-              <button className="circle-btn glass" aria-label="Reset" title="Reset" onClick={() => void timerAction("stop")}>
-                <RotateCcw />
+      <div className="timer-controls">
+        {/* Reset, +5 and skip only matter once a block is under way; idle shows just time, intention and play. */}
+        {timer.startedAt !== null && (
+          <div className="timer-secondary">
+            <button className="circle-btn glass" aria-label="Start over" title="Start over" onClick={() => void timerAction("stop")}>
+              <RotateCcw />
+            </button>
+            <button className="btn btn-glass" onClick={() => void extend(5)}>
+              <Plus /> 5 min
+            </button>
+            {timer.phase === "focus" ? (
+              <button className="btn btn-glass" title={`Finish now and log ${fmtDuration(elapsed)} (S)`} onClick={() => void timerAction("finish")}>
+                <Check /> Finish
               </button>
-              <button className="btn btn-glass" onClick={() => void extend(5)}>
-                <Plus /> 5 min
-              </button>
-              <button className="circle-btn glass" aria-label="Skip to next phase" title="Skip (S)" onClick={() => void skipPhase()}>
+            ) : (
+              <button className="circle-btn glass" aria-label="Skip break" title="Skip break (S)" onClick={() => void timerAction("skip")}>
                 <SkipForward />
               </button>
-            </div>
-          )}
-          <button className="circle-btn on-brand xl play" aria-label={running ? "Pause" : "Start"} title="Start / pause (Space)" onClick={() => void timerAction("toggle")}>
-            {running ? <Pause className="fill" /> : <Play className="fill" />}
-          </button>
-        </div>
+            )}
+          </div>
+        )}
+        <button className="circle-btn on-brand xl play" aria-label={running ? "Pause" : "Start"} title="Start / pause (Space)" onClick={() => void timerAction("toggle")}>
+          {running ? <Pause className="fill" /> : <Play className="fill" />}
+        </button>
       </div>
     </div>
   );
@@ -368,13 +377,15 @@ function useFocusToday() {
       else if (d !== today) break;
     }
     const todays = focus.filter((s) => s.start >= today);
-    return { ms: byDay.get(today) ?? 0, blocks: todays.filter((s) => s.completed).length, streak };
+    // The last seven days, oldest first: did each one reach the goal?
+    const week = Array.from({ length: 7 }, (_, i) => (byDay.get(addDays(today, i - 6)) ?? 0) >= goalMin * 60_000);
+    return { ms: byDay.get(today) ?? 0, blocks: todays.filter((s) => s.completed).length, streak, week };
   }, [data, today, goalMin]);
 }
 
 function TodayTiles() {
   const goalMin = useApp((s) => s.settings.dailyFocusGoalMinutes);
-  const { ms, blocks, streak } = useFocusToday();
+  const { ms, blocks, streak, week } = useFocusToday();
   const goal = goalMin * 60_000;
   const hours = ms / 3_600_000;
   return (
@@ -404,6 +415,11 @@ function TodayTiles() {
           <small>{streak === 1 ? "day" : "days"}</small>
         </div>
         <div className="tile-label">Goal streak</div>
+        <div className="week-dots" role="img" aria-label={`Goal reached on ${week.filter(Boolean).length} of the last 7 days`}>
+          {week.map((hit, i) => (
+            <span key={i} className={cx(hit && "hit", i === 6 && "today")} />
+          ))}
+        </div>
         <div className="tile-foot">{streak ? "Keep the chain going" : `Hit ${fmtDuration(goal)} to start one`}</div>
       </div>
     </div>
@@ -464,12 +480,80 @@ function SoundCard() {
   );
 }
 
+/** Today's screen time at a glance: how much was tracked, how it split, and where most of it went. */
+function ScreenTimeCard() {
+  const setView = useApp((s) => s.setView);
+  const tracking = useApp((s) => s.settings.trackingEnabled);
+  const today = startOfDay(Date.now());
+  const { data } = useQuery(async () => {
+    const now = Date.now();
+    const [[totals], entities] = await Promise.all([backend.bucketTotals([[today, now]]), backend.entityTotals(today, now)]);
+    return { totals, top: entities.slice().sort((a, b) => b.ms - a.ms).slice(0, 3) };
+  }, [today]);
+  const t = data?.totals;
+  const active = t ? t.productiveMs + t.neutralMs + t.distractingMs : 0;
+  const share = active ? Math.round(((t?.productiveMs ?? 0) / active) * 100) : 0;
+  return (
+    <div className="card screen-card">
+      <div className="card-head">
+        <div>
+          <div className="card-title">Screen time today</div>
+          <div className="card-sub">{active ? `${share}% productive` : tracking ? "Nothing tracked yet" : "Tracking is off"}</div>
+        </div>
+        <button className="btn btn-ghost btn-sm card-link" onClick={() => setView("stats")}>
+          Details
+        </button>
+      </div>
+      <div className="screen-total big-number">
+        <Dur ms={active} />
+      </div>
+      <ProportionBar p={t?.productiveMs ?? 0} n={t?.neutralMs ?? 0} d={t?.distractingMs ?? 0} height={8} />
+      {data?.top.length ? (
+        <ul className="list screen-top">
+          {data.top.map((e) => {
+            const name = entityName(e.kind, e.key, e.name);
+            return (
+              <li key={`${e.kind}:${e.key}`} className="list-row">
+                <Avatar name={name} productivity={e.productivity} size={36} iconKey={e.kind === "app" ? e.key : undefined} />
+                <span className="list-main">
+                  <span className="list-title">{name}</span>
+                </span>
+                <span className="list-trail">{fmtDuration(e.ms)}</span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="screen-empty">{tracking ? "Apps and sites you use today show up here." : "Turn tracking on in Settings to see where your day goes."}</p>
+      )}
+    </div>
+  );
+}
+
+/** A duration as big number + small units: "4h 12m" → 4<small>h</small> 12<small>m</small>. */
+function Dur({ ms }: { ms: number }) {
+  const m = Math.round(ms / 60_000);
+  const h = Math.floor(m / 60);
+  return h ? (
+    <>
+      {h}
+      <small>h</small> {m % 60}
+      <small>m</small>
+    </>
+  ) : (
+    <>
+      {m}
+      <small>min</small>
+    </>
+  );
+}
+
 function UpNext() {
   const { data } = useQuery(() => backend.tasksList(), []);
   const timer = useApp((s) => s.timer)!;
   const setIntention = useApp((s) => s.setIntention);
   const setView = useApp((s) => s.setView);
-  const tasks = (data ?? []).filter((t) => !t.done).slice(0, 3);
+  const tasks = (data ?? []).filter((t) => !t.done).slice(0, 4);
   return (
     <div className="card">
       <div className="card-head" style={{ marginBottom: 6 }}>

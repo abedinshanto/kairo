@@ -229,6 +229,9 @@ export function createDemoBackend(): Backend {
         return t;
       });
     },
+    // The preview runs in a browser, which can't see installed apps: monograms only.
+    appIcons: async () => ({}),
+
     async entityTotals(from, to) {
       const map = new Map<string, EntityTotal>();
       for (const s of overlapping(from, to)) {

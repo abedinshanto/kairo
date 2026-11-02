@@ -36,6 +36,8 @@ pub struct Completed {
     pub next: Phase,
     pub auto_started: bool,
     pub actual_ms: i64,
+    /// Finished by the user before the countdown ran out.
+    pub early: bool,
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
@@ -47,6 +49,8 @@ pub enum Action {
     Toggle,
     Skip,
     Stop,
+    /// End a focus block now and count it as done.
+    Finish,
 }
 
 struct SessionRecord {
@@ -153,14 +157,47 @@ impl Timer {
     }
 
     fn complete(&mut self, now: i64, settings: &Settings) -> Effects {
-        let finished = self.phase;
         let start = self.started_at.unwrap_or(self.ends_at - self.duration_ms);
+        let (end, actual) = (self.ends_at, self.duration_ms);
+        self.wrap_up(start, end, actual, false, now, settings)
+    }
+
+    /// End a focus block now and count it: the time so far is logged as a
+    /// finished block (and credited to its task), then the break begins as if
+    /// the countdown had run out. On a break it simply moves on to focus.
+    fn finish(&mut self, now: i64, settings: &Settings) -> Effects {
+        if self.phase != Phase::Focus {
+            return self.act(Action::Skip, now, settings);
+        }
+        let Some(start) = self.started_at else {
+            return Effects::default();
+        };
+        let actual = (self.duration_ms - self.remaining(now)).max(0);
+        if actual < MIN_RECORDED_MS {
+            // Too short to count as a block: start this one over instead.
+            self.enter(Phase::Focus, settings);
+            return Effects::default();
+        }
+        self.wrap_up(start, now, actual, true, now, settings)
+    }
+
+    /// Record the phase that just ended and move to the next one.
+    fn wrap_up(
+        &mut self,
+        start: i64,
+        end: i64,
+        actual: i64,
+        early: bool,
+        now: i64,
+        settings: &Settings,
+    ) -> Effects {
+        let finished = self.phase;
         let record = SessionRecord {
             phase: finished,
             start,
-            end: self.ends_at,
+            end,
             planned_ms: self.duration_ms,
-            actual_ms: self.duration_ms,
+            actual_ms: actual,
             completed: true,
             intention: self.intention.clone(),
             task_id: self.task_id,
@@ -191,7 +228,8 @@ impl Timer {
                 phase: finished,
                 next,
                 auto_started: auto,
-                actual_ms: record.actual_ms,
+                actual_ms: actual,
+                early,
             }),
             record: Some(record),
         }
@@ -224,6 +262,7 @@ impl Timer {
                 fx.record = self.abandon(now);
                 self.enter(self.phase, settings);
             }
+            (Action::Finish, _) => fx = self.finish(now, settings),
             _ => {}
         }
         fx
@@ -406,6 +445,8 @@ fn announce_completion<R: Runtime>(app: &AppHandle<R>, done: &Completed, snap: &
     let settings = state.settings.read().clone();
     let next_minutes = snap.duration_ms / 60_000;
     let (title, body) = match done.phase {
+        // The user ended it themselves in the app; no need to tell them.
+        Phase::Focus if done.early => (String::new(), String::new()),
         Phase::Focus => (
             "Focus block complete".to_string(),
             match (done.next, done.auto_started) {
@@ -425,7 +466,7 @@ fn announce_completion<R: Runtime>(app: &AppHandle<R>, done: &Completed, snap: &
         ),
     };
     // On mobile the alert was scheduled ahead of time so it fires even when suspended.
-    if cfg!(desktop) {
+    if cfg!(desktop) && !title.is_empty() {
         notify(app, &title, &body);
     }
 
@@ -538,6 +579,46 @@ mod tests {
         assert!(!rec.completed);
         assert_eq!(rec.actual_ms, 10 * 60_000);
         assert_eq!(t.phase, Phase::ShortBreak);
+    }
+
+    #[test]
+    fn finishing_early_logs_the_time_as_a_finished_block() {
+        let s = settings();
+        let mut t = Timer::new(&s);
+        t.act(Action::Start, 0, &s);
+        let fx = t.act(Action::Finish, 12 * 60_000, &s);
+        let rec = fx.record.unwrap();
+        assert!(rec.completed, "counts as a block");
+        assert_eq!((rec.actual_ms, rec.planned_ms, rec.end), (12 * 60_000, 25 * 60_000, 12 * 60_000));
+        let done = fx.completed.unwrap();
+        assert!(done.early);
+        assert_eq!(done.actual_ms, 12 * 60_000);
+        assert_eq!((t.phase, t.status, t.cycle), (Phase::ShortBreak, TimerStatus::Running, 1));
+
+        // Paused time doesn't count.
+        let mut t = Timer::new(&s);
+        t.act(Action::Start, 0, &s);
+        t.act(Action::Pause, 5 * 60_000, &s);
+        let rec = t.act(Action::Finish, 30 * 60_000, &s).record.unwrap();
+        assert_eq!(rec.actual_ms, 5 * 60_000);
+    }
+
+    #[test]
+    fn finishing_needs_a_started_block_of_at_least_a_minute() {
+        let s = settings();
+        let mut t = Timer::new(&s);
+        assert!(t.act(Action::Finish, 0, &s).record.is_none(), "nothing to finish while idle");
+        t.act(Action::Start, 0, &s);
+        let fx = t.act(Action::Finish, 20_000, &s);
+        assert!(fx.record.is_none() && fx.completed.is_none());
+        assert_eq!((t.phase, t.status), (Phase::Focus, TimerStatus::Idle), "starts over");
+
+        // On a break, finishing just moves on to focus.
+        let mut t = Timer::new(&s);
+        t.set_phase(Phase::ShortBreak, 0, &s);
+        t.act(Action::Start, 0, &s);
+        assert!(t.act(Action::Finish, 60_000, &s).record.is_none());
+        assert_eq!(t.phase, Phase::Focus);
     }
 
     #[test]

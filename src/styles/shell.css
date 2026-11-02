@@ -24,6 +24,21 @@
     radial-gradient(50% 40% at 50% 110%, var(--canvas-glow-2), transparent 70%);
 }
 
+/* Window drag area under the hidden macOS title bar (traffic lights sit on top of it) */
+.drag-strip {
+  display: none;
+}
+
+html.is-mac.is-native .drag-strip {
+  display: block;
+  position: fixed;
+  z-index: 200;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+}
+
 .scroll {
   position: relative;
   height: 100%;

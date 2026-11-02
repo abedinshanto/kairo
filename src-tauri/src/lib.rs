@@ -3,6 +3,8 @@
 mod categories;
 mod commands;
 mod db;
+#[cfg(desktop)]
+mod icons;
 mod models;
 #[cfg(desktop)]
 mod sites;
@@ -207,6 +209,7 @@ pub fn run() {
             commands::bucket_totals,
             commands::entity_totals,
             commands::focus_sessions,
+            commands::app_icons,
             commands::tasks_list,
             commands::task_create,
             commands::task_update,

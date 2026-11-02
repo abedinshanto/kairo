@@ -1,5 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, Bell, Check, ChevronsRight, Minus, Plus, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useAppIcon } from "../../lib/icons";
 import { useApp } from "../../lib/store";
 
 export function cx(...xs: (string | false | null | undefined)[]) {
@@ -27,10 +28,9 @@ export function PageTitle({ strong, dim, size = "display" }: { strong: ReactNode
 
 export function TopBar({ left, right }: { left?: ReactNode; right?: ReactNode }) {
   return (
-    <header className="topbar" data-tauri-drag-region>
-      <div className="topbar-left" data-tauri-drag-region>
-        {left}
-      </div>
+    // "deep": drag the window from anywhere in the bar; its buttons still click.
+    <header className="topbar" data-tauri-drag-region="deep">
+      <div className="topbar-left">{left}</div>
       <div className="topbar-right">{right}</div>
     </header>
   );
@@ -227,7 +227,21 @@ export const Modal = Sheet;
 
 // ------------------------------------------------------------------ Avatar (app / site initials)
 
-export function Avatar({ name, productivity, size = 44 }: { name: string; productivity?: number; size?: number }) {
+/**
+ * An app or site: the app's real icon when the core has one (with a small dot for
+ * productive / distracting), otherwise initials tinted by productivity.
+ */
+export function Avatar({ name, productivity, size = 44, iconKey }: { name: string; productivity?: number; size?: number; iconKey?: string }) {
+  const icon = useAppIcon(iconKey);
+  const p = productivity === undefined ? 1 : Math.sign(productivity);
+  if (icon) {
+    return (
+      <span className={cx("avatar has-icon", `p-${p}`)} style={{ width: size, height: size }} aria-hidden>
+        <img src={icon} alt="" draggable={false} />
+        {p !== 0 && <span className="avatar-dot" />}
+      </span>
+    );
+  }
   const clean = name.replace(/^www\./, "").replace(/\.(com|org|net|io|ai|app|so|tv|dev|us)$/, "");
   const letters = clean
     .split(/[\s._-]+/)
@@ -235,17 +249,11 @@ export function Avatar({ name, productivity, size = 44 }: { name: string; produc
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase())
     .join("");
-  const p = productivity === undefined ? 1 : Math.sign(productivity);
   return (
     <span className={cx("avatar", `p-${p}`)} style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }} aria-hidden>
       {letters || "?"}
     </span>
   );
-}
-
-/** @deprecated use Avatar */
-export function Monogram({ name, productivity }: { name: string; kind?: "app" | "site"; productivity?: number }) {
-  return <Avatar name={name} productivity={productivity} />;
 }
 
 // ------------------------------------------------------------------ Delta pill
