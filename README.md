@@ -22,26 +22,30 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 
 **Focus**
 - Focus, short break and long break phases. Long breaks come every *n* blocks, breaks and focus can start automatically, and you can add 5 minutes on the fly.
+- **Finish early:** done in 12 minutes? Finish the block and those 12 minutes are logged as a finished block, credited to its task, and your break starts.
 - Set an intention for each block and link it to a task, so blocks count toward the work they were for.
 - **Kai**, a small focus buddy, keeps you company. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks and asleep when nothing's playing.
 - **Tasks** are planned in focus blocks. The current task sits on its own card with a progress bar per block, and you slide to mark it done.
-- The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu has start, pause, skip, reset and break controls.
+- The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu shows today at a glance and has start, pause, finish, skip and break controls.
 - **Global shortcut** (default <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>Space</kbd>) starts or pauses the timer from any app.
 - **Deep focus mode** (<kbd>F</kbd>) leaves only the timer on screen.
 - Native notifications when a phase ends. On mobile the OS schedules them, so they fire even if the app is suspended.
 
 **Tracking (on-device)**
-- Samples the foreground app about once a second, merges the samples into spans and skips idle time (the idle threshold is configurable).
-- Detects websites in browsers. Window titles map to known sites on every platform. On macOS you can opt in to reading the exact front-tab domain from Safari, Chrome, Arc, Edge and Brave.
+- Samples the foreground app about once a second, merges the samples into spans and skips idle time (the idle threshold is configurable). **Open at login** (offered during setup) starts Kairo quietly in the menu bar, so the whole day is tracked, not just while the window is open.
+- Shows each app's **real icon**, read from the app on your computer (or the launcher on Android) and kept in the local database.
+- Detects websites in browsers. Window titles map to known sites on Windows and Linux. On macOS, Kairo reads the current tab's domain from Safari, Chrome, Arc, Edge, Brave and others once you allow it (macOS asks once per browser).
 - Classifies hundreds of apps and sites into 15 categories, each scored *productive*, *neutral* or *distracting*. You can re-categorise any app or site, and the change rewrites your whole history.
 - Pause tracking for 30 or 60 minutes. Excluding an app deletes its history and stops recording it.
 - **Android:** per-app usage through `UsageStatsManager` once you grant *Usage access*.
 
 **Understand**
+- **Home** shows today's screen time, how it split, and the apps that took the most of it.
+- **Daily summary** at a time you pick (6 pm by default): a notification with the day's headline, then a summary screen with screen time and its hourly shape, focus vs. goal, tasks done, distracting time vs. budget, your sharpest hour, and where the time went.
 - **Stats, today:** productive time, a productivity score, focus vs. goal, a distraction budget, app switches, a timeline of the day, an hour-by-hour breakdown, top apps & sites, categories and focus blocks.
 - **Stats, 7 or 30 days:** trends against the previous period, a daily breakdown, a weekday × hour *focus rhythm* heatmap, focus time vs. goal, *where time leaks*, and generated suggestions such as peak hours, distraction peaks, context switching, block follow-through, late nights and communication load.
 - **Focus persona:** a summary of your working style (for example *Early Bird Deep Diver*), saved as a shareable image that contains no app names, sites or timestamps.
-- **Smart nudges:** *Focus guard* nudges you if you drift to a distracting app during a block. Kairo also suggests a block after a long distraction and a break after a long stretch.
+- **Smart nudges:** *Focus guard* nudges you if you drift to a distracting app during a block. Kairo also suggests a block after a long distraction and a break after a long stretch, and lets you know once when the day's distraction budget is used up.
 
 **Sound**
 - 13 soundscapes synthesised on the device in real time: rain, thunder, ocean, wind, fireplace, stream, forest, night, white / pink / brown noise, binaural beats and an ambient pad. There are no audio files and nothing is streamed.
@@ -55,7 +59,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 | --- | --- |
 | ![Stats: productive time, score and top apps](docs/screenshots/stats.png) | ![Tasks: the current task card with slide to mark done](docs/screenshots/tasks.png) |
 | ![Soundscapes: player and presets](docs/screenshots/sounds.png) | ![Apps & sites: search, filters and time per app](docs/screenshots/apps.png) |
-| ![Settings: profile, privacy and preferences](docs/screenshots/settings.png) | ![Welcome: meet Kai](docs/screenshots/onboarding.png) |
+| ![Daily summary: your day, wrapped](docs/screenshots/summary.png) | ![Settings: profile, privacy and preferences](docs/screenshots/settings.png) |
 
 **Dark theme**
 

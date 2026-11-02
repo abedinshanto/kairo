@@ -29,7 +29,7 @@ mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "windows")]
-mod windows;
+mod win32;
 
 #[cfg(target_os = "macos")]
 fn extract<R: Runtime>(app: &AppHandle<R>, process_path: &Path, _app_name: &str) -> Option<Icon> {
@@ -45,7 +45,7 @@ fn extract<R: Runtime>(app: &AppHandle<R>, process_path: &Path, _app_name: &str)
 
 #[cfg(target_os = "windows")]
 fn extract<R: Runtime>(_app: &AppHandle<R>, process_path: &Path, _app_name: &str) -> Option<Icon> {
-    windows::extract(process_path)
+    win32::extract(process_path)
 }
 
 #[cfg(target_os = "linux")]

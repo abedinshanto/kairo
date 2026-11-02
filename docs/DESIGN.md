@@ -44,10 +44,11 @@ React (`src/components/ui/index.tsx`): `PageTitle`, `TopBar`, `PillTabs`, `Segme
 CSS classes (`src/styles/ui.css`, `src/styles/shell.css`):
 
 - Type: `.display` (40px two-tone, `.dim` span), `.title` (22px), `.label` (13px gray), `.big-number` (+ `<small>` unit), `.muted`, `.faint`.
-- Cards: `.card` (white, 32px), `.card.soft`, `.card.tint` (pale blue), `.card.hero` (royal blue gradient, white text, sheen), `.card.flush`, `.card-head`, `.card-title`, `.card-sub`. Wrap a hero in `<div className="stacked">` for the peeking cards behind it.
+- Cards: `.card` (white, 32px), `.card.soft`, `.card.tint` (pale blue), `.card.hero` (royal blue gradient, white text, sheen), `.card.flush`, `.card-head`, `.card-title`, `.card-sub`. Hero cards stand alone: no peeking cards behind them.
 - **Soundscape art is the one place colour families mix.** Preset tiles and the mix thumbnail use soft pastels (`.art-*`, `.sounds .preset.art-*`), like album art. Nowhere else.
 - **Say it once.** A number, state or action appears once per viewport: no hero legend repeating the headline, no second play button for the same thing, no badge restating a progress bar.
-- **One coloured hero per app, not per screen.** The stacked blue hero belongs to the moment that matters (the timer on Home, the current task on Tasks, Stats' headline number). Secondary screens (Apps, Settings) use white or tint cards.
+- **Columns line up.** Every screen is: top bar, then the title (and its tabs) spanning the page, then a two-column grid (`1.25fr / 1fr`, 24px gap, `align-items: stretch`) whose rows start and end on the same lines. When a column holds several cards, the last one (or the tiles) stretches to take up the slack, so both columns end together.
+- **One coloured hero per app, not per screen.** The blue hero belongs to the moment that matters (the timer on Home, the current task on Tasks, Stats' headline number). Secondary screens (Apps, Settings) use white or tint cards.
 - Header links ("See all", "All tasks", "Show more"): `.btn.btn-ghost.btn-sm.card-link`.
 - Buttons: `.btn` + `.btn-primary | .btn-dark | .btn-soft | .btn-ghost | .btn-danger | .btn-on-brand | .btn-glass`, `.btn-sm`, `.btn-block`.
 - Circles: `.circle-btn` (+ `.sm | .lg | .xl`, `.brand | .on-brand | .glass | .soft`). Add `className="fill"` on Play/Pause icons.
