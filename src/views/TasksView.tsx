@@ -145,21 +145,23 @@ export function TasksView() {
         }
       />
 
+      <header className="tasks-head">
+        <PageTitle strong="Your tasks," dim="one block at a time." />
+        <div className="tasks-tabs">
+          <PillTabs<Tab>
+            label="Task lists"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "todo", label: "To do", count: loaded ? open.length : undefined },
+              { value: "done", label: "Done", count: loaded ? done.length : undefined },
+            ]}
+          />
+        </div>
+      </header>
+
       <div className="tasks-grid">
         <section className="tasks-main">
-          <PageTitle strong="Your tasks," dim="one block at a time." />
-          <div className="tasks-tabs">
-            <PillTabs<Tab>
-              label="Task lists"
-              value={tab}
-              onChange={setTab}
-              options={[
-                { value: "todo", label: "To do", count: loaded ? open.length : undefined },
-                { value: "done", label: "Done", count: loaded ? done.length : undefined },
-              ]}
-            />
-          </div>
-
           {loaded &&
             (tab === "todo" ? (
               hero ? (

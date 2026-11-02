@@ -1,10 +1,16 @@
 /* ================================================================ Stats — a calm personal summary */
 
+/* Title and period span the page; below them both columns start on one line
+   and their last cards stretch so they end on one line too (as on Home). */
+.stats-intro {
+  margin-bottom: 28px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 28px 36px;
-  align-items: start;
+  gap: 24px;
+  align-items: stretch;
   transition: opacity 0.2s var(--ease);
 }
 
@@ -25,8 +31,16 @@
   min-width: 0;
 }
 
-.stats-side {
-  padding-top: 6px;
+.stats-main > :last-child,
+.stats-side > :last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-main > :last-child > .card,
+.stats-side > :last-child > .card {
+  flex: 1;
 }
 
 .stats-intro .display {
@@ -37,9 +51,6 @@
   margin-top: 26px;
 }
 
-.stats .stats-hero {
-  margin-top: 22px;
-}
 
 /* ---------------------------------------------------------------- Top bar */
 
@@ -624,10 +635,6 @@
 
   .stats-grid [class*="o-"] {
     min-width: 0;
-  }
-
-  .stats .stats-hero {
-    margin-top: 18px;
   }
 
   .stats .o-1 {

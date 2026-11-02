@@ -345,24 +345,24 @@ export function StatsView() {
       />
 
       {/* Desktop: two columns. Below 1024px the columns dissolve and the o-* classes set the order. */}
+      <header className="stats-intro">
+        <PageTitle strong="Your progress," dim={dim} />
+        <div className="stats-tabs">
+          <PillTabs<Range>
+            label="Period"
+            value={range}
+            onChange={pickRange}
+            options={[
+              { value: "day", label: dayMode ? relativeDayLabel(day) : "Today" },
+              { value: 7, label: "7 days" },
+              { value: 30, label: "30 days" },
+            ]}
+          />
+        </div>
+      </header>
+
       <div className={cx("stats-grid", shownDayMode ? "is-day" : "is-range")}>
         <div className="stats-main">
-          <div className="stats-intro o-1">
-            <PageTitle strong="Your progress," dim={dim} />
-            <div className="stats-tabs">
-              <PillTabs<Range>
-                label="Period"
-                value={range}
-                onChange={pickRange}
-                options={[
-                  { value: "day", label: dayMode ? relativeDayLabel(day) : "Today" },
-                  { value: 7, label: "7 days" },
-                  { value: 30, label: "30 days" },
-                ]}
-              />
-            </div>
-          </div>
-
           <div className="o-2">
             <Hero model={data} onScore={() => setSheet("score")} />
           </div>

@@ -12,18 +12,20 @@
 .apps-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  /* The title spans the page; the summary then starts level with the search field. */
   grid-template-areas:
-    "title side"
+    "title title"
     "controls side"
     "list side";
   grid-template-rows: auto auto 1fr;
-  column-gap: 36px;
+  column-gap: 24px;
   align-items: start;
 }
 
 .apps-title {
   grid-area: title;
   min-width: 0;
+  margin-bottom: 28px;
 }
 
 .apps-title .display {
@@ -37,14 +39,9 @@
   top: 24px;
 }
 
-.apps-side .apps-hero {
-  margin-top: 6px;
-}
-
 .apps-controls {
   grid-area: controls;
   min-width: 0;
-  margin-top: 26px;
 }
 
 .apps-list-wrap {
@@ -592,13 +589,13 @@ button.apps-cat.active:hover {
   }
 
   .apps-controls {
-    margin-top: 28px;
+    margin-top: 24px;
   }
 }
 
 @media (max-width: 760px) {
-  .apps-side .apps-hero {
-    margin-top: 16px;
+  .apps-title {
+    margin-bottom: 20px;
   }
 
   .apps-controls {

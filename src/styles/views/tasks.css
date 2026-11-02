@@ -1,15 +1,33 @@
 /* ================================================================ Tasks */
 
+/* Title and lists span the page; the hero card and the side column then share
+   their top and bottom edges (as on Home). */
+.tasks-head {
+  margin-bottom: 28px;
+}
+
+.tasks-head > .display {
+  max-width: 560px;
+  text-wrap: balance;
+}
+
 .tasks-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 36px;
-  align-items: start;
+  gap: 24px;
+  align-items: stretch;
 }
 
-.tasks-main > .display {
-  max-width: 560px;
-  text-wrap: balance;
+.tasks-main,
+.task-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tasks-main > *,
+.task-stack > .card {
+  flex: 1;
 }
 
 .tasks-tabs {
@@ -59,7 +77,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-top: 6px;
+  min-width: 0;
+}
+
+.tasks-side > .card:last-child {
+  flex: 1;
 }
 
 /* ---------------------------------------------------------------- Hero task card (reference 1) */
@@ -738,9 +760,6 @@ h2.task-hero-title {
     gap: 16px;
   }
 
-  .tasks-side {
-    padding-top: 12px;
-  }
 }
 
 @media (max-width: 760px) {
