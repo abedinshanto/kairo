@@ -1,0 +1,295 @@
+/* ================================================================ Daily summary */
+
+.summary-head {
+  margin-bottom: 28px;
+}
+
+/* Same system as Home: two rows on shared columns, edges aligned */
+.summary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+/* ---------------------------------------------------------------- Hero */
+
+.summary-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px;
+}
+
+.summary-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.summary-hero-label {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--on-brand-2);
+}
+
+.summary-hero-top .buddy {
+  margin: -8px -6px -24px 0;
+}
+
+.summary-hero-number {
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-hero-sub {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--on-brand-2);
+}
+
+.summary-hero-split {
+  padding-top: 18px;
+}
+
+/* The day's shape: thin stacked columns per hour, rounded tops, 2px gaps */
+.day-shape {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.day-shape-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2px;
+  height: 92px;
+}
+
+.day-shape-col {
+  display: flex;
+  flex-direction: column-reverse;
+  flex: 1;
+  max-width: 22px;
+  height: 100%;
+  gap: 2px;
+}
+
+.day-shape-col > span {
+  display: block;
+  border-radius: 3px;
+}
+
+.day-shape-col > span:empty[style*="height: 0%"] {
+  display: none;
+}
+
+.day-shape-col .p {
+  background: #fff;
+}
+
+.day-shape-col .n {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.day-shape-col .d {
+  background: #ffae9b;
+}
+
+.day-shape-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--on-brand-2);
+}
+
+.summary-legend {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  gap: 8px 32px;
+  margin: 14px 0 0;
+}
+
+.summary-legend dt {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-brand-2);
+}
+
+.summary-legend dd {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- Tiles */
+
+.summary-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.summary-tiles .tile {
+  padding: 20px;
+  gap: 8px;
+}
+
+.summary-tile-value {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-tiles .tile-foot {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------- How it went */
+
+.summary-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summary-notes li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.summary-notes .icon-tile {
+  width: 40px;
+  height: 40px;
+}
+
+.summary-notes .icon-tile svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------------------------------------------------------------- Where the time went */
+
+.summary-where {
+  margin-top: 8px;
+}
+
+.summary-where .list-row {
+  gap: 12px;
+}
+
+.summary-where .list-main {
+  gap: 6px;
+}
+
+.summary-bar {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-sunk);
+  overflow: hidden;
+}
+
+.summary-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--neutral);
+}
+
+.summary-bar.productive > span {
+  background: var(--productive);
+}
+
+.summary-bar.distracting > span {
+  background: var(--distracting);
+}
+
+.summary-where .list-trail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.summary-where .list-trail small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------------- Footer */
+
+.summary-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.summary-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.summary-empty strong {
+  margin-top: 8px;
+  font-size: 18px;
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- Responsive */
+
+@media (max-width: 1024px) {
+  .summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (max-width: 760px) {
+  .summary-hero {
+    padding: 22px;
+  }
+
+  .summary-hero-number {
+    font-size: 48px;
+  }
+
+  .summary-legend {
+    gap: 8px 20px;
+  }
+
+  .summary-tiles {
+    gap: 12px;
+  }
+
+  .summary-actions {
+    flex-direction: column-reverse;
+  }
+
+  .summary-actions .btn {
+    width: 100%;
+  }
+}

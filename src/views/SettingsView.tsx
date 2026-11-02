@@ -52,6 +52,9 @@ function Group({ id, title, foot, children }: { id: string; title: string; foot?
  * Controls stay inline on phones too; only `wide` ones (segmented, slider) drop onto their own line.
  * `below` content always sits under the text.
  */
+/** Minutes after midnight as "HH:MM" for a time input. */
+const clockTime = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
 function Row({
   label,
   desc,
@@ -295,6 +298,23 @@ export function SettingsView() {
             <Row label="Notifications">
               <Switch label="Notifications" checked={s.notificationsEnabled} onChange={(v) => update({ notificationsEnabled: v })} />
             </Row>
+            <Row label="Daily summary" desc="What you got done and where the time went, once a day.">
+              <Switch label="Daily summary" checked={s.dailySummary} onChange={(v) => update({ dailySummary: v })} />
+            </Row>
+            {s.dailySummary && (
+              <Row label="Summary time" desc="Pick the end of your working day.">
+                <input
+                  className="input pill set-time"
+                  type="time"
+                  aria-label="Summary time"
+                  value={clockTime(s.dailySummaryMinutes)}
+                  onChange={(e) => {
+                    const [h, m] = e.target.value.split(":").map(Number);
+                    if (Number.isFinite(h) && Number.isFinite(m)) update({ dailySummaryMinutes: h * 60 + m });
+                  }}
+                />
+              </Row>
+            )}
             {desktop && (
               <Row label="Focus guard" desc="A nudge if you drift mid-block.">
                 <Switch label="Focus guard" checked={s.focusGuard} onChange={(v) => update({ focusGuard: v })} />
@@ -324,7 +344,7 @@ export function SettingsView() {
       <footer className="set-footer">
         <Buddy mood="sleep" size={40} />
         <span>
-          Kairo 0.1.0 · Made for deep work · {isNative ? `${os} app` : "Browser preview"}
+          Kairo {__APP_VERSION__} · Made for deep work · {isNative ? `${os} app` : "Browser preview"}
         </span>
       </footer>
     </div>

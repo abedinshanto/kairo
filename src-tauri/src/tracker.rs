@@ -360,7 +360,33 @@ mod macos {
     }
 
     /// Front tab URL via AppleScript (asks for Automation permission once per browser).
+    /// Browsers that refused (Automation not allowed, or not scriptable) are left
+    /// alone for a while instead of being asked every few seconds.
+    static REFUSED: std::sync::Mutex<Vec<(String, Instant)>> = std::sync::Mutex::new(Vec::new());
+    const RETRY_AFTER: Duration = Duration::from_secs(10 * 60);
+
     pub fn browser_url(app_name: &str) -> Option<String> {
+        if let Ok(mut refused) = REFUSED.lock() {
+            refused.retain(|(_, at)| at.elapsed() < RETRY_AFTER);
+            if refused.iter().any(|(name, _)| name == app_name) {
+                return None;
+            }
+        }
+        match ask_browser(app_name) {
+            Ok(url) => url,
+            Err(Refused) => {
+                if let Ok(mut refused) = REFUSED.lock() {
+                    refused.push((app_name.to_string(), Instant::now()));
+                }
+                None
+            }
+        }
+    }
+
+    /// The user (or macOS) said no to Automation for this browser.
+    struct Refused;
+
+    fn ask_browser(app_name: &str) -> Result<Option<String>, Refused> {
         let script = match app_name {
             "Safari" | "Safari Technology Preview" | "Orion" => {
                 format!("tell application \"{app_name}\" to get URL of front document")
@@ -369,28 +395,38 @@ mod macos {
             | "Arc" | "Vivaldi" | "Chromium" | "Opera" | "Dia" => format!(
                 "tell application \"{app_name}\" to get URL of active tab of front window"
             ),
-            _ => return None,
+            _ => return Ok(None),
         };
-        let mut child = Command::new("osascript")
+        let Ok(mut child) = Command::new("osascript")
             .args(["-e", &script])
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .spawn()
-            .ok()?;
+        else {
+            return Ok(None);
+        };
         let deadline = Instant::now() + Duration::from_millis(1500);
-        loop {
+        let ok = loop {
             match child.try_wait() {
-                Ok(Some(status)) if status.success() => break,
-                Ok(Some(_)) | Err(_) => return None,
+                Ok(Some(status)) => break status.success(),
+                Err(_) => return Ok(None),
                 Ok(None) if Instant::now() > deadline => {
                     let _ = child.kill();
-                    return None;
+                    return Ok(None);
                 }
                 Ok(None) => std::thread::sleep(Duration::from_millis(25)),
             }
+        };
+        let Ok(out) = child.wait_with_output() else {
+            return Ok(None);
+        };
+        if !ok {
+            // -1743: not allowed to send Apple Events; anything else (no window open,
+            // a tab without an address) is worth asking about again next time.
+            let err = String::from_utf8_lossy(&out.stderr);
+            return if err.contains("-1743") { Err(Refused) } else { Ok(None) };
         }
-        let out = child.wait_with_output().ok()?;
         let url = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        (!url.is_empty()).then_some(url)
+        Ok((!url.is_empty()).then_some(url))
     }
 }

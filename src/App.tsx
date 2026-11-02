@@ -10,6 +10,7 @@ import { Onboarding } from "./views/Onboarding";
 import { SettingsView } from "./views/SettingsView";
 import { SoundsView } from "./views/SoundsView";
 import { StatsView } from "./views/StatsView";
+import { SummaryView } from "./views/SummaryView";
 import { TasksView } from "./views/TasksView";
 
 const NAV: { view: View; label: string; icon: ReactNode }[] = [
@@ -65,7 +66,7 @@ function useShortcuts() {
 function BottomNav() {
   const view = useApp((s) => s.view);
   const setView = useApp((s) => s.setView);
-  const current = view === "apps" ? "stats" : view;
+  const current = view === "apps" || view === "summary" ? "stats" : view;
   return (
     <nav className="nav" aria-label="Main">
       {NAV.map((n) => {
@@ -103,6 +104,8 @@ function CurrentView() {
       return <SettingsView />;
     case "apps":
       return <AppsView />;
+    case "summary":
+      return <SummaryView />;
   }
 }
 

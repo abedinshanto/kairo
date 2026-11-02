@@ -3,11 +3,11 @@ import { soundEngine, type SoundId } from "./audio/engine";
 import { backend } from "./backend";
 import { DEFAULT_SETTINGS, withDefaults } from "./defaults";
 import { iconChanged } from "./icons";
-import { fmtDuration } from "./time";
+import { fmtDuration, startOfDay } from "./time";
 import type { Phase, Settings, SoundPrefs, TimerAction, TimerSnapshot, TrackerStatus } from "./types";
 
-export type View = "home" | "stats" | "sounds" | "tasks" | "settings" | "apps";
-export const VIEWS: View[] = ["home", "stats", "sounds", "tasks", "settings", "apps"];
+export type View = "home" | "stats" | "sounds" | "tasks" | "settings" | "apps" | "summary";
+export const VIEWS: View[] = ["home", "stats", "sounds", "tasks", "settings", "apps", "summary"];
 /** Views reachable from the bottom navigation, in order (⌘1…⌘5). */
 export const TAB_VIEWS: View[] = ["home", "stats", "sounds", "tasks", "settings"];
 
@@ -30,13 +30,16 @@ interface State {
   toasts: Toast[];
   soundPlaying: boolean;
   deepFocus: boolean;
+  /** The day the summary view shows (local midnight); null = today. */
+  summaryDay: number | null;
 
   init(): Promise<void>;
+  openSummary(day?: number): void;
   setView(v: View): void;
   setDeepFocus(on: boolean): void;
   updateSettings(patch: Partial<Settings>): void;
   updateSound(patch: Partial<SoundPrefs>): void;
-  timerAction(a: TimerAction): Promise<void>;
+  timerAction(a: TimerAction): Promise<TimerSnapshot>;
   setPhase(p: Phase): Promise<void>;
   extend(minutes: number): Promise<void>;
   setIntention(intention: string, taskId: number | null): Promise<void>;
@@ -66,6 +69,7 @@ export const useApp = create<State>((set, get) => ({
   toasts: [],
   soundPlaying: false,
   deepFocus: false,
+  summaryDay: null,
 
   async init() {
     const [settings, timer, tracker] = await Promise.all([
@@ -118,6 +122,9 @@ export const useApp = create<State>((set, get) => ({
         case "icon":
           iconChanged(e.key);
           break;
+        case "summary":
+          get().openSummary();
+          break;
       }
     });
 
@@ -147,6 +154,12 @@ export const useApp = create<State>((set, get) => ({
     set({ view, deepFocus: false });
   },
 
+  openSummary(day) {
+    set({ summaryDay: day ?? null });
+    get().setView("summary");
+    get().updateSettings({ summarySeenDay: startOfDay(day ?? Date.now()) });
+  },
+
   setDeepFocus(deepFocus) {
     set({ deepFocus });
   },
@@ -172,6 +185,7 @@ export const useApp = create<State>((set, get) => ({
     const timer = await backend.timerAction(a);
     onTimer(get().timer, timer);
     set({ timer, clockSkew: Date.now() - timer.now });
+    return timer;
   },
   async setPhase(p) {
     const timer = await backend.timerSetPhase(p);
@@ -221,10 +235,18 @@ function onTimer(prev: TimerSnapshot | null, next: TimerSnapshot) {
  * The S key: finish a running focus block (its time is logged as a finished
  * block and the break begins), or skip ahead from a break or an untouched block.
  */
-export async function finishOrSkip(): Promise<void> {
-  const t = useApp.getState().timer;
-  await useApp.getState().timerAction(t?.phase === "focus" && t.startedAt !== null ? "finish" : "skip");
+export async function finishOrSkip(): Promise<TimerSnapshot | undefined> {
+  const { timer: t, clockSkew, timerAction, toast } = useApp.getState();
+  if (!t) return;
+  if (t.phase !== "focus" || t.startedAt === null) return timerAction("skip");
+  if (t.durationMs - remainingNow(t, clockSkew) < MIN_LOGGED_MS) {
+    toast({ title: "Started over", body: "Blocks under a minute aren't logged.", tone: "default" });
+  }
+  return timerAction("finish");
 }
+
+/** The core doesn't log focus blocks shorter than this (timer.rs MIN_RECORDED_MS). */
+const MIN_LOGGED_MS = 60_000;
 
 /** Remaining time for a snapshot at the current instant. */
 export function remainingNow(t: TimerSnapshot, skew: number): number {

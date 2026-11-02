@@ -41,6 +41,8 @@ pub fn update_settings(app: AppHandle, settings: Settings) -> CmdResult<Settings
         state.db.delete_app_history(app_id)?;
     }
     timer::settings_changed(&app);
+    #[cfg(mobile)]
+    crate::daily::schedule_mobile(&app);
 
     #[cfg(desktop)]
     {

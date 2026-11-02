@@ -1,9 +1,9 @@
-import { ArrowLeft, ArrowRight, BarChart3, Lock, MonitorSmartphone, ShieldCheck, Smartphone, Sparkles, Target, Timer, WifiOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Lock, ShieldCheck, Smartphone, Sparkles, Target, Timer, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Buddy, type BuddyMood } from "../components/Buddy";
-import { PageTitle, Stepper, cx } from "../components/ui";
+import { PageTitle, Stepper, Switch, cx } from "../components/ui";
 import { backend, isNative } from "../lib/backend";
-import { isMobileOS, os } from "../lib/platform";
+import { isMac, isMobileOS, os } from "../lib/platform";
 import { useApp } from "../lib/store";
 import { fmtDuration } from "../lib/time";
 import "../styles/views/onboarding.css";
@@ -37,6 +37,8 @@ export function Onboarding() {
   const update = useApp((s) => s.updateSettings);
   const tracker = useApp((s) => s.tracker);
   const root = useRef<HTMLDivElement>(null);
+  const [atLogin, setAtLogin] = useState(true);
+  const [readSites, setReadSites] = useState(true);
 
   const finish = () => update({ onboarded: true });
   // Fade the welcome flow away, then hand over to the app.
@@ -52,6 +54,9 @@ export function Onboarding() {
   };
   const start = () => {
     void backend.ensureNotificationPermission().catch(() => {});
+    // Kairo only sees what happens while it runs: starting at login covers the whole day.
+    if (trayNote) void backend.setAutostart(atLogin).catch(() => {});
+    if (sitesNote) update({ trackBrowserUrls: readSites });
     close();
   };
   const last = step === STEPS - 1;
@@ -84,6 +89,7 @@ export function Onboarding() {
   const needsUsage = isNative && os === "android" && !!tracker?.needsPermission;
   const iosNote = isNative && os === "ios";
   const trayNote = !isMobileOS && isNative;
+  const sitesNote = trayNote && isMac;
   const compact = last && (needsUsage || iosNote || trayNote);
 
   return (
@@ -190,6 +196,24 @@ export function Onboarding() {
                       format={(v) => fmtDuration(v * 60_000)}
                     />
                   </div>
+                  {trayNote && (
+                    <div className="onb-goal">
+                      <div className="onb-goal-text">
+                        <span className="onb-field-label">Open at login</span>
+                        <span className="onb-field-sub">Starts quietly in the {isMac ? "menu bar" : "tray"}, so your whole day is tracked.</span>
+                      </div>
+                      <Switch label="Open at login" checked={atLogin} onChange={setAtLogin} />
+                    </div>
+                  )}
+                  {sitesNote && (
+                    <div className="onb-goal">
+                      <div className="onb-goal-text">
+                        <span className="onb-field-label">See websites, not just browsers</span>
+                        <span className="onb-field-sub">Reads the current tab in Safari, Chrome, Arc and others. macOS asks once per browser; only the site's domain is kept.</span>
+                      </div>
+                      <Switch label="See websites" checked={readSites} onChange={setReadSites} />
+                    </div>
+                  )}
                   {needsUsage && (
                     <div className="onb-permission">
                       <span className="icon-tile round">
@@ -210,12 +234,6 @@ export function Onboarding() {
                   <p className="onb-note">
                     <Smartphone />
                     <span>On iPhone and iPad, Apple doesn't let apps read other apps' usage. Kairo tracks your focus blocks here; app tracking runs on your Mac, PC or Android.</span>
-                  </p>
-                )}
-                {trayNote && (
-                  <p className="onb-note">
-                    <MonitorSmartphone />
-                    <span>Kairo lives in your menu bar or system tray. Closing the window keeps the timer and tracking running.</span>
                   </p>
                 )}
               </>

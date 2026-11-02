@@ -2,6 +2,7 @@
 
 mod categories;
 mod commands;
+mod daily;
 mod db;
 #[cfg(desktop)]
 mod icons;
@@ -136,12 +137,28 @@ fn setup<R: Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::error::
         }
     }
 
+    // Taps on our notifications open Kairo (and the summary, for the summary).
+    let handle = app.handle().clone();
+    let _ = app.notification().on_action(move |performed| {
+        if performed.action_id() == "tap" {
+            daily::on_notification_tap(&handle, performed.notification().and_then(|n| n.title()));
+        }
+    });
+    #[cfg(mobile)]
+    daily::schedule_mobile(app.handle());
+
     let handle = app.handle().clone();
     thread::Builder::new()
         .name("kairo-ticker".into())
-        .spawn(move || loop {
-            thread::sleep(Duration::from_millis(250));
-            timer::tick(&handle);
+        .spawn(move || {
+            #[cfg(desktop)]
+            let mut daily_run = 0;
+            loop {
+                thread::sleep(Duration::from_millis(250));
+                timer::tick(&handle);
+                #[cfg(desktop)]
+                daily::tick(&handle, &mut daily_run);
+            }
         })?;
 
     Ok(())

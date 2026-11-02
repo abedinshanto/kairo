@@ -1,6 +1,9 @@
 import {
   Brain,
   Check,
+  Globe,
+  Power,
+  ScrollText,
   ChevronDown,
   Clock,
   CloudMoonRain,
@@ -30,7 +33,8 @@ import { backend, isNative } from "../lib/backend";
 import { entityName } from "../lib/categories";
 import { confirmDialog } from "../lib/dialogs";
 import { useMediaQuery, useNow, useQuery } from "../lib/hooks";
-import { remainingNow, useApp } from "../lib/store";
+import { isMac, isMobileOS } from "../lib/platform";
+import { finishOrSkip, remainingNow, useApp } from "../lib/store";
 import { addDays, DAY, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
 import type { Phase, TimerSnapshot } from "../lib/types";
 import "../styles/views/home.css";
@@ -112,14 +116,23 @@ export function HomeView() {
   );
 
   // Switching phase mid-block ends the block, so a stray tap on a pill must not lose it silently.
+  // Switching mode mid-block ends the block, so ask first; a focus block that's
+  // under way is finished (its time logged), never thrown away.
   const pickPhase = async (p: Phase) => {
     if (p === timer.phase) return;
     if (timer.startedAt !== null) {
+      const focus = timer.phase === "focus";
       const ok = await confirmDialog(
-        timer.phase === "focus" ? `End this focus block early and switch to ${PHASE_LABEL[p].toLowerCase()}?` : `End this ${PHASE_LABEL[timer.phase].toLowerCase()} early?`,
-        { title: timer.phase === "focus" ? "End focus block?" : "End break?", okLabel: "End early" },
+        focus
+          ? `The time so far is logged as a finished block, then you switch to ${PHASE_LABEL[p].toLowerCase()}.`
+          : `End this ${PHASE_LABEL[timer.phase].toLowerCase()} early?`,
+        { title: focus ? "Finish this focus block?" : "End break?", okLabel: focus ? "Finish & switch" : "End early" },
       );
       if (!ok) return;
+      if (focus) {
+        const next = await finishOrSkip();
+        if (next?.phase === p) return;
+      }
     }
     void setPhase(p);
   };
@@ -173,6 +186,8 @@ export function HomeView() {
           />
         </div>
       </header>
+
+      <SetupTip />
 
       {/* Two rows on a shared two-column grid: every card in a row starts and ends on the same lines. */}
       <div className="home-grid">
@@ -259,7 +274,7 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
               <Plus /> 5 min
             </button>
             {timer.phase === "focus" ? (
-              <button className="btn btn-glass" title={`Finish now and log ${fmtDuration(elapsed)} (S)`} onClick={() => void timerAction("finish")}>
+              <button className="btn btn-glass" title={`Finish now and log ${fmtDuration(elapsed)} (S)`} onClick={() => void finishOrSkip()}>
                 <Check /> Finish
               </button>
             ) : (
@@ -476,6 +491,86 @@ function SoundCard() {
       <button className={cx("circle-btn", playing ? "brand" : "soft")} aria-label={playing ? "Pause soundscape" : "Play soundscape"} disabled={!active.length} onClick={() => void soundEngine.toggle()}>
         {playing ? <Pause className="fill" /> : <Play className="fill" />}
       </button>
+    </div>
+  );
+}
+
+interface Tip {
+  id: string;
+  icon: ReactNode;
+  title: string;
+  body: string;
+  action: string;
+  run: () => unknown;
+}
+
+/**
+ * One suggestion at a time for installs that predate them: open at login (so the
+ * whole day is tracked, not just while the window is open) and, on macOS, reading
+ * which website the browser shows.
+ */
+function SetupTip() {
+  const settings = useApp((s) => s.settings);
+  const update = useApp((s) => s.updateSettings);
+  const [atLogin, setAtLogin] = useState<boolean | null>(null);
+  const desktop = isNative && !isMobileOS;
+  useEffect(() => {
+    if (desktop) backend.autostartEnabled().then(setAtLogin).catch(() => setAtLogin(null));
+  }, [desktop]);
+  const dismissed = settings.tipsDismissed ?? [];
+  const openSummary = useApp((s) => s.openSummary);
+  const today = startOfDay(Date.now());
+  // Evenings: the day's summary, until it's opened or put off.
+  const summaryDue = settings.dailySummary && Date.now() >= today + settings.dailySummaryMinutes * 60_000 && settings.summarySeenDay !== today;
+  let tip: Tip | null = null;
+  if (summaryDue) {
+    tip = {
+      id: "summary",
+      icon: <ScrollText />,
+      title: "Your day, wrapped",
+      body: "See what you got done today, where the time went and what pulled you away.",
+      action: "See summary",
+      run: () => openSummary(),
+    };
+  } else if (desktop && atLogin === false && !dismissed.includes("login")) {
+    tip = {
+      id: "login",
+      icon: <Power />,
+      title: "Track your whole day",
+      body: `Kairo only sees what you do while it's running. Open it at login and it starts quietly in the ${isMac ? "menu bar" : "tray"}.`,
+      action: "Open at login",
+      run: async () => {
+        await backend.setAutostart(true);
+        setAtLogin(await backend.autostartEnabled());
+      },
+    };
+  } else if (desktop && isMac && settings.trackingEnabled && !settings.trackBrowserUrls && !dismissed.includes("sites")) {
+    tip = {
+      id: "sites",
+      icon: <Globe />,
+      title: "See websites, not just browsers",
+      body: "Kairo can read the current tab in Safari, Chrome, Arc and others. macOS asks once per browser; only the site's domain is kept.",
+      action: "Turn on",
+      run: () => update({ trackBrowserUrls: true }),
+    };
+  }
+  if (!tip) return null;
+  const { id, icon, title, body, action, run } = tip;
+  return (
+    <div className="card tint home-tip" role="note">
+      <span className="icon-tile round">{icon}</span>
+      <div className="home-tip-text">
+        <div className="home-tip-title">{title}</div>
+        <div className="home-tip-body">{body}</div>
+      </div>
+      <div className="home-tip-actions">
+        <button className="btn btn-ghost btn-sm" onClick={() => update(id === "summary" ? { summarySeenDay: today } : { tipsDismissed: [...dismissed, id] })}>
+          Not now
+        </button>
+        <button className="btn btn-primary btn-sm" onClick={() => void run()}>
+          {action}
+        </button>
+      </div>
     </div>
   );
 }

@@ -30,6 +30,8 @@ export const DEFAULT_SETTINGS: Settings = {
   focusGuard: true,
   nudgeDistractionMinutes: 15,
   nudgeBreakMinutes: 90,
+  dailySummary: true,
+  dailySummaryMinutes: 18 * 60,
   showTimerInTray: true,
   hideDockIcon: false,
   globalShortcut: "CommandOrControl+Shift+Space",

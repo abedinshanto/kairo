@@ -26,7 +26,7 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let status = MenuItem::with_id(app, "status", "Ready to focus", false, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "Start focus", true, None::<&str>)?;
     let finish = MenuItem::with_id(app, "finish", "Finish block now", false, None::<&str>)?;
-    let skip = MenuItem::with_id(app, "skip", "Skip to next phase", true, None::<&str>)?;
+    let skip = MenuItem::with_id(app, "skip", "Skip to break", true, None::<&str>)?;
     let stop = MenuItem::with_id(app, "stop", "Reset timer", false, None::<&str>)?;
     let short = MenuItem::with_id(app, "short_break", "Take a short break", true, None::<&str>)?;
     let long = MenuItem::with_id(app, "long_break", "Take a long break", true, None::<&str>)?;
@@ -152,10 +152,14 @@ pub fn update_timer<R: Runtime>(app: &AppHandle<R>, snap: &TimerSnapshot) {
     let _ = tray.status.set_text(status);
     let _ = tray.toggle.set_text(toggle);
     let _ = tray.stop.set_enabled(snap.started_at.is_some());
-    let _ = tray
-        .finish
-        .set_enabled(snap.phase == Phase::Focus && snap.started_at.is_some());
-    let _ = tray.skip.set_enabled(true);
+    // A focus block under way is finished (and logged), never skipped.
+    let focus_started = snap.phase == Phase::Focus && snap.started_at.is_some();
+    let _ = tray.finish.set_enabled(focus_started);
+    let _ = tray.skip.set_enabled(!focus_started);
+    let _ = tray.skip.set_text(match snap.phase {
+        Phase::Focus => "Skip to break",
+        _ => "Skip break",
+    });
 }
 
 pub fn update_tracking<R: Runtime>(app: &AppHandle<R>, paused: bool) {

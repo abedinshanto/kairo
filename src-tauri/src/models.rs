@@ -33,6 +33,11 @@ pub struct Settings {
     pub nudge_distraction_minutes: u32,
     pub nudge_break_minutes: u32,
 
+    // End-of-day summary
+    pub daily_summary: bool,
+    /// Local time of day, in minutes after midnight.
+    pub daily_summary_minutes: u32,
+
     // Desktop
     pub show_timer_in_tray: bool,
     pub hide_dock_icon: bool,
@@ -64,6 +69,8 @@ impl Default for Settings {
             focus_guard: true,
             nudge_distraction_minutes: 15,
             nudge_break_minutes: 90,
+            daily_summary: true,
+            daily_summary_minutes: 18 * 60,
             show_timer_in_tray: true,
             hide_dock_icon: false,
             global_shortcut: "CommandOrControl+Shift+Space".into(),
@@ -82,6 +89,7 @@ impl Settings {
         self.idle_threshold_seconds = self.idle_threshold_seconds.clamp(30, 3600);
         self.nudge_distraction_minutes = self.nudge_distraction_minutes.clamp(1, 240);
         self.nudge_break_minutes = self.nudge_break_minutes.clamp(15, 480);
+        self.daily_summary_minutes = self.daily_summary_minutes.min(24 * 60 - 1);
         self.excluded_apps.iter_mut().for_each(|a| *a = a.to_lowercase());
         self.excluded_apps.sort();
         self.excluded_apps.dedup();

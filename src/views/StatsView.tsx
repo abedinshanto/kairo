@@ -1,4 +1,4 @@
-import { AppWindow, Check, ChevronLeft, ChevronRight, Download, Flame, Hourglass, Sparkles, Timer } from "lucide-react";
+import { AppWindow, Check, ChevronLeft, ChevronRight, Download, Flame, Hourglass, ScrollText, Sparkles, Timer } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { BarList, ProportionBar, type BarRow } from "../components/charts/Bars";
@@ -228,6 +228,7 @@ export function StatsView() {
   const [sheet, setSheet] = useState<SheetKind>(null);
   const settings = useApp((s) => s.settings);
   const setView = useApp((s) => s.setView);
+  const openSummary = useApp((s) => s.openSummary);
   const today = startOfDay(Date.now());
   const isToday = day === today;
   const goalMs = settings.dailyFocusGoalMinutes * 60_000;
@@ -330,6 +331,11 @@ export function StatsView() {
                   <ChevronRight />
                 </button>
               </div>
+            )}
+            {dayMode && (
+              <button className="circle-btn" aria-label="Daily summary" title="Daily summary" onClick={() => openSummary(day)}>
+                <ScrollText />
+              </button>
             )}
             <button className="circle-btn" aria-label="Apps & sites" title="Apps & sites" onClick={openApps}>
               <AppWindow />
@@ -939,13 +945,13 @@ function FocusBlocksSheet({ sessions, isToday, onClose, onStart }: { sessions: F
           <ul className="list">
             {ordered.map((s) => (
               <li key={s.id} className="list-row block-row">
-                <span className={cx("block-check", s.completed && "done")} aria-label={s.completed ? "Completed" : "Ended early"}>
+                <span className={cx("block-check", s.completed && "done")} aria-label={blockLabel(s)}>
                   {s.completed && <Check />}
                 </span>
                 <div className="list-main">
                   <div className="list-title">{s.intention || "Untitled focus block"}</div>
                   <div className="list-sub">
-                    {fmtTime(s.start)} · {s.completed ? "Completed" : "Ended early"}
+                    {fmtTime(s.start)} · {blockLabel(s)}
                     {s.interruptions ? ` · ${s.interruptions} detour${s.interruptions > 1 ? "s" : ""}` : ""}
                   </div>
                 </div>
@@ -1031,4 +1037,11 @@ function PersonaCard({ persona, range, activeHours }: { persona: Persona | null;
       )}
     </section>
   );
+}
+
+/** "Completed", "Finished early · 12 of 25 min" or "Ended early". */
+function blockLabel(s: FocusSession): string {
+  if (!s.completed) return "Ended early";
+  if (s.actualMs >= s.plannedMs - 30_000) return "Completed";
+  return `Finished early · ${Math.round(s.actualMs / 60_000)} of ${Math.round(s.plannedMs / 60_000)} min`;
 }

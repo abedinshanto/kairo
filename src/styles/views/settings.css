@@ -610,3 +610,11 @@
   width: 24px;
   height: 24px;
 }
+
+/* Daily summary time */
+.set-time {
+  width: 130px;
+  height: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

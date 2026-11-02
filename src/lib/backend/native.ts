@@ -101,6 +101,7 @@ export function createNativeBackend(): Backend {
         ),
         listen("data://changed", () => listener({ type: "data" })),
         listen<string>("icons://changed", (e) => listener({ type: "icon", key: e.payload })),
+        listen("summary://open", () => listener({ type: "summary" })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },

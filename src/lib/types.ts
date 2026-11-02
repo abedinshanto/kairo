@@ -36,6 +36,9 @@ export interface Settings {
   focusGuard: boolean;
   nudgeDistractionMinutes: number;
   nudgeBreakMinutes: number;
+  dailySummary: boolean;
+  /** Local time of day for the summary, in minutes after midnight. */
+  dailySummaryMinutes: number;
   showTimerInTray: boolean;
   hideDockIcon: boolean;
   globalShortcut: string;
@@ -44,6 +47,10 @@ export interface Settings {
   onboarded?: boolean;
   /** What Kairo calls you in greetings (optional, stays on device). */
   name?: string;
+  /** Home suggestions the user said "not now" to. */
+  tipsDismissed?: string[];
+  /** Local midnight of the last day whose summary was opened (hides Home's prompt). */
+  summarySeenDay?: number;
   sound?: SoundPrefs;
 }
 
@@ -175,7 +182,9 @@ export type BackendEvent =
   | { type: "settings"; settings: Settings }
   | { type: "data" }
   /** The core just stored a real icon for this app. */
-  | { type: "icon"; key: string };
+  | { type: "icon"; key: string }
+  /** The user tapped the end-of-day summary notification. */
+  | { type: "summary" };
 
 export interface Backend {
   kind: "native" | "demo";

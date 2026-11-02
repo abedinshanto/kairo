@@ -1,12 +1,16 @@
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
 import process from "node:process";
 import { defineConfig } from "vite";
+
+const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://tauri.app/start/frontend/vite/
 export default defineConfig(() => ({
   plugins: [react()],
+  define: { __APP_VERSION__: JSON.stringify(version) },
   clearScreen: false,
   server: {
     port: 1420,
