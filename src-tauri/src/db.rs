@@ -22,7 +22,7 @@ use crate::{
 /// stay index-bound (`start_ts >= from - MAX_SPAN_MS`).
 pub const MAX_SPAN_MS: i64 = 60 * 60 * 1000;
 
-const SCHEMA_VERSION: i32 = 2;
+const SCHEMA_VERSION: i32 = 3;
 
 pub type DbResult<T> = Result<T, String>;
 
@@ -129,6 +129,18 @@ impl Db {
                     mime TEXT NOT NULL,
                     data BLOB NOT NULL,
                     updated_at INTEGER NOT NULL
+                 );",
+            )
+            .map_err(e)?;
+        }
+        if version < 3 {
+            // Task priority: open tasks keep the order they had (newest first).
+            conn.execute_batch(
+                "ALTER TABLE tasks ADD COLUMN position INTEGER NOT NULL DEFAULT 0;
+                 UPDATE tasks SET position = (
+                    SELECT COUNT(*) FROM tasks t2
+                    WHERE t2.created_at > tasks.created_at
+                       OR (t2.created_at = tasks.created_at AND t2.id > tasks.id)
                  );",
             )
             .map_err(e)?;
@@ -651,7 +663,9 @@ impl Db {
                  FROM tasks t
                  LEFT JOIN sessions s ON s.task_id = t.id AND s.kind = 'focus'
                  GROUP BY t.id
-                 ORDER BY t.done, COALESCE(t.completed_at, 0) DESC, t.created_at DESC",
+                 ORDER BY t.done,
+                          CASE WHEN t.done = 1 THEN -COALESCE(t.completed_at, 0) ELSE t.position END,
+                          t.created_at DESC",
             )
             .map_err(e)?;
         let rows = stmt
@@ -673,14 +687,31 @@ impl Db {
         rows
     }
 
+    /// New tasks go to the top of the list (task 1).
     pub fn create_task(&self, title: &str, estimate: u32, now: i64) -> DbResult<i64> {
         let conn = self.conn.lock();
         conn.execute(
-            "INSERT INTO tasks(title, estimate, created_at) VALUES(?1, ?2, ?3)",
+            "INSERT INTO tasks(title, estimate, created_at, position)
+             VALUES(?1, ?2, ?3, (SELECT COALESCE(MIN(position), 0) - 1 FROM tasks))",
             params![title.trim(), estimate.clamp(1, 20), now],
         )
         .map_err(e)?;
         Ok(conn.last_insert_rowid())
+    }
+
+    /// Put tasks in this order (highest priority first); others keep their place.
+    pub fn reorder_tasks(&self, ids: &[i64]) -> DbResult<()> {
+        let mut conn = self.conn.lock();
+        let tx = conn.transaction().map_err(e)?;
+        {
+            let mut stmt = tx
+                .prepare("UPDATE tasks SET position = ?1 WHERE id = ?2")
+                .map_err(e)?;
+            for (i, id) in ids.iter().enumerate() {
+                stmt.execute(params![i as i64, id]).map_err(e)?;
+            }
+        }
+        tx.commit().map_err(e)
     }
 
     pub fn update_task(
@@ -898,6 +929,32 @@ mod tests {
         let ents = db.entity_totals(0, i64::MAX / 2).unwrap();
         let yt = ents.iter().find(|e| e.key == "youtube.com").unwrap();
         assert_eq!(yt.productivity, -1);
+    }
+
+    #[test]
+    fn new_tasks_go_on_top_and_reordering_sticks() {
+        let db = Db::in_memory().unwrap();
+        let a = db.create_task("Write docs", 2, 1).unwrap();
+        let b = db.create_task("Fix login", 1, 2).unwrap();
+        let c = db.create_task("Plan sprint", 1, 3).unwrap();
+        let order = |db: &Db| db.tasks().unwrap().into_iter().map(|t| t.id).collect::<Vec<_>>();
+        assert_eq!(order(&db), vec![c, b, a], "newest first");
+        db.reorder_tasks(&[a, c, b]).unwrap();
+        assert_eq!(order(&db), vec![a, c, b]);
+        let d = db.create_task("Reply to Sam", 1, 4).unwrap();
+        assert_eq!(order(&db), vec![d, a, c, b], "a new task becomes task 1");
+        db.update_task(a, None, None, Some(true), 5).unwrap();
+        assert_eq!(order(&db), vec![d, c, b, a], "done tasks go last");
+    }
+
+    #[test]
+    fn site_history_goes_with_its_subdomains_only() {
+        let db = Db::in_memory().unwrap();
+        db.insert_span(&span(0, 60_000, "google chrome", Some("reddit.com"))).unwrap();
+        db.insert_span(&span(60_000, 120_000, "google chrome", Some("old.reddit.com"))).unwrap();
+        db.insert_span(&span(120_000, 180_000, "google chrome", Some("notreddit.com"))).unwrap();
+        assert_eq!(db.delete_site_history("reddit.com").unwrap(), 2);
+        assert_eq!(db.site_domains(10).unwrap(), vec!["notreddit.com".to_string()]);
     }
 
     #[test]

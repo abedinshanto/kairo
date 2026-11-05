@@ -23,9 +23,10 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 **Focus**
 - Focus, short break and long break phases. Long breaks come every *n* blocks, breaks and focus can start automatically, and you can add 5 minutes on the fly.
 - **Finish early:** done in 12 minutes? Finish the block and those 12 minutes are logged as a finished block, credited to its task, and your break starts.
-- Set an intention for each block and link it to a task, so blocks count toward the work they were for.
-- **Kai**, a small focus buddy, keeps you company. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks and asleep when nothing's playing.
-- **Tasks** are planned in focus blocks. The current task sits on its own card with a progress bar per block, and you slide to mark it done.
+- Set an intention for each block and link it to a task, so blocks count toward the work they were for. The buttons **1–4** on the timer (or the keys <kbd>1</kbd>–<kbd>4</kbd>) pick your top four tasks; an intention that isn't a task yet becomes one with **Add as task**.
+- **Voice dictation, on your device.** Tap Kai (or press <kbd>V</kbd>) and say what you're working on; Kai listens until you pause, and the words fill in your focus. Say a task's name or "task two" to link it. In Tasks, the microphone in *Add a task* takes things like "landing page redesign, three blocks". Speech becomes text through [Whisper](https://github.com/openai/whisper) (OpenAI's open speech model, tiny English, 32 MB, via [whisper.cpp](https://github.com/ggml-org/whisper.cpp)) shipped with the app: no audio is stored or sent anywhere. Desktop only; phones have dictation on their keyboard.
+- **Kai**, a small focus buddy, keeps you company. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks, all ears while you dictate and asleep when nothing's playing.
+- **Tasks** are planned in focus blocks and kept in priority order (move any task up, down or to the top). The current task sits on its own card with a progress bar per block, and you slide to mark it done.
 - The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu shows today at a glance and has start, pause, finish, skip and break controls.
 - **Global shortcut** (default <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>Space</kbd>) starts or pauses the timer from any app.
 - **Deep focus mode** (<kbd>F</kbd>) leaves only the timer on screen.
@@ -90,6 +91,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - **No network access.** The app has no server, telemetry, crash reporting or update pings. The Content Security Policy in `src-tauri/tauri.conf.json` blocks all remote connections. The one exception is **Download site icons**, off unless you turn it on (see below).
 - **One local file.** Data lives in `kairo.db` in the OS app-data folder. Settings shows the path and size.
 - **Site icons.** Logos are bundled with the app or copied from your browser's own favicon cache on this computer. Only if you turn on **Download site icons** does Kairo ask a site with no saved icon for its own icon: requests to that site alone, over HTTPS, through the system's `curl`, carrying nothing about you.
+- **Microphone only while you dictate.** Speech is turned into text on your device by a bundled Whisper model; the audio is never saved or sent.
 - **Minimal by default.** Kairo stores app names and website domains. Window titles are off unless you turn them on, and full URLs are never stored.
 - **Least-privilege permissions.** The webview can only write files to a path you just picked in a save dialog.
 - **You're in control.** Pause tracking, exclude apps and sites (which deletes their history), choose a retention period, export, or delete everything.
@@ -107,12 +109,14 @@ The browser preview runs on deterministic sample data so you can explore every s
 
 ### Run the native app
 
-Prerequisites: [Node 20+](https://nodejs.org), [Rust](https://rustup.rs), and the [Tauri system dependencies](https://tauri.app/start/prerequisites/) for your OS.
+Prerequisites: [Node 20+](https://nodejs.org), [Rust](https://rustup.rs), the [Tauri system dependencies](https://tauri.app/start/prerequisites/) for your OS, and CMake (voice dictation builds whisper.cpp). On Linux also `libasound2-dev` for the microphone.
 
 ```bash
-npm install
+npm install          # also downloads the voice model (32 MB, checksum-verified) into src-tauri/voice/
 npm run tauri dev
 ```
+
+`npm run voice-model` fetches the model again if it's missing. Set `KAIRO_SKIP_VOICE_MODEL=1` to skip it for mobile-only builds.
 
 ### Build installers
 
@@ -166,6 +170,9 @@ src-tauri/                Rust core (Tauri 2)
   src/categories.rs       default app/site classification
   src/sites.rs            website detection from titles and URLs
   src/tray.rs             menu-bar / tray countdown and controls
+  src/voice.rs            on-device dictation: microphone (cpal) → Whisper (whisper.cpp)
+  src/playback.rs         "is the app in front playing video?" so watching isn't idle
+  src/icons/              app icons, browser-cached favicons, optional icon download
 plugins/tauri-plugin-screentime/
   android/                Kotlin plugin over UsageStatsManager
 ```
@@ -186,3 +193,8 @@ The timer runs in Rust, not in the webview, so the countdown, tray title and not
 npm run typecheck
 cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
 ```
+
+## Credits
+
+- Voice dictation runs [Whisper](https://github.com/openai/whisper) (© OpenAI, MIT) through [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (© The ggml authors, MIT), using the `ggml-tiny.en-q5_1` model.
+- Site logos come from [Simple Icons](https://simpleicons.org) (CC0); each brand belongs to its owner.

@@ -1,13 +1,15 @@
-import { Check, Clock, Ellipsis, ListChecks, Pencil, Play, Plus, RotateCcw, Timer, Trash2 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { ArrowDown, ArrowUp, ArrowUpToLine, Check, Clock, Ellipsis, ListChecks, LoaderCircle, Mic, Pencil, Play, Plus, RotateCcw, Square, Timer, Trash2 } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type Ref } from "react";
 import { Buddy, type BuddyMood } from "../components/Buddy";
 import { PageTitle, PillTabs, SlideToConfirm, Stepper, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
 import { confirmDialog } from "../lib/dialogs";
 import { useQuery } from "../lib/hooks";
+import { parseSpokenTask } from "../lib/spoken";
 import { useApp } from "../lib/store";
 import { addDays, fmtDuration, fmtShortDay, MINUTE, relativeDayLabel, startOfDay } from "../lib/time";
 import type { Task } from "../lib/types";
+import { useDictation } from "../lib/voice";
 import "../styles/views/tasks.css";
 
 type Tab = "todo" | "done";
@@ -79,6 +81,16 @@ const actions = {
     return ok && run("delete the task", () => backend.taskDelete(task.id));
   },
 
+  /** Change a task's priority: `order` is the open tasks' ids, highest first. */
+  move(task: Task, order: number[], to: "top" | "up" | "down") {
+    const from = order.indexOf(task.id);
+    if (from < 0) return Promise.resolve(false);
+    const next = order.filter((id) => id !== task.id);
+    const at = to === "top" ? 0 : to === "up" ? Math.max(0, from - 1) : Math.min(next.length, from + 1);
+    next.splice(at, 0, task.id);
+    return run("reorder the tasks", () => backend.tasksReorder(next));
+  },
+
   /** Make this task the timer's intention and jump to the timer. */
   async focus(task: Task) {
     const { timer, setIntention, setView } = useApp.getState();
@@ -110,6 +122,8 @@ export function TasksView() {
   // Hero: the task linked to the timer, else the one already on screen, else the first open task.
   const hero = open.find((t) => t.id === timer.taskId) ?? open.find((t) => t.id === stickyHeroId) ?? open[0];
   const rest = open.filter((t) => t !== hero);
+  // Priority order: the first four are the 1–4 buttons on the timer.
+  const order = open.map((t) => t.id);
   const left = open.reduce((a, t) => a + blocksLeft(t), 0);
   const planned = open.reduce((a, t) => a + t.estimate, 0);
   const progressed = open.reduce((a, t) => a + Math.min(t.pomodoros, t.estimate), 0);
@@ -165,7 +179,7 @@ export function TasksView() {
           {loaded &&
             (tab === "todo" ? (
               hero ? (
-                <HeroTask key={hero.id} task={hero} />
+                <HeroTask key={hero.id} task={hero} order={order} />
               ) : (
                 <EmptyHero cleared={done.length > 0} />
               )
@@ -186,7 +200,7 @@ export function TasksView() {
                     </div>
                     <ul className="task-list">
                       {rest.map((t) => (
-                        <TaskRow key={t.id} task={t} />
+                        <TaskRow key={t.id} task={t} order={order} />
                       ))}
                     </ul>
                   </div>
@@ -216,7 +230,13 @@ export function TasksView() {
 
 // ------------------------------------------------------------------ Hero: the one task that matters right now
 
-function HeroTask({ task }: { task: Task }) {
+/** "1"–"4" for the tasks the timer's number buttons pick, else nothing. */
+const rankOf = (task: Task, order: number[]) => {
+  const i = order.indexOf(task.id);
+  return i >= 0 && i < 4 ? i + 1 : null;
+};
+
+function HeroTask({ task, order }: { task: Task; order: number[] }) {
   const timer = useApp((s) => s.timer)!;
   const focusMin = useApp((s) => s.settings.focusMinutes);
   const [editing, setEditing] = useState(false);
@@ -237,18 +257,25 @@ function HeroTask({ task }: { task: Task }) {
               <Clock />
               {task.focusMs > 0 ? `${fmtDuration(task.focusMs)} focused` : "Not started"}
             </span>
-            <TaskMenu task={task} onRename={() => setEditing(true)} onBrand />
+            <TaskMenu task={task} order={order} onRename={() => setEditing(true)} onBrand />
           </div>
         </div>
 
         <div className="task-hero-text">
           {/* The block bar below carries the estimate; the tag only marks a task the timer is on. */}
-          {inFocus && (
+          {(inFocus || rankOf(task, order)) && (
             <div className="task-hero-tags">
-              <span className="badge glass">
-                <span className="live-dot" aria-hidden />
-                In focus
-              </span>
+              {rankOf(task, order) && (
+                <span className="badge glass task-rank-badge" title={`Press ${rankOf(task, order)} on the timer to focus on this`}>
+                  Task {rankOf(task, order)}
+                </span>
+              )}
+              {inFocus && (
+                <span className="badge glass">
+                  <span className="live-dot" aria-hidden />
+                  In focus
+                </span>
+              )}
             </div>
           )}
           <TaskTitle task={task} editing={editing} setEditing={setEditing} variant="hero" />
@@ -364,7 +391,23 @@ function Composer() {
   const [title, setTitle] = useState("");
   const [estimate, setEstimate] = useState(2);
   const [busy, setBusy] = useState(false);
+  const [missed, setMissed] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const dictation = useDictation();
+
+  // Say it: "Landing page redesign, three blocks". The field fills in; Enter adds it.
+  const dictate = async () => {
+    if (dictation.state === "listening") return dictation.stop();
+    if (dictation.busy) return;
+    setMissed(false);
+    const text = await dictation.listen();
+    if (text === null) return;
+    if (!text) return setMissed(true);
+    const spoken = parseSpokenTask(text);
+    setTitle(spoken.title);
+    if (spoken.estimate) setEstimate(spoken.estimate);
+    input.current?.focus();
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -384,13 +427,34 @@ function Composer() {
         ref={input}
         id={COMPOSER_ID}
         className="composer-input"
-        placeholder="Add a task…"
+        placeholder={
+          dictation.state === "listening"
+            ? "Listening…"
+            : dictation.state === "thinking"
+              ? "Writing it down…"
+              : missed
+                ? "Didn't catch that. Try again?"
+                : "Add a task…"
+        }
         value={title}
         maxLength={120}
         onChange={(e) => setTitle(e.target.value)}
         aria-label="New task"
         enterKeyHint="done"
       />
+      {dictation.available && (
+        <button
+          type="button"
+          ref={dictation.levelRef as Ref<HTMLButtonElement>}
+          className={cx("composer-mic", `is-${dictation.state}`)}
+          aria-label={dictation.state === "listening" ? "Done talking" : "Say a task"}
+          aria-pressed={dictation.state === "listening"}
+          title={dictation.state === "listening" ? "Done talking (or just pause)" : "Say a task, e.g. “Landing page, three blocks”"}
+          onClick={() => void dictate()}
+        >
+          {dictation.state === "listening" ? <Square className="fill" /> : dictation.state === "thinking" ? <LoaderCircle className="spin" /> : <Mic />}
+        </button>
+      )}
       <select
         className="select composer-est"
         value={estimate}
@@ -413,7 +477,7 @@ function Composer() {
 
 // ------------------------------------------------------------------ Calm list rows
 
-function TaskRow({ task }: { task: Task }) {
+function TaskRow({ task, order = [] }: { task: Task; order?: number[] }) {
   const [editing, setEditing] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -440,7 +504,14 @@ function TaskRow({ task }: { task: Task }) {
       </button>
 
       <div className="task-main">
-        <TaskTitle task={task} editing={editing} setEditing={setEditing} variant="row" />
+        <div className="task-title-line">
+          {!task.done && rankOf(task, order) && (
+            <span className="task-rank" title={`Press ${rankOf(task, order)} on the timer to focus on this`}>
+              {rankOf(task, order)}
+            </span>
+          )}
+          <TaskTitle task={task} editing={editing} setEditing={setEditing} variant="row" />
+        </div>
         {!editing && (
           <div className="task-sub">
             {task.done ? (
@@ -464,7 +535,7 @@ function TaskRow({ task }: { task: Task }) {
               <Play className="fill" />
             </button>
           )}
-          <TaskMenu task={task} onRename={() => setEditing(true)} />
+          <TaskMenu task={task} order={order} onRename={() => setEditing(true)} />
         </div>
       )}
     </li>
@@ -570,7 +641,8 @@ function TaskTitle({
 
 // ------------------------------------------------------------------ Overflow menu (rename · estimate · delete)
 
-function TaskMenu({ task, onRename, onBrand }: { task: Task; onRename: () => void; onBrand?: boolean }) {
+function TaskMenu({ task, order = [], onRename, onBrand }: { task: Task; order?: number[]; onRename: () => void; onBrand?: boolean }) {
+  const at = order.indexOf(task.id);
   const [open, setOpen] = useState(false);
   const [up, setUp] = useState(false);
   const [estimate, setEstimate] = useState(task.estimate);
@@ -632,6 +704,21 @@ function TaskMenu({ task, onRename, onBrand }: { task: Task; onRename: () => voi
               <button type="button" role="menuitem" onClick={pick(onRename)}>
                 <Pencil /> Rename
               </button>
+              {at > 0 && (
+                <button type="button" role="menuitem" onClick={pick(() => void actions.move(task, order, "top"))}>
+                  <ArrowUpToLine /> Move to top
+                </button>
+              )}
+              {at > 1 && (
+                <button type="button" role="menuitem" onClick={pick(() => void actions.move(task, order, "up"))}>
+                  <ArrowUp /> Move up
+                </button>
+              )}
+              {at >= 0 && at < order.length - 1 && (
+                <button type="button" role="menuitem" onClick={pick(() => void actions.move(task, order, "down"))}>
+                  <ArrowDown /> Move down
+                </button>
+              )}
               <div className="task-menu-est">
                 <span>Blocks</span>
                 <Stepper

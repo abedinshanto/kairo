@@ -4,5 +4,7 @@
 <dict>
   <key>NSAppleEventsUsageDescription</key>
   <string>Kairo reads the address of your browser's current tab to show which websites your time goes to. Only the site's domain is kept, on this Mac.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Kairo listens only while you dictate a task or what you're focusing on. Speech is turned into text on this Mac and never recorded or sent anywhere.</string>
 </dict>
 </plist>

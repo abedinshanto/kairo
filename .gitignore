@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Voice model (downloaded by scripts/fetch-voice-model.mjs)
+src-tauri/voice/*.bin
+src-tauri/voice/*.part

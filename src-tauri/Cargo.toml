@@ -1,6 +1,6 @@
 [package]
 name = "kairo"
-version = "0.2.2"
+version = "0.3.0"
 description = "Kairo — private, on-device focus timer and time intelligence"
 authors = ["Kairo"]
 edition = "2021"
@@ -32,6 +32,9 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
 active-win-pos-rs = "0.11"
 user-idle = "0.6"
+# On-device dictation: Whisper (whisper.cpp) and the microphone.
+whisper-rs = { version = "0.16", default-features = false }
+cpal = "0.18"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"

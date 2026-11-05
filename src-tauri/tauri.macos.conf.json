@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "voice/ggml-tiny.en-q5_1.bin": "voice/ggml-tiny.en-q5_1.bin"
+    }
+  }
+}

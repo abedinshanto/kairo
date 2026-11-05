@@ -10,9 +10,10 @@ import {
   Flag,
   Flame,
   Headphones,
-  Link2,
   ListChecks,
+  LoaderCircle,
   Maximize2,
+  Mic,
   Minimize2,
   Pause,
   Play,
@@ -20,11 +21,12 @@ import {
   RotateCcw,
   SkipForward,
   Sparkles,
+  Square,
   Timer,
   Trees,
   Waves,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 import { Buddy, type BuddyMood, type BuddyTone } from "../components/Buddy";
 import { ProportionBar } from "../components/charts/Bars";
 import { Avatar, PageTitle, PillTabs, TopBar, cx } from "../components/ui";
@@ -35,8 +37,10 @@ import { confirmDialog } from "../lib/dialogs";
 import { useMediaQuery, useNow, useQuery } from "../lib/hooks";
 import { isMac, isMobileOS } from "../lib/platform";
 import { finishOrSkip, remainingNow, useApp } from "../lib/store";
+import { matchTask, parseSpokenTask, spokenTaskNumber } from "../lib/spoken";
 import { addDays, DAY, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
-import type { Phase, TimerSnapshot } from "../lib/types";
+import type { Phase, Task, TimerSnapshot } from "../lib/types";
+import { useDictation } from "../lib/voice";
 import "../styles/views/home.css";
 
 const PHASE_LABEL: Record<Phase, string> = { focus: "Focus", short_break: "Short break", long_break: "Long break" };
@@ -217,10 +221,66 @@ function SessionDots({ timer }: { timer: TimerSnapshot }) {
   );
 }
 
+/** Open tasks in priority order: the first four are the timer's 1–4. */
+function useOpenTasks(): Task[] {
+  const { data } = useQuery(() => backend.tasksList(), []);
+  return useMemo(() => (data ?? []).filter((t) => !t.done), [data]);
+}
+
+type Notice = "missed" | null;
+
 function TimerCard({ deep = false }: { deep?: boolean }) {
   const timer = useApp((s) => s.timer)!;
   const skew = useApp((s) => s.clockSkew);
-  const { timerAction, extend } = useApp.getState();
+  const { timerAction, extend, setIntention } = useApp.getState();
+  const tasks = useOpenTasks();
+  const dictation = useDictation();
+  const [notice, setNotice] = useState<Notice>(null);
+  const voiceOn = dictation.available && timer.phase === "focus";
+
+  /** Focus on task n (1–4); picking the linked one again unlinks it. */
+  const pick = (n: number) => {
+    const task = tasks[n - 1];
+    if (!task || timer.phase !== "focus") return;
+    if (timer.taskId === task.id) void setIntention(timer.intention === task.title ? "" : timer.intention, null);
+    else void setIntention(task.title, task.id);
+  };
+
+  /** Tap Kai: listen; tap again: done talking. */
+  const talk = async () => {
+    if (dictation.state === "listening") return dictation.stop();
+    if (dictation.busy) return;
+    setNotice(null);
+    const text = await dictation.listen();
+    if (text === null) return;
+    if (!text) return setNotice("missed");
+    const n = spokenTaskNumber(text);
+    const task = n ? tasks[n - 1] : matchTask(text, tasks);
+    if (task) return void setIntention(task.title, task.id);
+    void setIntention(parseSpokenTask(text).title, null);
+  };
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
+
+  // 1–4 pick a task, V dictates, Escape stops listening (Home only, not while typing).
+  const keys = useRef({ pick, talk, dictation });
+  keys.current = { pick, talk, dictation };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (el.closest("input, textarea, select, [contenteditable=true]") || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+      const k = keys.current;
+      if (/^[1-4]$/.test(e.key)) k.pick(Number(e.key));
+      else if (e.key === "v" && k.dictation.available) void k.talk();
+      else if (e.key === "Escape" && k.dictation.busy) k.dictation.cancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const remaining = remainingNow(timer, skew);
   const progress = timer.durationMs > 0 ? Math.min(1, Math.max(0, 1 - remaining / timer.durationMs)) : 0;
   const running = timer.status === "running";
@@ -257,11 +317,34 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
           </div>
         </div>
         <div className="timer-buddy">
-          <Buddy mood={moodFor(timer)} tone={TONE[timer.phase]} size={deep ? 150 : 118} />
+          {voiceOn ? (
+            <button
+              type="button"
+              ref={dictation.levelRef as Ref<HTMLButtonElement>}
+              className={cx("buddy-voice", `is-${dictation.state}`)}
+              aria-label={dictation.state === "listening" ? "Done talking" : "Tell Kai what you're focusing on"}
+              title={dictation.state === "listening" ? "Done talking (or just pause)" : "Tap Kai and say what you're working on (V)"}
+              aria-pressed={dictation.state === "listening"}
+              onClick={() => void talk()}
+            >
+              <span className="voice-ring" aria-hidden />
+              <span className="voice-ring two" aria-hidden />
+              <Buddy mood={dictation.state === "listening" ? "listen" : dictation.state === "thinking" ? "think" : moodFor(timer)} tone={TONE[timer.phase]} size={deep ? 150 : 118} />
+              <span className="voice-badge" aria-hidden>
+                {dictation.state === "listening" ? <Square className="fill" /> : dictation.state === "thinking" ? <LoaderCircle className="spin" /> : <Mic />}
+              </span>
+            </button>
+          ) : (
+            <Buddy mood={moodFor(timer)} tone={TONE[timer.phase]} size={deep ? 150 : 118} />
+          )}
         </div>
       </div>
 
-      {timer.phase === "focus" ? <Intention /> : <p className="timer-rest">Stand up, stretch, and look at something far away. Your next block will be sharper for it.</p>}
+      {timer.phase === "focus" ? (
+        <Intention tasks={tasks} onPick={pick} voice={voiceOn ? dictation.state : null} notice={notice} />
+      ) : (
+        <p className="timer-rest">Stand up, stretch, and look at something far away. Your next block will be sharper for it.</p>
+      )}
 
       <div className="timer-controls">
         {/* Reset, +5 and skip only matter once a block is under way; idle shows just time, intention and play. */}
@@ -292,17 +375,13 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
   );
 }
 
-function Intention() {
+function Intention({ tasks, onPick, voice, notice }: { tasks: Task[]; onPick: (n: number) => void; voice: "idle" | "listening" | "thinking" | null; notice: Notice }) {
   const timer = useApp((s) => s.timer)!;
   const setIntention = useApp((s) => s.setIntention);
-  const version = useApp((s) => s.dataVersion);
   const [value, setValue] = useState(timer.intention);
-  const [tasks, setTasks] = useState<{ id: number; title: string }[]>([]);
+  const [adding, setAdding] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => setValue(timer.intention), [timer.intention]);
-  useEffect(() => {
-    backend.tasksList().then((t) => setTasks(t.filter((x) => !x.done)));
-  }, [version]);
 
   // Grow with the text. `field-sizing: content` does this in Chromium only; WebKit (macOS, iOS, Linux) needs JS.
   useLayoutEffect(() => {
@@ -319,9 +398,52 @@ function Intention() {
   }, [value]);
 
   const linked = tasks.find((t) => t.id === timer.taskId);
+  const top = tasks.slice(0, 4);
   const commit = () => {
     if (value !== timer.intention) void setIntention(value, timer.taskId);
   };
+  const text = value.trim();
+  // Focus on something that isn't a task yet? One tap makes it one.
+  const canAdd = !!text && !linked && !tasks.some((t) => t.title.toLowerCase() === text.toLowerCase());
+  const addAsTask = async () => {
+    if (adding) return;
+    setAdding(true);
+    try {
+      const id = await backend.taskCreate(text, parseSpokenTask(text).estimate ?? 2);
+      await setIntention(text, id);
+      useApp.getState().bumpData();
+      useApp.getState().toast({ title: "Added to your tasks", body: `“${text}” is task 1.`, tone: "success" });
+    } catch (err) {
+      useApp.getState().toast({ title: "Couldn't add the task", body: String(err), tone: "warning" });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // One line under the intention, most relevant first.
+  let caption: ReactNode = null;
+  if (voice === "listening")
+    caption = (
+      <span className="intention-caption live">
+        <span className="live-dot" aria-hidden /> Listening… pause when you're done
+      </span>
+    );
+  else if (voice === "thinking") caption = <span className="intention-caption">Writing it down…</span>;
+  else if (notice === "missed") caption = <span className="intention-caption">Didn't catch that. Tap Kai to try again.</span>;
+  else if (linked && text !== linked.title)
+    caption = (
+      <span className="intention-caption">
+        <ListChecks aria-hidden />
+        <span className="ellipsis">{linked.title}</span>
+      </span>
+    );
+  else if (canAdd)
+    caption = (
+      <button type="button" className="intention-add" onClick={() => void addAsTask()} disabled={adding}>
+        <Plus aria-hidden /> Add as task
+      </button>
+    );
+  else if (voice === "idle" && !text) caption = <span className="intention-caption hint">Tap Kai and say what you're working on</span>;
 
   return (
     <div className="intention">
@@ -343,37 +465,27 @@ function Intention() {
           }}
           aria-label="Focus intention"
         />
-        {(tasks.length > 0 || linked) && (
-          <label className={cx("intention-link", linked && "on")} title={linked ? `Linked to ${linked.title}` : "Link a task"}>
-            {linked ? <ListChecks aria-hidden /> : <Link2 aria-hidden />}
-            <select
-              aria-label={linked ? `Linked task: ${linked.title}` : "Link a task"}
-              value={linked ? String(linked.id) : ""}
-              onChange={(e) => {
-                const id = e.target.value ? Number(e.target.value) : null;
-                const task = tasks.find((t) => t.id === id);
-                // Take the task's title when the intention is empty or was just the previous task's title.
-                const next = task && (!value.trim() || value === linked?.title) ? task.title : value;
-                setValue(next);
-                void setIntention(next, id);
-              }}
-            >
-              <option value="">{linked ? "Unlink task" : "No task"}</option>
-              {tasks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
-          </label>
+        {top.length > 0 && (
+          <div className="intention-tasks" role="group" aria-label="Focus on a task">
+            {top.map((t, i) => (
+              <button
+                key={t.id}
+                type="button"
+                className={cx("task-num", linked?.id === t.id && "on")}
+                aria-pressed={linked?.id === t.id}
+                aria-label={`Task ${i + 1}: ${t.title}`}
+                title={`${t.title} (${i + 1})`}
+                onClick={() => onPick(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
         )}
       </div>
-      {linked && value.trim() !== linked.title && (
-        <div className="intention-linked">
-          <ListChecks aria-hidden />
-          <span>{linked.title}</span>
-        </div>
-      )}
+      <div className="intention-foot" aria-live="polite">
+        {caption}
+      </div>
     </div>
   );
 }
@@ -659,10 +771,12 @@ function UpNext() {
       </div>
       {tasks.length ? (
         <ul className="list">
-          {tasks.map((t) => (
+          {tasks.map((t, i) => (
             <li key={t.id} className={cx("list-row upnext", timer.taskId === t.id && "current")}>
-              <button className="upnext-btn" onClick={() => void setIntention(t.title, t.id)} title="Focus on this">
-                <span className="upnext-dot" aria-hidden />
+              <button className="upnext-btn" onClick={() => void setIntention(t.title, t.id)} title={`Focus on this (${i + 1})`}>
+                <span className="upnext-num" aria-hidden>
+                  {i + 1}
+                </span>
                 <span className="list-main">
                   <span className="list-title">{t.title}</span>
                   <span className="list-sub">{t.pomodoros <= t.estimate ? `${t.pomodoros} of ${t.estimate} blocks` : `${t.pomodoros} blocks done`}</span>

@@ -16,6 +16,11 @@ mod timer;
 mod tracker;
 #[cfg(desktop)]
 mod tray;
+#[cfg(desktop)]
+mod voice;
+#[cfg(mobile)]
+#[path = "voice_stub.rs"]
+mod voice;
 
 use std::{path::PathBuf, thread, time::Duration};
 
@@ -117,6 +122,7 @@ fn setup<R: Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::error::
         db,
         db_path,
     });
+    app.manage(voice::Voice::default());
 
     #[cfg(desktop)]
     {
@@ -233,6 +239,7 @@ pub fn run() {
             commands::task_create,
             commands::task_update,
             commands::task_delete,
+            commands::tasks_reorder,
             commands::rules_list,
             commands::rule_set,
             commands::rule_delete,
@@ -243,6 +250,10 @@ pub fn run() {
             commands::data_info,
             commands::export_data,
             commands::wipe_data,
+            voice::voice_available,
+            voice::voice_listen,
+            voice::voice_stop,
+            voice::voice_cancel,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Kairo");

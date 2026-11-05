@@ -163,6 +163,14 @@ pub fn task_create(state: State<AppState>, title: String, estimate: u32) -> CmdR
     state.db.create_task(&title, estimate, now_ms())
 }
 
+/// Set the priority order of tasks (ids, highest first).
+#[tauri::command]
+pub fn tasks_reorder(app: AppHandle, ids: Vec<i64>) -> CmdResult<()> {
+    app.state::<AppState>().db.reorder_tasks(&ids)?;
+    let _ = app.emit("data://changed", ());
+    Ok(())
+}
+
 #[tauri::command]
 pub fn task_update(
     state: State<AppState>,

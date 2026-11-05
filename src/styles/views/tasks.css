@@ -377,6 +377,64 @@ h2.task-hero-title {
   font-weight: 500;
 }
 
+/* Dictate a task: the mic glows red while listening, its ring following your voice */
+.composer-mic {
+  --level: 0;
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--ink-2);
+  transition: background 0.2s, color 0.2s;
+}
+
+.composer-mic svg {
+  width: 18px;
+  height: 18px;
+}
+
+.composer-mic svg.fill {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+@media (hover: hover) {
+  .composer-mic:hover {
+    background: var(--surface-sunk);
+    color: var(--ink);
+  }
+}
+
+.composer-mic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(255, 90, 95, 0.22);
+  opacity: 0;
+  transform: scale(calc(1 + var(--level) * 0.6));
+  transition: transform 0.12s linear, opacity 0.25s;
+  pointer-events: none;
+}
+
+.composer-mic.is-listening {
+  background: #ff5a5f;
+  color: #fff;
+}
+
+.composer-mic.is-listening::before {
+  opacity: 1;
+}
+
+.composer-mic.is-thinking {
+  color: var(--brand-ink);
+}
+
 /* Estimate: a small trailing chip that opens the native picker */
 .composer-est {
   flex: none;
@@ -507,6 +565,33 @@ h2.task-hero-title {
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+/* Rank (1–4): the number button that picks this task on the timer */
+.task-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.task-title-line > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-rank {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+  font-size: 11.5px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
 }
 
 .task-title {

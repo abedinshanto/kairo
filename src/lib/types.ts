@@ -188,7 +188,12 @@ export type BackendEvent =
   /** The core just stored a real icon for this app. */
   | { type: "icon"; key: string }
   /** The user tapped the end-of-day summary notification. */
-  | { type: "summary" };
+  | { type: "summary" }
+  /** Dictation: listening (with the microphone level) or turning speech into text. */
+  | { type: "voice"; state: VoiceState }
+  | { type: "voice-level"; level: number };
+
+export type VoiceState = "listening" | "thinking";
 
 export interface Backend {
   kind: "native" | "demo";
@@ -212,6 +217,8 @@ export interface Backend {
   taskCreate(title: string, estimate: number): Promise<number>;
   taskUpdate(id: number, patch: TaskPatch): Promise<void>;
   taskDelete(id: number): Promise<void>;
+  /** Priority order of tasks, highest first (task 1, 2, 3…). */
+  tasksReorder(ids: number[]): Promise<void>;
 
   rulesList(): Promise<Rule[]>;
   ruleSet(rule: Rule): Promise<void>;
@@ -230,6 +237,15 @@ export interface Backend {
   autostartEnabled(): Promise<boolean | null>;
   setAutostart(enabled: boolean): Promise<void>;
   ensureNotificationPermission(): Promise<boolean>;
+
+  /** On-device dictation (desktop): whether it can work here. */
+  voiceAvailable(): Promise<boolean>;
+  /** Listen for one utterance; resolves to its text ("" if nothing was said or it was cancelled). */
+  voiceListen(): Promise<string>;
+  /** Stop listening and transcribe what was said so far. */
+  voiceStop(): Promise<void>;
+  /** Stop listening and discard it. */
+  voiceCancel(): Promise<void>;
 
   subscribe(listener: (event: BackendEvent) => void): () => void;
 }

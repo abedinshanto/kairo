@@ -21,7 +21,7 @@ jobs:
       - name: Install system libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libxss-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libxss-dev libasound2-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -80,7 +80,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libxss-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libxss-dev libasound2-dev patchelf
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust-targets }}
@@ -130,6 +130,9 @@ jobs:
           workspaces: src-tauri
           key: android
       - run: npm ci
+        env:
+          # Phones use their keyboard's dictation; the voice model is desktop-only.
+          KAIRO_SKIP_VOICE_MODEL: "1"
       - name: Generate Android project
         run: |
           npx tauri android init --ci
@@ -200,6 +203,9 @@ jobs:
           workspaces: src-tauri
           key: ios
       - run: npm ci
+        env:
+          # Phones use their keyboard's dictation; the voice model is desktop-only.
+          KAIRO_SKIP_VOICE_MODEL: "1"
       - name: Generate Xcode project
         run: npx tauri ios init --ci
       - name: Build for the iOS simulator

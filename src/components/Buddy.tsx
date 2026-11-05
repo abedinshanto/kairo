@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { cx } from "./ui";
 
-export type BuddyMood = "idle" | "focus" | "break" | "paused" | "happy" | "sleep";
+export type BuddyMood = "idle" | "focus" | "break" | "paused" | "happy" | "sleep" | "listen" | "think";
 export type BuddyTone = "blue" | "mint" | "violet" | "cloud";
 
 type Palette = {
@@ -50,6 +50,9 @@ const EARS: Record<BuddyMood, { l: number; r: number; lift: number }> = {
   paused: { l: 14, r: -6, lift: 0 },
   happy: { l: -10, r: -10, lift: 1.6 },
   sleep: { l: 26, r: 26, lift: -1.4 },
+  // all ears while you dictate; one ear cocked while it works out what you said
+  listen: { l: -16, r: -16, lift: 2.4 },
+  think: { l: -4, r: 10, lift: 0.4 },
 };
 
 const line = { stroke: INK, strokeLinecap: "round", strokeLinejoin: "round", fill: "none" } as const;
@@ -104,6 +107,10 @@ export function Buddy({ mood = "idle", tone = "blue", size = 96, still = false, 
   else if (mood === "focus") eyes = EYES.map((x) => focusEye(x, (eyeY = EYE_Y + 1), 6.4, 7.4));
   // paused: glancing aside, waiting
   else if (mood === "paused") eyes = EYES.map((x) => openEye(x - 2.8, (eyeY = EYE_Y - 1.2), 6.4, 7.6));
+  // listening: wide, attentive eyes
+  else if (mood === "listen") eyes = EYES.map((x) => openEye(x, (eyeY = EYE_Y - 0.8), 7, 8.4));
+  // thinking: a glance up and to the side
+  else if (mood === "think") eyes = EYES.map((x) => openEye(x + 2.6, (eyeY = EYE_Y - 1.8), 6.2, 7.2));
 
   return (
     <span className={cx("buddy", `mood-${mood}`, still && "still")} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
@@ -213,6 +220,10 @@ export function Buddy({ mood = "idle", tone = "blue", size = 96, still = false, 
               </g>
             ) : mood === "paused" ? (
               <ellipse cx="58" cy="75" rx="2.5" ry="2.9" fill={INK} />
+            ) : mood === "listen" ? (
+              <ellipse cx="60" cy="75.5" rx="3" ry="3.5" fill={INK} />
+            ) : mood === "think" ? (
+              <path d="M56.5 75.5q2-1.6 3.6 0t3.6 0" {...line} strokeWidth="2.4" />
             ) : mood === "break" ? (
               <path d="M54 73q6 5.6 12 0" {...line} strokeWidth="2.8" />
             ) : mood === "sleep" ? (

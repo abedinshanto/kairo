@@ -8,6 +8,7 @@ import type {
   TimerCompleted,
   TimerSnapshot,
   TrackerStatus,
+  VoiceState,
 } from "../types";
 
 const isDesktop = () => !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -36,6 +37,11 @@ export function createNativeBackend(): Backend {
     taskCreate: (title, estimate) => invoke("task_create", { title, estimate }),
     taskUpdate: (id, patch) => invoke("task_update", { id, ...patch }),
     taskDelete: (id) => invoke("task_delete", { id }),
+    tasksReorder: (ids) => invoke("tasks_reorder", { ids }),
+    voiceAvailable: () => invoke<boolean>("voice_available").catch(() => false),
+    voiceListen: () => invoke("voice_listen"),
+    voiceStop: () => invoke("voice_stop"),
+    voiceCancel: () => invoke("voice_cancel"),
 
     rulesList: () => invoke("rules_list"),
     ruleSet: (rule) => invoke("rule_set", { rule }),
@@ -102,6 +108,8 @@ export function createNativeBackend(): Backend {
         listen("data://changed", () => listener({ type: "data" })),
         listen<string>("icons://changed", (e) => listener({ type: "icon", key: e.payload })),
         listen("summary://open", () => listener({ type: "summary" })),
+        listen<VoiceState>("voice://state", (e) => listener({ type: "voice", state: e.payload })),
+        listen<number>("voice://level", (e) => listener({ type: "voice-level", level: e.payload })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },

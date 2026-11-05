@@ -1,0 +1,4 @@
+# whisper.cpp (voice dictation) would otherwise compile for the build machine's
+# exact CPU (-march=native), and the app could crash on other computers.
+[env]
+GGML_NATIVE = "OFF"

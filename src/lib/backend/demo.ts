@@ -188,7 +188,13 @@ export function createDemoBackend(): Backend {
           focusMs: mine.reduce((a, s) => a + s.actualMs, 0),
         };
       })
-      .sort((a, b) => Number(a.done) - Number(b.done) || b.createdAt - a.createdAt);
+      // Open tasks keep their priority order (the array's); done ones newest first.
+      .sort((a, b) => Number(a.done) - Number(b.done) || (a.done ? (b.completedAt ?? 0) - (a.completedAt ?? 0) : 0));
+
+  // Dictation in the preview: Kai "hears" a sample phrase, so the flow can be tried.
+  const SAMPLE_SPEECH = ["Polish the pricing page copy", "Review pull requests", "Plan next week's sprint, two blocks", "Reply to design feedback"];
+  let speechIndex = 0;
+  let voice: { phrase: string; finish: (text: string) => void } | null = null;
 
   return {
     kind: "demo",
@@ -302,6 +308,43 @@ export function createDemoBackend(): Backend {
     },
     async taskDelete(id) {
       tasks = tasks.filter((t) => t.id !== id);
+    },
+    async tasksReorder(ids) {
+      const byId = new Map(tasks.map((t) => [t.id, t]));
+      const ordered = ids.map((id) => byId.get(id)).filter((t): t is (typeof tasks)[number] => !!t);
+      tasks = [...ordered, ...tasks.filter((t) => !ids.includes(t.id))];
+      emit({ type: "data" });
+    },
+
+    voiceAvailable: async () => true,
+    voiceListen() {
+      voice?.finish("");
+      return new Promise<string>((resolve) => {
+        const phrase = SAMPLE_SPEECH[speechIndex++ % SAMPLE_SPEECH.length];
+        let t = 0;
+        emit({ type: "voice", state: "listening" });
+        const levels = window.setInterval(() => {
+          t += 1;
+          emit({ type: "voice-level", level: t > 34 ? 0.04 : 0.25 + 0.55 * Math.abs(Math.sin(t * 0.7)) * Math.random() });
+        }, 50);
+        const timer = window.setTimeout(() => finish(phrase), 2300);
+        const finish = (text: string) => {
+          window.clearInterval(levels);
+          window.clearTimeout(timer);
+          voice = null;
+          if (!text) return resolve("");
+          emit({ type: "voice", state: "thinking" });
+          window.setTimeout(() => resolve(text), 450);
+        };
+        voice = { phrase, finish };
+      });
+    },
+    async voiceStop() {
+      // Stopping early keeps what was "heard".
+      voice?.finish(voice.phrase);
+    },
+    async voiceCancel() {
+      voice?.finish("");
     },
 
     rulesList: async () => [...rules.values()],

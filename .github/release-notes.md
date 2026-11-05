@@ -2,11 +2,13 @@ Kairo is a calm focus timer that shows where your time goes, privately and on yo
 
 ## What's new
 
-- **Watching counts.** A long video or a call no longer stops counting after a few minutes without keyboard or mouse input. Kairo now keeps counting while the app in front is playing video or holding a call, so a three-hour film is three hours, not the minutes after you last touched the mouse.
-- **Exclude any app or site from Stats.** Tap a row in **Top apps & sites** (or in Apps & sites) and choose **Exclude & delete history**. Websites can be excluded now too. Kairo deletes their history and stops recording them; **Settings → Excluded apps & sites** brings any of them back.
-- **More site icons.** Kairo now looks up icons for every site in your history, not just ones you visit after updating, and tries again when one is missing. Small icons show on a neat tile instead of being stretched.
-- **Download site icons** (Settings → Appearance & system, off by default). For sites your browser has no saved icon for (ChatGPT, for example), Kairo can ask the site itself. It asks only that site, over HTTPS, sends nothing about you, and it's the only time Kairo goes online.
-- **Android:** if Android won't install this over your current version, export your data from **Settings** (Export on the privacy card) if you want a copy, uninstall the old app, then install this one.
+- **Tell Kai what you're working on.** Tap Kai on the timer (or press **V**), say it, and pause: the words become your focus. Say a task's name, or "task two", and Kai links that task. It runs entirely on your computer with Whisper, OpenAI's open speech model, in its small English version, which ships with the app. Your voice is never recorded or sent anywhere.
+- **Dictate tasks.** The microphone in **Add a task** takes things like "landing page redesign, three blocks" and fills in the estimate too.
+- **Tasks 1 to 4 on the timer.** The link button is now four number buttons (and the keys **1–4**) for your top four tasks. Home's Up next list shows the same numbers.
+- **Put tasks in order.** Move any task up, down or to the top from its menu; new tasks start at the top.
+- **Add as task.** When your focus isn't a task yet, one tap turns it into one, linked to the timer.
+- The desktop downloads are about 32 MB bigger because the speech model comes with them. The first time you dictate, your computer asks to use the microphone.
+- **Android:** voice uses your keyboard's own dictation. If Android won't install this over your current version, export your data from **Settings** (Export on the privacy card) if you want a copy, uninstall the old app, then install this one.
 
 ## Downloads
 
