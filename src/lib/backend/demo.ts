@@ -43,6 +43,9 @@ function savePrefs(s: Settings) {
 
 const delay = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 40));
 
+/** Same rule as the core: the site itself or any subdomain of it. */
+const siteExcluded = (domain: string, excluded: string[]) => excluded.some((ex) => domain === ex || domain.endsWith(`.${ex}`));
+
 export function createDemoBackend(): Backend {
   let settings = loadPrefs();
   const seed = generateSeed(98);
@@ -129,6 +132,13 @@ export function createDemoBackend(): Backend {
     }
     const last = spans[spans.length - 1];
     const app = LIVE[liveIndex % LIVE.length];
+    if (settings.excludedApps.includes(app.appId) || (app.domain && siteExcluded(app.domain, settings.excludedSites))) {
+      if (current) {
+        current = null;
+        emit({ type: "current", current });
+      }
+      return;
+    }
     const same = current && last && last.appId === app.appId && last.domain === app.domain && now - last.end < 60_000;
     if (same) {
       last.end = now;
@@ -189,6 +199,14 @@ export function createDemoBackend(): Backend {
       for (const app of settings.excludedApps) {
         if (!before.excludedApps.includes(app)) {
           for (let i = spans.length - 1; i >= 0; i--) if (spans[i].appId === app) spans.splice(i, 1);
+        }
+      }
+      for (const site of settings.excludedSites) {
+        if (!before.excludedSites.includes(site)) {
+          for (let i = spans.length - 1; i >= 0; i--) {
+            const d = spans[i].domain;
+            if (d && siteExcluded(d, [site])) spans.splice(i, 1);
+          }
         }
       }
       timer.applySettings(settings);

@@ -11,10 +11,13 @@ use rusqlite::{params, Connection, OpenFlags};
 
 use super::Icon;
 
-/// Favicons smaller than this look blurry at avatar size; initials read better.
-const MIN_PX: i64 = 32;
+/// Smaller bitmaps aren't real icons (tracking pixels, placeholders).
+const MIN_PX: i64 = 16;
 /// How long a copy of a browser's favicon database is reused.
 const REFRESH: Duration = Duration::from_secs(60 * 60);
+/// On a miss, a copy older than this is made again: the browser may have
+/// saved the icon since (a site visited for the first time today).
+const STALE_ON_MISS: Duration = Duration::from_secs(2 * 60);
 
 /// Profile folders of Chromium-family browsers (each holds `Default`, `Profile 1`…).
 fn browser_roots() -> Vec<PathBuf> {
@@ -82,26 +85,50 @@ pub struct Favicons {
 }
 
 impl Favicons {
-    fn refresh(&mut self) {
-        if self.made.is_some_and(|t| t.elapsed() < REFRESH) {
+    fn refresh(&mut self, max_age: Duration) {
+        if self.made.is_some_and(|t| t.elapsed() < max_age) {
             return;
         }
-        for old in self.copies.drain(..) {
-            let _ = std::fs::remove_file(old);
-        }
+        self.remove_copies();
         let dir = std::env::temp_dir();
         for (i, db) in databases().into_iter().enumerate() {
             let copy = dir.join(format!("kairo-favicons-{}-{i}.db", std::process::id()));
-            if std::fs::copy(&db, &copy).is_ok() {
-                self.copies.push(copy);
+            if std::fs::copy(&db, &copy).is_err() {
+                continue;
             }
+            // A browser using write-ahead logging keeps its latest changes beside the file.
+            let wal = sidecar(&db, "-wal");
+            if wal.is_file() {
+                let _ = std::fs::copy(&wal, sidecar(&copy, "-wal"));
+            }
+            self.copies.push(copy);
         }
         self.made = Some(Instant::now());
     }
 
+    fn remove_copies(&mut self) {
+        for copy in self.copies.drain(..) {
+            for suffix in ["-wal", "-shm", "-journal"] {
+                let _ = std::fs::remove_file(sidecar(&copy, suffix));
+            }
+            let _ = std::fs::remove_file(copy);
+        }
+    }
+
     /// The sharpest saved favicon for `domain` (or its subdomains), as PNG.
     pub fn lookup(&mut self, domain: &str) -> Option<Icon> {
-        self.refresh();
+        self.refresh(REFRESH);
+        if let Some(icon) = self.best(domain) {
+            return Some(icon);
+        }
+        if self.made.is_some_and(|t| t.elapsed() >= STALE_ON_MISS) {
+            self.refresh(STALE_ON_MISS);
+            return self.best(domain);
+        }
+        None
+    }
+
+    fn best(&self, domain: &str) -> Option<Icon> {
         let (width, data) = self
             .copies
             .iter()
@@ -113,14 +140,20 @@ impl Favicons {
 
 impl Drop for Favicons {
     fn drop(&mut self) {
-        for copy in &self.copies {
-            let _ = std::fs::remove_file(copy);
-        }
+        self.remove_copies();
     }
 }
 
+/// `path` with `suffix` appended to its file name (SQLite's side files).
+fn sidecar(path: &Path, suffix: &str) -> PathBuf {
+    let mut name = path.as_os_str().to_owned();
+    name.push(suffix);
+    PathBuf::from(name)
+}
+
 fn query(db: &Path, domain: &str) -> Option<(i64, Vec<u8>)> {
-    let conn = Connection::open_with_flags(db, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX).ok()?;
+    // Read-write: it's our own copy, and SQLite needs that to replay a copied write-ahead log.
+    let conn = Connection::open_with_flags(db, OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX).ok()?;
     conn.query_row(
         "SELECT b.width, b.image_data FROM icon_mapping m JOIN favicon_bitmaps b ON b.icon_id = m.icon_id
          WHERE (m.page_url LIKE ?1 OR m.page_url LIKE ?2 OR m.page_url LIKE ?3) AND b.image_data IS NOT NULL

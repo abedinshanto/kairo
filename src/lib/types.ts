@@ -30,6 +30,8 @@ export interface Settings {
   storeWindowTitles: boolean;
   trackBrowserUrls: boolean;
   excludedApps: string[];
+  /** Domains never recorded (subdomains included). */
+  excludedSites: string[];
   retentionDays: number;
   notificationsEnabled: boolean;
   nudgesEnabled: boolean;
@@ -42,6 +44,8 @@ export interface Settings {
   showTimerInTray: boolean;
   hideDockIcon: boolean;
   globalShortcut: string;
+  /** Ask a site for its icon when the browser hasn't saved one. */
+  downloadSiteIcons: boolean;
   // UI-owned (stored in the core's `extra` map)
   theme?: ThemePref;
   onboarded?: boolean;

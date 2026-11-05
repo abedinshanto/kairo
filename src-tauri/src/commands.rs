@@ -40,6 +40,18 @@ pub fn update_settings(app: AppHandle, settings: Settings) -> CmdResult<Settings
     {
         state.db.delete_app_history(app_id)?;
     }
+    for domain in settings
+        .excluded_sites
+        .iter()
+        .filter(|d| !old.excluded_sites.contains(d))
+    {
+        state.db.delete_site_history(domain)?;
+    }
+    #[cfg(desktop)]
+    if settings.download_site_icons && !old.download_site_icons {
+        // Sites that came up empty before get another go, now from the web too.
+        crate::icons::retry_sites(&app);
+    }
     timer::settings_changed(&app);
     #[cfg(mobile)]
     crate::daily::schedule_mobile(&app);
@@ -112,17 +124,28 @@ pub fn focus_sessions(state: State<AppState>, from: i64, to: i64) -> CmdResult<V
     state.db.sessions(from, to)
 }
 
-/// Real app icons as data URLs, by app id. Apps without one are left out.
+/// Real icons as data URLs, by key (an app id, or `site:<domain>`). Keys without
+/// one are left out; sites among them are looked for in the background.
 #[tauri::command]
-pub fn app_icons(state: State<AppState>, keys: Vec<String>) -> CmdResult<HashMap<String, String>> {
+pub fn app_icons(app: AppHandle, keys: Vec<String>) -> CmdResult<HashMap<String, String>> {
     use base64::{engine::general_purpose::STANDARD, Engine};
+    let state = app.state::<AppState>();
     let keys: Vec<String> = keys.into_iter().take(500).collect();
-    Ok(state
+    let icons: HashMap<String, String> = state
         .db
         .app_icons(&keys)?
         .into_iter()
         .map(|(id, mime, data)| (id, format!("data:{mime};base64,{}", STANDARD.encode(data))))
-        .collect())
+        .collect();
+    #[cfg(desktop)]
+    crate::icons::request_sites(
+        &app,
+        keys.iter()
+            .filter(|k| !icons.contains_key(*k))
+            .filter_map(|k| k.strip_prefix("site:"))
+            .map(str::to_owned),
+    );
+    Ok(icons)
 }
 
 // ------------------------------------------------------------------ tasks

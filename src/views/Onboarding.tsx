@@ -24,7 +24,7 @@ const MEET: Benefit[] = [
 ];
 
 const PRIVATE: Benefit[] = [
-  { icon: <WifiOff />, title: "Works fully offline", sub: "Kairo makes no network requests. Ever." },
+  { icon: <WifiOff />, title: "Works fully offline", sub: "No account, no cloud. Your data never leaves this device." },
   { icon: <Lock />, title: "Only names, no titles", sub: "Window titles are off; app and site names are kept." },
   { icon: <ShieldCheck />, title: "You're in control", sub: "Pause, exclude apps or delete everything any time." },
 ];

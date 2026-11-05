@@ -24,6 +24,8 @@ pub struct Settings {
     pub store_window_titles: bool,
     pub track_browser_urls: bool,
     pub excluded_apps: Vec<String>,
+    /// Domains never recorded (subdomains included).
+    pub excluded_sites: Vec<String>,
     pub retention_days: u32,
 
     // Nudges & notifications
@@ -42,6 +44,9 @@ pub struct Settings {
     pub show_timer_in_tray: bool,
     pub hide_dock_icon: bool,
     pub global_shortcut: String,
+    /// Ask a site for its icon when the browser hasn't saved one (the only
+    /// network request Kairo makes, and only when this is on).
+    pub download_site_icons: bool,
 
     #[serde(flatten)]
     pub extra: Map<String, Value>,
@@ -63,6 +68,7 @@ impl Default for Settings {
             store_window_titles: false,
             track_browser_urls: false,
             excluded_apps: Vec::new(),
+            excluded_sites: Vec::new(),
             retention_days: 0,
             notifications_enabled: true,
             nudges_enabled: true,
@@ -74,6 +80,7 @@ impl Default for Settings {
             show_timer_in_tray: true,
             hide_dock_icon: false,
             global_shortcut: "CommandOrControl+Shift+Space".into(),
+            download_site_icons: false,
             extra: Map::new(),
         }
     }
@@ -93,6 +100,13 @@ impl Settings {
         self.excluded_apps.iter_mut().for_each(|a| *a = a.to_lowercase());
         self.excluded_apps.sort();
         self.excluded_apps.dedup();
+        for site in self.excluded_sites.iter_mut() {
+            let s = site.trim().to_lowercase();
+            *site = s.strip_prefix("www.").unwrap_or(&s).to_string();
+        }
+        self.excluded_sites.retain(|s| s.contains('.'));
+        self.excluded_sites.sort();
+        self.excluded_sites.dedup();
         self
     }
 }
@@ -282,10 +296,12 @@ mod tests {
         let s = Settings {
             focus_minutes: 0,
             excluded_apps: vec!["Slack".into(), "slack".into()],
+            excluded_sites: vec!["WWW.Reddit.com".into(), "reddit.com".into(), "nonsense".into()],
             ..Default::default()
         }
         .sanitized();
         assert_eq!(s.focus_minutes, 1);
         assert_eq!(s.excluded_apps, vec!["slack".to_string()]);
+        assert_eq!(s.excluded_sites, vec!["reddit.com".to_string()]);
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "kairo"
-version = "0.2.1"
+version = "0.2.2"
 description = "Kairo — private, on-device focus timer and time intelligence"
 authors = ["Kairo"]
 edition = "2021"
@@ -41,7 +41,7 @@ objc2-core-graphics = { version = "0.3", default-features = false, features = ["
 
 [target.'cfg(windows)'.dependencies]
 png = "0.17"
-windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Power", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
 time = "0.3"

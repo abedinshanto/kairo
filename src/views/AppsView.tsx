@@ -1,11 +1,11 @@
-import { Check, ChevronLeft, ChevronRight, EyeOff, RotateCcw, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Buddy } from "../components/Buddy";
-import { Avatar, PageTitle, PillTabs, Segmented, Sheet, TopBar, cx } from "../components/ui";
+import { EntitySheet, fmtShare, ruleKey } from "../components/EntitySheet";
+import { Avatar, PageTitle, PillTabs, Segmented, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
-import { CATEGORIES, PRODUCTIVITY_LABEL, categoryLabel, defaultProductivity, entityName, productivityClass } from "../lib/categories";
-import { confirmDialog } from "../lib/dialogs";
-import { useMediaQuery, useQuery } from "../lib/hooks";
+import { PRODUCTIVITY_LABEL, categoryLabel, entityName, productivityClass } from "../lib/categories";
+import { useQuery } from "../lib/hooks";
 import { useApp } from "../lib/store";
 import { addDays, fmtDuration, startOfDay } from "../lib/time";
 import type { EntityTotal, Productivity } from "../lib/types";
@@ -19,14 +19,8 @@ const LEVELS: Productivity[] = [1, 0, -1];
 /** Rows shown before "Show all" (progressive disclosure keeps the screen calm). */
 const PAGE = 10;
 
-const ruleKey = (e: EntityTotal) => `${e.kind === "site" ? "site" : "app"}:${e.key}`;
 const displayName = (e: EntityTotal) => entityName(e.kind, e.key, e.name);
 const periodLabel = (r: Range) => (r === 1 ? "today" : `in the last ${r} days`);
-const fmtShare = (ms: number, total: number) => {
-  if (!total || ms <= 0) return "0%";
-  const pct = (ms / total) * 100;
-  return pct < 1 ? "<1%" : `${Math.round(pct)}%`;
-};
 
 export function AppsView() {
   // Stats links here with its range (#/apps?r=30)
@@ -176,7 +170,7 @@ export function AppsView() {
       </div>
 
       {selected && data && (
-        <EntitySheet e={selected} custom={data.rules.has(ruleKey(selected))} total={total} range={range} onClose={() => setOpenKey(null)} />
+        <EntitySheet e={selected} total={total} period={periodLabel(range)} onClose={() => setOpenKey(null)} />
       )}
     </div>
   );
@@ -284,122 +278,5 @@ function Row({ e, total, custom, onOpen }: { e: EntityTotal; total: number; cust
         <ChevronRight className="apps-row-chev" aria-hidden />
       </button>
     </li>
-  );
-}
-
-// ------------------------------------------------------------------ Detail sheet
-
-function EntitySheet({ e, custom, total, range, onClose }: { e: EntityTotal; custom: boolean; total: number; range: Range; onClose: () => void }) {
-  const toast = useApp((s) => s.toast);
-  const phone = useMediaQuery("(max-width: 760px)");
-  const [busy, setBusy] = useState(false);
-  const name = displayName(e);
-  const key = ruleKey(e);
-
-  const run = async (fn: () => Promise<void>) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await fn();
-      useApp.getState().bumpData();
-    } catch (err) {
-      toast({ title: "Couldn't save that change", body: String(err), tone: "warning" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const setRule = (category: string, productivity: Productivity) => {
-    if (category === e.category && productivity === e.productivity) return;
-    void run(() => backend.ruleSet({ key, category, productivity }));
-  };
-
-  const reset = () => void run(() => backend.ruleDelete(key));
-
-  const exclude = async () => {
-    const ok = await confirmDialog(`Stop tracking ${name} and permanently delete its history from this device?`, {
-      title: "Exclude app",
-      okLabel: "Exclude & delete",
-      destructive: true,
-    });
-    if (!ok) return;
-    const { settings, updateSettings } = useApp.getState();
-    const id = e.key.toLowerCase();
-    if (!settings.excludedApps.includes(id)) updateSettings({ excludedApps: [...settings.excludedApps, id] });
-    onClose();
-    toast({ title: `${name} excluded`, body: "Its history was deleted. You can re-enable it in Settings.", tone: "success" });
-    window.setTimeout(() => useApp.getState().bumpData(), 600);
-  };
-
-  const where = e.kind === "site" ? `${e.key} in ${e.appName}` : "App";
-
-  return (
-    <Sheet label={`${name} details`} onClose={onClose}>
-      <div className={cx("apps-sheet", busy && "busy")}>
-        <header className="apps-sheet-head">
-          <Avatar name={name} productivity={e.productivity} size={phone ? 60 : 72} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />
-          <h2 className="title apps-sheet-name">{name}</h2>
-          <p className="apps-sheet-where">
-            {where} · {e.visits} visit{e.visits === 1 ? "" : "s"}
-          </p>
-          <div className="apps-sheet-time tabular">{fmtDuration(e.ms)}</div>
-          <p className="apps-sheet-period">
-            {periodLabel(range)} · {fmtShare(e.ms, total)} of your time
-          </p>
-        </header>
-
-        <section aria-labelledby="apps-counts-as">
-          <h3 className="apps-sheet-label" id="apps-counts-as">
-            Counts as
-          </h3>
-          <div className="apps-levels" role="group" aria-labelledby="apps-counts-as">
-            {LEVELS.map((p) => {
-              const on = e.productivity === p;
-              return (
-                <button key={p} className={cx("apps-level", productivityClass(p))} aria-pressed={on} disabled={busy} onClick={() => setRule(e.category, p)}>
-                  {on ? <Check /> : <span className="apps-level-dot" aria-hidden />}
-                  {PRODUCTIVITY_LABEL[p]}
-                </button>
-              );
-            })}
-          </div>
-          <p className="apps-sheet-note">Changes apply to your whole history.</p>
-        </section>
-
-        <section aria-labelledby="apps-category">
-          <h3 className="apps-sheet-label" id="apps-category">
-            Category
-          </h3>
-          <div className="apps-cats" role="group" aria-labelledby="apps-category">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.id}
-                className={cx("chip", "apps-cat", e.category === c.id && "active")}
-                aria-pressed={e.category === c.id}
-                disabled={busy}
-                onClick={() => setRule(c.id, defaultProductivity(c.id))}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {(custom || e.kind === "app") && (
-          <div className="apps-sheet-actions">
-            {custom && (
-              <button className="btn btn-soft" disabled={busy} onClick={reset}>
-                <RotateCcw /> Reset to default
-              </button>
-            )}
-            {e.kind === "app" && (
-              <button className="btn btn-danger" disabled={busy} onClick={() => void exclude()}>
-                <EyeOff /> Exclude & delete history
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </Sheet>
   );
 }

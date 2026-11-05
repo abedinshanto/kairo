@@ -2,6 +2,7 @@ import { AppWindow, Check, ChevronLeft, ChevronRight, Download, Flame, Hourglass
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { BarList, ProportionBar, type BarRow } from "../components/charts/Bars";
+import { EntitySheet, ruleKey } from "../components/EntitySheet";
 import { Legend, SERIES, FOCUS_COLOR } from "../components/charts/common";
 import { activeHourRange, DayTimeline } from "../components/charts/DayTimeline";
 import { Heatmap } from "../components/charts/Heatmap";
@@ -819,9 +820,14 @@ type AppsMode = "apps" | "categories" | "leaks";
 
 function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () => void }) {
   const [mode, setMode] = useState<AppsMode>("apps");
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const entities = model?.entities ?? [];
   const activeDays = Math.max(1, model?.now.activeDays ?? 1);
   const dayMode = !model || model.range === "day";
+  const total = entities.reduce((sum, e) => sum + e.ms, 0);
+  // Reloads after a change (or an exclusion, which closes the sheet).
+  const selected = openKey ? entities.find((e) => ruleKey(e) === openKey) : undefined;
+  const open = (e: EntityTotal) => () => setOpenKey(ruleKey(e));
 
   let rows: BarRow[] = [];
   if (mode === "apps") {
@@ -834,6 +840,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
         sub: categoryLabel(e.category),
         value: e.ms,
         productivity: e.productivity,
+        onOpen: open(e),
       };
     });
   } else if (mode === "categories") {
@@ -862,6 +869,7 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
           value: e.ms,
           productivity: e.productivity,
           trailing: <Delta value={prev ? pctChange(e.ms, prev.ms) : null} goodWhenUp={false} />,
+          onOpen: open(e),
         };
       });
   }
@@ -902,6 +910,9 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
           }
         />
       </div>
+      {selected && (
+        <EntitySheet e={selected} total={total} period={dayMode ? (model?.first === startOfDay(Date.now()) ? "today" : "that day") : `in these ${model?.n} days`} onClose={() => setOpenKey(null)} />
+      )}
     </section>
   );
 }

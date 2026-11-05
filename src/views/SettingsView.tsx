@@ -4,6 +4,7 @@ import { Buddy } from "../components/Buddy";
 import { Avatar, PageTitle, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
 import { soundEngine } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
+import { entityName } from "../lib/categories";
 import { confirmDialog } from "../lib/dialogs";
 import { useMediaQuery, useQuery } from "../lib/hooks";
 import { isMac, isMobileOS, os, shortcutLabel } from "../lib/platform";
@@ -251,7 +252,7 @@ export function SettingsView() {
             </Row>
           )}
           {desktop && (
-            <Row label="Idle after" desc="Stop counting when you step away.">
+            <Row label="Idle after" desc="Stop counting when you step away. Videos and calls keep counting.">
               <select className="select" value={s.idleThresholdSeconds} onChange={(e) => update({ idleThresholdSeconds: Number(e.target.value) })} aria-label="Idle threshold">
                 {[60, 120, 180, 300, 600, 900].map((v) => (
                   <option key={v} value={v}>
@@ -307,6 +308,11 @@ export function SettingsView() {
           {isMac && isNative && (
             <Row label="Hide Dock icon" desc="Kairo stays in the menu bar.">
               <Switch label="Hide Dock icon" checked={s.hideDockIcon} onChange={(v) => update({ hideDockIcon: v })} />
+            </Row>
+          )}
+          {desktop && (
+            <Row label="Download site icons" desc="Only for sites your browser has no icon for. Nothing else goes online.">
+              <Switch label="Download site icons" checked={s.downloadSiteIcons} onChange={(v) => update({ downloadSiteIcons: v })} />
             </Row>
           )}
           {desktop && (
@@ -520,21 +526,29 @@ function ChimeRows() {
 const appLabel = (id: string) => id.replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
 
 function ExcludedApps() {
-  const excluded = useApp((st) => st.settings.excludedApps);
+  const apps = useApp((st) => st.settings.excludedApps);
+  const sites = useApp((st) => st.settings.excludedSites);
   const update = useApp((st) => st.updateSettings);
   const setView = useApp((st) => st.setView);
+  const chips = [
+    ...apps.map((a) => ({ key: `app:${a}`, label: appLabel(a), avatar: <Avatar name={appLabel(a)} productivity={0} size={20} iconKey={a} />, untrack: () => update({ excludedApps: apps.filter((x) => x !== a) }) })),
+    ...sites.map((d) => {
+      const label = entityName("site", d, d);
+      return { key: `site:${d}`, label, avatar: <Avatar name={label} productivity={0} size={20} siteKey={d} />, untrack: () => update({ excludedSites: sites.filter((x) => x !== d) }) };
+    }),
+  ];
   return (
     <Row
-      label="Excluded apps"
-      desc={excluded.length ? "Kairo never records these." : "None yet. Exclude apps from Apps & Sites."}
+      label="Excluded apps & sites"
+      desc={chips.length ? "Kairo never records these." : "None yet. Tap any app or site in Stats to exclude it."}
       below={
-        excluded.length ? (
+        chips.length ? (
           <div className="set-chips">
-            {excluded.map((a) => (
-              <span key={a} className="chip set-chip">
-                <Avatar name={appLabel(a)} size={20} iconKey={a} />
-                {appLabel(a)}
-                <button aria-label={`Track ${appLabel(a)} again`} title="Track again" onClick={() => update({ excludedApps: excluded.filter((x) => x !== a) })}>
+            {chips.map((c) => (
+              <span key={c.key} className="chip set-chip">
+                {c.avatar}
+                {c.label}
+                <button aria-label={`Track ${c.label} again`} title="Track again" onClick={c.untrack}>
                   <X />
                 </button>
               </span>

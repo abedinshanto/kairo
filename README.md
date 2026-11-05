@@ -12,7 +12,7 @@ macOS · Windows · Linux · Android · iOS
 
 ![Kairo home: focus timer, today's progress, soundscape and next tasks](docs/screenshots/home.png)
 
-Kairo combines a Pomodoro-style focus timer with automatic time tracking across your apps and websites. It then turns that history into plain-language insights: your sharpest hours, when distractions peak, and which apps cost you the most time. Everything is stored in a local SQLite database. Kairo has no account, no cloud and no analytics, and it never makes a network request.
+Kairo combines a Pomodoro-style focus timer with automatic time tracking across your apps and websites. It then turns that history into plain-language insights: your sharpest hours, when distractions peak, and which apps cost you the most time. Everything is stored in a local SQLite database. Kairo has no account, no cloud and no analytics, and it makes no network requests (unless you ask it to download site icons).
 
 ## Download
 
@@ -32,11 +32,11 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - Native notifications when a phase ends. On mobile the OS schedules them, so they fire even if the app is suspended.
 
 **Tracking (on-device)**
-- Samples the foreground app about once a second, merges the samples into spans and skips idle time (the idle threshold is configurable). **Open at login** (offered during setup) starts Kairo quietly in the menu bar, so the whole day is tracked, not just while the window is open.
-- Shows each app's **real icon**, read from the app on your computer (or the launcher on Android) and kept in the local database. Well-known sites show their logo (bundled brand marks from [Simple Icons](https://simpleicons.org), CC0); other sites use the favicon your Chromium-based browser already saved, read from its local cache. Categories have their own icons.
+- Samples the foreground app about once a second, merges the samples into spans and skips idle time (the idle threshold is configurable). Watching a video or sitting in a call still counts without any input: Kairo checks whether the app in front is keeping the screen awake, as video players and call apps do. **Open at login** (offered during setup) starts Kairo quietly in the menu bar, so the whole day is tracked, not just while the window is open.
+- Shows each app's **real icon**, read from the app on your computer (or the launcher on Android) and kept in the local database. Well-known sites show their logo (bundled brand marks from [Simple Icons](https://simpleicons.org), CC0); other sites use the favicon your Chromium-based browser already saved, read from its local cache, or, if you turn on **Download site icons**, the site's own icon. Categories have their own icons.
 - Detects websites in browsers. Window titles map to known sites on Windows and Linux. On macOS, Kairo reads the current tab's domain from Safari, Chrome, Arc, Edge, Brave and others once you allow it (macOS asks once per browser).
 - Classifies hundreds of apps and sites into 15 categories, each scored *productive*, *neutral* or *distracting*. You can re-categorise any app or site, and the change rewrites your whole history.
-- Pause tracking for 30 or 60 minutes. Excluding an app deletes its history and stops recording it.
+- Pause tracking for 30 or 60 minutes. Tap any app or site in Stats or Apps & sites to exclude it: Kairo deletes its history and stops recording it.
 - **Android:** per-app usage through `UsageStatsManager` once you grant *Usage access*.
 
 **Understand**
@@ -87,12 +87,12 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 
 ## Privacy
 
-- **No network access.** The app has no server, telemetry, crash reporting or update pings. The Content Security Policy in `src-tauri/tauri.conf.json` blocks all remote connections.
+- **No network access.** The app has no server, telemetry, crash reporting or update pings. The Content Security Policy in `src-tauri/tauri.conf.json` blocks all remote connections. The one exception is **Download site icons**, off unless you turn it on (see below).
 - **One local file.** Data lives in `kairo.db` in the OS app-data folder. Settings shows the path and size.
-- **No fetched logos.** Site logos are bundled with the app or copied from your browser's own favicon cache on this computer, never downloaded.
+- **Site icons.** Logos are bundled with the app or copied from your browser's own favicon cache on this computer. Only if you turn on **Download site icons** does Kairo ask a site with no saved icon for its own icon: requests to that site alone, over HTTPS, through the system's `curl`, carrying nothing about you.
 - **Minimal by default.** Kairo stores app names and website domains. Window titles are off unless you turn them on, and full URLs are never stored.
 - **Least-privilege permissions.** The webview can only write files to a path you just picked in a save dialog.
-- **You're in control.** Pause tracking, exclude apps (which deletes their history), choose a retention period, export, or delete everything.
+- **You're in control.** Pause tracking, exclude apps and sites (which deletes their history), choose a retention period, export, or delete everything.
 
 ## Getting started
 

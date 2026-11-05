@@ -8,6 +8,8 @@ mod db;
 mod icons;
 mod models;
 #[cfg(desktop)]
+mod playback;
+#[cfg(desktop)]
 mod sites;
 mod timer;
 #[cfg(desktop)]

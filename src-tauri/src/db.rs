@@ -518,6 +518,34 @@ impl Db {
             .map_err(e)
     }
 
+    /// Sites in the history, most time first.
+    pub fn site_domains(&self, limit: usize) -> DbResult<Vec<String>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn
+            .prepare(
+                "SELECT domain FROM activity WHERE domain IS NOT NULL
+                 GROUP BY domain ORDER BY SUM(end_ts - start_ts) DESC LIMIT ?1",
+            )
+            .map_err(e)?;
+        let rows = stmt
+            .query_map([limit as i64], |r| r.get(0))
+            .map_err(e)?
+            .collect::<Result<Vec<String>, _>>()
+            .map_err(e);
+        rows
+    }
+
+    /// Permanently remove a site's history, subdomains included (used when the user excludes it).
+    pub fn delete_site_history(&self, domain: &str) -> DbResult<usize> {
+        self.conn
+            .lock()
+            .execute(
+                "DELETE FROM activity WHERE domain = ?1 OR domain LIKE '%.' || ?1",
+                [domain],
+            )
+            .map_err(e)
+    }
+
     pub fn purge_before(&self, ts: i64) -> DbResult<()> {
         let conn = self.conn.lock();
         conn.execute("DELETE FROM activity WHERE end_ts < ?1", [ts])

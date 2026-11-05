@@ -1,11 +1,11 @@
-Kairo is a calm focus timer that shows where your time goes, privately and on your own device. It has no account, no cloud and no analytics, and it never makes a network request.
+Kairo is a calm focus timer that shows where your time goes, privately and on your own device. It has no account, no cloud and no analytics, and it makes no network requests unless you turn on site icon downloads.
 
 ## What's new
 
-- **Logos instead of initials.** Well-known sites and apps show their logo: Instagram, YouTube, GitHub, Figma, Notion, Spotify and about 100 more. Other sites use the icon your browser (Chrome, Arc, Edge, Brave or Vivaldi) already saved on your computer. Nothing is downloaded.
-- **Category icons** in Stats, instead of letters.
-- **Tidier Settings.** Sections sit in pairs whose headings and cards line up, and settings that depend on a switch stay in place, dimmed, instead of disappearing. Where your data is stored now shows on the privacy card.
-- **Sounds:** the presets line up with the player.
+- **Watching counts.** A long video or a call no longer stops counting after a few minutes without keyboard or mouse input. Kairo now keeps counting while the app in front is playing video or holding a call, so a three-hour film is three hours, not the minutes after you last touched the mouse.
+- **Exclude any app or site from Stats.** Tap a row in **Top apps & sites** (or in Apps & sites) and choose **Exclude & delete history**. Websites can be excluded now too. Kairo deletes their history and stops recording them; **Settings → Excluded apps & sites** brings any of them back.
+- **More site icons.** Kairo now looks up icons for every site in your history, not just ones you visit after updating, and tries again when one is missing. Small icons show on a neat tile instead of being stretched.
+- **Download site icons** (Settings → Appearance & system, off by default). For sites your browser has no saved icon for (ChatGPT, for example), Kairo can ask the site itself. It asks only that site, over HTTPS, sends nothing about you, and it's the only time Kairo goes online.
 - **Android:** if Android won't install this over your current version, export your data from **Settings** (Export on the privacy card) if you want a copy, uninstall the old app, then install this one.
 
 ## Downloads

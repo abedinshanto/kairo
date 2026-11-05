@@ -10,6 +10,8 @@ export interface BarRow {
   value: number;
   productivity: number;
   trailing?: ReactNode;
+  /** Makes the row a button (opens the app's or site's details). */
+  onOpen?: () => void;
 }
 
 /** Ranked rows with a thin bar each; the bar colour carries productivity, text stays in ink. */
@@ -18,24 +20,37 @@ export function BarList({ rows, max, empty }: { rows: BarRow[]; max?: number; em
   if (!rows.length) return <>{empty}</>;
   return (
     <ul className="barlist">
-      {rows.map((r) => (
-        <li key={r.key}>
-          {r.icon}
-          <div className="barlist-main">
-            <div className="barlist-line">
-              <span className="barlist-label">{r.label}</span>
-              <span className="barlist-value">{fmtDuration(r.value)}</span>
-              {/* The bar colour carries productivity; say it in words too. */}
-              <span className="sr-only">, {PRODUCTIVITY_LABEL[Math.sign(r.productivity) as -1 | 0 | 1]}</span>
-            </div>
-            {r.sub && <div className="barlist-sub">{r.sub}</div>}
-            <div className="barlist-track" aria-hidden>
-              <span className={`barlist-fill ${productivityClass(r.productivity)}`} style={{ width: `${Math.max(2, (r.value / top) * 100)}%` }} />
-            </div>
-          </div>
-          {r.trailing && <div className="barlist-trail">{r.trailing}</div>}
-        </li>
-      ))}
+      {rows.map((r) => {
+        const body = (
+          <>
+            {r.icon}
+            <span className="barlist-main">
+              <span className="barlist-line">
+                <span className="barlist-label">{r.label}</span>
+                <span className="barlist-value">{fmtDuration(r.value)}</span>
+                {/* The bar colour carries productivity; say it in words too. */}
+                <span className="sr-only">, {PRODUCTIVITY_LABEL[Math.sign(r.productivity) as -1 | 0 | 1]}</span>
+              </span>
+              {r.sub && <span className="barlist-sub">{r.sub}</span>}
+              <span className="barlist-track" aria-hidden>
+                <span className={`barlist-fill ${productivityClass(r.productivity)}`} style={{ width: `${Math.max(2, (r.value / top) * 100)}%` }} />
+              </span>
+            </span>
+            {r.trailing && <span className="barlist-trail">{r.trailing}</span>}
+          </>
+        );
+        return (
+          <li key={r.key} className={r.onOpen ? "is-button" : undefined}>
+            {r.onOpen ? (
+              <button type="button" className="barlist-row" aria-haspopup="dialog" onClick={r.onOpen}>
+                {body}
+              </button>
+            ) : (
+              body
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

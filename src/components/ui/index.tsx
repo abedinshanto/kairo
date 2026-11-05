@@ -280,7 +280,7 @@ export function Avatar({
   }
   if (icon) {
     return (
-      <span className={cx("avatar has-icon", `p-${p}`)} style={{ width: size, height: size }} aria-hidden>
+      <span className={cx("avatar has-icon", siteKey && "favicon", `p-${p}`)} style={{ width: size, height: size }} aria-hidden>
         <img src={icon} alt="" draggable={false} />
         {dot}
       </span>

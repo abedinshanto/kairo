@@ -1,5 +1,6 @@
 //! Desktop activity tracker: samples the foreground app once a second and
-//! writes merged spans to the local database. Idle time is never recorded.
+//! writes merged spans to the local database. Idle time is never recorded,
+//! but watching a video or sitting in a call isn't idle.
 
 use std::{
     path::Path,
@@ -14,7 +15,7 @@ use crate::{
     db::{NewSpan, MAX_SPAN_MS},
     icons::IconWorker,
     models::{CurrentActivity, Settings},
-    notify, now_ms, sites, timer, AppState,
+    notify, now_ms, playback, sites, timer, AppState,
 };
 
 const POLL: Duration = Duration::from_secs(1);
@@ -41,6 +42,37 @@ struct Nudges {
     last_break: i64,
 }
 
+/// Whether the app in front is playing a video (or in a call), checked every
+/// few seconds and only once there's been no input for a while.
+#[derive(Default)]
+struct Playback {
+    app_id: String,
+    checked: Option<Instant>,
+    playing: bool,
+    /// The last sample that counted thanks to playback.
+    last_playing: i64,
+}
+
+const PLAYBACK_RECHECK: Duration = Duration::from_secs(10);
+
+impl Playback {
+    fn playing<R: Runtime>(&mut self, app: &AppHandle<R>, app_name: &str, app_id: &str, now: i64) -> bool {
+        let fresh = self.app_id == app_id && self.checked.is_some_and(|t| t.elapsed() < PLAYBACK_RECHECK);
+        if !fresh {
+            let browser = categories::is_browser(app_id, app_name);
+            let (category, _) = app.state::<AppState>().db.resolve(app_id, app_name, None);
+            let media_app = matches!(category.as_str(), "entertainment" | "meetings");
+            self.playing = playback::front_app_playing(app_name, app_id, browser, media_app);
+            self.app_id = app_id.to_owned();
+            self.checked = Some(Instant::now());
+        }
+        if self.playing {
+            self.last_playing = now;
+        }
+        self.playing
+    }
+}
+
 #[derive(Default)]
 struct UrlCache {
     title: String,
@@ -58,10 +90,11 @@ pub fn spawn<R: Runtime>(app: AppHandle<R>) {
             let mut open: Option<OpenSpan> = None;
             let mut nudges = Nudges::default();
             let mut urls = UrlCache::default();
+            let mut playback = Playback::default();
             let mut icons = IconWorker::spawn(app.clone());
             loop {
                 thread::sleep(POLL);
-                sample(&app, &mut open, &mut nudges, &mut urls, &mut icons);
+                sample(&app, &mut open, &mut nudges, &mut urls, &mut playback, &mut icons);
             }
         })
         .expect("failed to start tracker thread");
@@ -72,6 +105,7 @@ fn sample<R: Runtime>(
     open: &mut Option<OpenSpan>,
     nudges: &mut Nudges,
     urls: &mut UrlCache,
+    playback: &mut Playback,
     icons: &mut IconWorker,
 ) {
     let state = app.state::<AppState>();
@@ -92,20 +126,30 @@ fn sample<R: Runtime>(
     let idle_ms = user_idle::UserIdle::get_time()
         .map(|t| t.as_milliseconds() as i64)
         .unwrap_or(0);
+    let win = active_win_pos_rs::get_active_window().ok();
+    let front = win.as_ref().map(|w| {
+        let name = clean_name(&w.app_name, &w.process_path);
+        let id = app_id_for(&name, &w.process_path);
+        (name, id)
+    });
     if idle_ms >= settings.idle_threshold_seconds as i64 * 1000 {
-        close(app, open, Some(now - idle_ms));
-        nudges.distracting_since = None;
-        if idle_ms >= 5 * 60_000 {
-            nudges.active_since = None;
+        let watching = front
+            .as_ref()
+            .is_some_and(|(name, id)| !id.is_empty() && playback.playing(app, name, id, now));
+        if !watching {
+            // Count up to the last input, or to the end of the video if that came later.
+            close(app, open, Some((now - idle_ms).max(playback.last_playing)));
+            nudges.distracting_since = None;
+            if idle_ms >= 5 * 60_000 {
+                nudges.active_since = None;
+            }
+            return;
         }
-        return;
     }
 
-    let Ok(win) = active_win_pos_rs::get_active_window() else {
+    let (Some(win), Some((app_name, app_id))) = (win, front) else {
         return;
     };
-    let app_name = clean_name(&win.app_name, &win.process_path);
-    let app_id = app_id_for(&app_name, &win.process_path);
     if app_id.is_empty() {
         return;
     }
@@ -121,6 +165,10 @@ fn sample<R: Runtime>(
         None
     };
     if let Some(domain) = &domain {
+        if sites::is_excluded(domain, &settings.excluded_sites) {
+            close(app, open, None);
+            return;
+        }
         icons.see_site(domain);
     }
     let title = (settings.store_window_titles && !win.title.trim().is_empty())

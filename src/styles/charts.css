@@ -260,9 +260,38 @@
   border-top: 1px solid var(--line);
 }
 
+/* Rows that open details: the same layout, as a button with a soft hover */
+.barlist li.is-button {
+  padding: 4px 0;
+}
+
+.barlist-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% + 20px);
+  margin: 0 -10px;
+  padding: 8px 10px;
+  border-radius: 18px;
+  text-align: left;
+  color: inherit;
+  transition: background 0.2s;
+}
+
+.barlist-row:hover {
+  background: var(--surface-soft);
+}
+
 .barlist-main {
+  display: block;
   flex: 1;
   min-width: 0;
+}
+
+.barlist-sub,
+.barlist-track {
+  display: block;
 }
 
 .barlist-line {

@@ -135,6 +135,13 @@ pub fn domain_from_url(url: &str) -> Option<String> {
     Some(host.to_ascii_lowercase())
 }
 
+/// Whether `domain` is one of `excluded` or a subdomain of one ("m.reddit.com" for "reddit.com").
+pub fn is_excluded(domain: &str, excluded: &[String]) -> bool {
+    excluded.iter().any(|ex| {
+        domain == ex || (domain.len() > ex.len() && domain.ends_with(ex.as_str()) && domain[..domain.len() - ex.len()].ends_with('.'))
+    })
+}
+
 /// TLDs we accept for bare hosts in titles; keeps "Node.js" or "index.html" from
 /// being mistaken for a site.
 const COMMON_TLDS: &[&str] = &[
@@ -175,6 +182,15 @@ fn contains_word(haystack: &str, needle: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn excludes_sites_and_their_subdomains_only() {
+        let ex = vec!["reddit.com".to_string()];
+        assert!(is_excluded("reddit.com", &ex));
+        assert!(is_excluded("old.reddit.com", &ex));
+        assert!(!is_excluded("notreddit.com", &ex));
+        assert!(!is_excluded("reddit.com.evil.io", &ex));
+    }
 
     #[test]
     fn parses_urls() {
