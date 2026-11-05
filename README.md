@@ -27,7 +27,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - **Voice dictation, on your device.** Tap Kai (or press <kbd>V</kbd>) and say what you're working on; Kai listens until you pause, and the words fill in your focus. Say a task's name or "task two" to link it. In Tasks, the microphone in *Add a task* takes things like "landing page redesign, three blocks". Speech becomes text through [Whisper](https://github.com/openai/whisper) (OpenAI's open speech model, tiny English, 32 MB, via [whisper.cpp](https://github.com/ggml-org/whisper.cpp)) shipped with the app: no audio is stored or sent anywhere. Desktop only; phones have dictation on their keyboard.
 - **Kai**, a small focus buddy, keeps you company. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks, all ears while you dictate and asleep when nothing's playing.
 - **Tasks** are planned in focus blocks and kept in priority order (move any task up, down or to the top). The current task sits on its own card with a progress bar per block, and you slide to mark it done.
-- The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu shows today at a glance and has start, pause, finish, skip and break controls.
+- The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu shows the timer's state and today at a glance, with start, pause, finish, skip and break controls.
 - **Global shortcut** (default <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>Space</kbd>) starts or pauses the timer from any app.
 - **Deep focus mode** (<kbd>F</kbd>) leaves only the timer on screen.
 - Native notifications when a phase ends. On mobile the OS schedules them, so they fire even if the app is suspended.
@@ -37,7 +37,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - Shows each app's **real icon**, read from the app on your computer (or the launcher on Android) and kept in the local database. Well-known sites show their logo (bundled brand marks from [Simple Icons](https://simpleicons.org), CC0); other sites use the favicon your Chromium-based browser already saved, read from its local cache, or, if you turn on **Download site icons**, the site's own icon. Categories have their own icons.
 - Detects websites in browsers. Window titles map to known sites on Windows and Linux. On macOS, Kairo reads the current tab's domain from Safari, Chrome, Arc, Edge, Brave and others once you allow it (macOS asks once per browser).
 - Classifies hundreds of apps and sites into 15 categories, each scored *productive*, *neutral* or *distracting*. You can re-categorise any app or site, and the change rewrites your whole history.
-- Pause tracking for 30 or 60 minutes. Tap any app or site in Stats or Apps & sites to exclude it: Kairo deletes its history and stops recording it.
+- Pause tracking for 30 or 60 minutes. Tap any app or site in Stats or Apps & sites to exclude it (Kairo deletes its history and stops recording it), or just delete its history once and keep tracking it.
 - **Android:** per-app usage through `UsageStatsManager` once you grant *Usage access*.
 
 **Understand**
@@ -94,7 +94,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - **Microphone only while you dictate.** Speech is turned into text on your device by a bundled Whisper model; the audio is never saved or sent.
 - **Minimal by default.** Kairo stores app names and website domains. Window titles are off unless you turn them on, and full URLs are never stored.
 - **Least-privilege permissions.** The webview can only write files to a path you just picked in a save dialog.
-- **You're in control.** Pause tracking, exclude apps and sites (which deletes their history), choose a retention period, export, or delete everything.
+- **You're in control.** Pause tracking, exclude apps and sites (which deletes their history), delete any one app's or site's history, choose a retention period, export, or delete everything.
 
 ## Getting started
 

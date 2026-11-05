@@ -220,6 +220,9 @@ export interface Backend {
   /** Priority order of tasks, highest first (task 1, 2, 3…). */
   tasksReorder(ids: number[]): Promise<void>;
 
+  /** Forget an app's own time, or a site's, once (tracking carries on). */
+  deleteHistory(kind: "app" | "site", key: string): Promise<void>;
+
   rulesList(): Promise<Rule[]>;
   ruleSet(rule: Rule): Promise<void>;
   ruleDelete(key: string): Promise<void>;

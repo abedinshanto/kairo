@@ -240,6 +240,7 @@ pub fn run() {
             commands::task_update,
             commands::task_delete,
             commands::tasks_reorder,
+            commands::delete_history,
             commands::rules_list,
             commands::rule_set,
             commands::rule_delete,

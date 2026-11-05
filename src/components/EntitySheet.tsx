@@ -1,4 +1,4 @@
-import { Check, EyeOff, RotateCcw } from "lucide-react";
+import { Check, EyeOff, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { backend } from "../lib/backend";
 import { CATEGORIES, PRODUCTIVITY_LABEL, defaultProductivity, entityName, productivityClass } from "../lib/categories";
@@ -37,14 +37,17 @@ export function EntitySheet({ e, total, period, onClose }: { e: EntityTotal; tot
   const site = e.kind === "site";
   const custom = !!rules?.some((r) => r.key === key);
 
-  const run = async (fn: () => Promise<void>) => {
-    if (busy) return;
+  /** Resolves to whether it worked (a failure has already said so in a toast). */
+  const run = async (fn: () => Promise<void>): Promise<boolean> => {
+    if (busy) return false;
     setBusy(true);
     try {
       await fn();
       useApp.getState().bumpData();
+      return true;
     } catch (err) {
       toast({ title: "Couldn't save that change", body: String(err), tone: "warning" });
+      return false;
     } finally {
       setBusy(false);
     }
@@ -75,6 +78,19 @@ export function EntitySheet({ e, total, period, onClose }: { e: EntityTotal; tot
     toast({ title: `${name} excluded`, body: "Its history was deleted. You can track it again in Settings.", tone: "success" });
     // Settings save after a short debounce; the core deletes the history then.
     window.setTimeout(() => useApp.getState().bumpData(), 700);
+  };
+
+  // Just this once: the time goes, tracking stays.
+  const forget = async () => {
+    const ok = await confirmDialog(`Delete all of ${name}'s recorded time? Kairo keeps tracking it from now on.`, {
+      title: "Delete history",
+      okLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    if (!(await run(() => backend.deleteHistory(site ? "site" : "app", e.key)))) return;
+    onClose();
+    toast({ title: `${name}'s history deleted`, body: "It will show up again when you next use it.", tone: "success" });
   };
 
   const where = site ? `${e.key} in ${e.appName}` : "App";
@@ -137,8 +153,11 @@ export function EntitySheet({ e, total, period, onClose }: { e: EntityTotal; tot
               <RotateCcw /> Reset to default
             </button>
           )}
-          <button className="btn btn-danger" disabled={busy} onClick={() => void exclude()}>
-            <EyeOff /> Exclude & delete history
+          <button className="btn btn-soft" disabled={busy} onClick={() => void forget()} title="Delete its time once; Kairo keeps tracking it">
+            <Trash2 /> Delete history
+          </button>
+          <button className="btn btn-danger" disabled={busy} onClick={() => void exclude()} title="Stop tracking it and delete its time">
+            <EyeOff /> Exclude & delete
           </button>
         </div>
       </div>

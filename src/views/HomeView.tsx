@@ -27,6 +27,7 @@ import {
   Waves,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
+import { createPortal } from "react-dom";
 import { Buddy, type BuddyMood, type BuddyTone } from "../components/Buddy";
 import { ProportionBar } from "../components/charts/Bars";
 import { Avatar, PageTitle, PillTabs, TopBar, cx } from "../components/ui";
@@ -237,6 +238,10 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
   const dictation = useDictation();
   const [notice, setNotice] = useState<Notice>(null);
   const voiceOn = dictation.available && timer.phase === "focus";
+  // Before a block starts, the intention's caption sits beside the play button
+  // (that corner is empty then), so a two-line focus never makes the card grow.
+  const [captionSlot, setCaptionSlot] = useState<HTMLDivElement | null>(null);
+  const idleFocus = timer.phase === "focus" && timer.startedAt === null;
 
   /** Focus on task n (1–4); picking the linked one again unlinks it. */
   const pick = (n: number) => {
@@ -341,12 +346,13 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
       </div>
 
       {timer.phase === "focus" ? (
-        <Intention tasks={tasks} onPick={pick} voice={voiceOn ? dictation.state : null} notice={notice} />
+        <Intention tasks={tasks} onPick={pick} voice={voiceOn ? dictation.state : null} notice={notice} captionSlot={idleFocus ? captionSlot : null} />
       ) : (
         <p className="timer-rest">Stand up, stretch, and look at something far away. Your next block will be sharper for it.</p>
       )}
 
       <div className="timer-controls">
+        {idleFocus && <div className="timer-caption" ref={setCaptionSlot} aria-live="polite" />}
         {/* Reset, +5 and skip only matter once a block is under way; idle shows just time, intention and play. */}
         {timer.startedAt !== null && (
           <div className="timer-secondary">
@@ -375,7 +381,20 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
   );
 }
 
-function Intention({ tasks, onPick, voice, notice }: { tasks: Task[]; onPick: (n: number) => void; voice: "idle" | "listening" | "thinking" | null; notice: Notice }) {
+function Intention({
+  tasks,
+  onPick,
+  voice,
+  notice,
+  captionSlot,
+}: {
+  tasks: Task[];
+  onPick: (n: number) => void;
+  voice: "idle" | "listening" | "thinking" | null;
+  notice: Notice;
+  /** Where the caption goes instead of under the intention (beside play, before a block starts). */
+  captionSlot: HTMLElement | null;
+}) {
   const timer = useApp((s) => s.timer)!;
   const setIntention = useApp((s) => s.setIntention);
   const [value, setValue] = useState(timer.intention);
@@ -483,9 +502,13 @@ function Intention({ tasks, onPick, voice, notice }: { tasks: Task[]; onPick: (n
           </div>
         )}
       </div>
-      <div className="intention-foot" aria-live="polite">
-        {caption}
-      </div>
+      {captionSlot ? (
+        createPortal(caption, captionSlot)
+      ) : (
+        <div className="intention-foot" aria-live="polite">
+          {caption}
+        </div>
+      )}
     </div>
   );
 }
@@ -510,45 +533,96 @@ function useFocusToday() {
   }, [data, today, goalMin]);
 }
 
+const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: "short" });
+
+/**
+ * A ring around a number. `value` (0–1) draws progress from the top; `segments`
+ * draws one arc per day instead (lit when that day's goal was met, today last).
+ */
+function TodayRing({ value, segments, label, children }: { value?: number; segments?: boolean[]; label: string; children: ReactNode }) {
+  const r = 50;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="today-ring" role="img" aria-label={label}>
+      <svg viewBox="0 0 120 120" aria-hidden>
+        <g transform="rotate(-90 60 60)">
+          {segments ? (
+            segments.map((hit, i) => {
+              const slot = c / segments.length;
+              // Round caps reach into the gap, so leave room for them.
+              const arc = slot - 16;
+              return (
+                <circle
+                  key={i}
+                  className={cx("arc", hit ? "hit" : "miss", i === segments.length - 1 && "today")}
+                  cx="60"
+                  cy="60"
+                  r={r}
+                  strokeDasharray={`${arc} ${c - arc}`}
+                  strokeDashoffset={-(i * slot + 8)}
+                />
+              );
+            })
+          ) : (
+            <>
+              <circle className="arc track" cx="60" cy="60" r={r} />
+              {(value ?? 0) > 0 && (
+                <circle className="arc fill" cx="60" cy="60" r={r} strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, value ?? 0))} />
+              )}
+            </>
+          )}
+        </g>
+      </svg>
+      <div className="today-ring-center">{children}</div>
+    </div>
+  );
+}
+
 function TodayTiles() {
   const goalMin = useApp((s) => s.settings.dailyFocusGoalMinutes);
   const { ms, blocks, streak, week } = useFocusToday();
   const goal = goalMin * 60_000;
+  const share = goal ? Math.min(1, ms / goal) : 0;
   const hours = ms / 3_600_000;
+  const met = week.filter(Boolean).length;
+  const today = startOfDay(Date.now());
+  const days = week.map((hit, i) => `${WEEKDAY.format(addDays(today, i - 6))} ${hit ? "met" : "missed"}`).join(", ");
   return (
-    <div className="grid-2">
-      <div className="card tint tile">
-        <span className="icon-tile round brand-solid">
-          <Timer />
-        </span>
-        <div className="big-number">
-          {hours >= 1 ? hours.toFixed(1) : Math.round(ms / 60_000)}
-          <small>{hours >= 1 ? "hours" : "min"}</small>
-        </div>
-        <div className="tile-label">Focused today</div>
-        <div className={cx("meter", ms >= goal && "done")}>
-          <span style={{ width: `${goal ? Math.min(100, (ms / goal) * 100) : 0}%` }} />
-        </div>
-        <div className="tile-foot">
-          {blocks} block{blocks === 1 ? "" : "s"} · goal {fmtDuration(goal)}
-        </div>
-      </div>
-      <div className="card tile">
-        <span className="icon-tile round warn">
-          <Flame />
-        </span>
-        <div className="big-number">
-          {streak}
-          <small>{streak === 1 ? "day" : "days"}</small>
-        </div>
-        <div className="tile-label">Goal streak</div>
-        <div className="week-dots" role="img" aria-label={`Goal reached on ${week.filter(Boolean).length} of the last 7 days`}>
-          {week.map((hit, i) => (
-            <span key={i} className={cx(hit && "hit", i === 6 && "today")} />
-          ))}
-        </div>
-        <div className="tile-foot">{streak ? "Keep the chain going" : `Hit ${fmtDuration(goal)} to start one`}</div>
-      </div>
+    <div className="grid-2 today-tiles">
+      <section className="card today-tile" aria-labelledby="today-focus">
+        <header className="today-head">
+          <span className="icon-tile round brand-solid">
+            <Timer />
+          </span>
+          <span id="today-focus">Focused today</span>
+        </header>
+        <TodayRing value={share} label={`${fmtDuration(ms)} of your ${fmtDuration(goal)} goal`}>
+          <span className="today-num tabular">
+            {hours >= 1 ? hours.toFixed(1) : Math.round(ms / 60_000)}
+            <small>{hours >= 1 ? "h" : "min"}</small>
+          </span>
+          <span className="today-of">of {fmtDuration(goal)}</span>
+        </TodayRing>
+        <footer className="today-foot">
+          {ms >= goal ? "Goal reached. Lovely." : `${blocks} block${blocks === 1 ? "" : "s"} · ${Math.round(share * 100)}% done`}
+        </footer>
+      </section>
+      <section className="card today-tile streak" aria-labelledby="today-streak">
+        <header className="today-head">
+          <span className="icon-tile round warn">
+            <Flame />
+          </span>
+          <span id="today-streak">Goal streak</span>
+        </header>
+        <TodayRing segments={week} label={`Goal met on ${met} of the last 7 days: ${days}`}>
+          <span className="today-num tabular">
+            {streak}
+            <small>{streak === 1 ? "day" : "days"}</small>
+          </span>
+          <span className="today-of">{met} of 7 days</span>
+        </TodayRing>
+        <footer className="today-foot">{streak ? "Keep the chain going" : `Hit ${fmtDuration(goal)} to start one`}</footer>
+      </section>
     </div>
   );
 }

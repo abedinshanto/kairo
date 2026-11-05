@@ -683,30 +683,6 @@
   color: var(--ink-2);
 }
 
-/* Last seven days at the meter's height, so both tiles' numbers line up */
-.week-dots {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 8px;
-}
-
-.week-dots span {
-  flex: 1;
-  max-width: 22px;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--surface-sunk);
-}
-
-.week-dots span.hit {
-  background: var(--warn);
-}
-
-.week-dots span.today:not(.hit) {
-  box-shadow: inset 0 0 0 1.5px var(--line-strong);
-}
-
 .tile-foot {
   font-size: 12.5px;
   color: var(--ink-2);

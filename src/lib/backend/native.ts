@@ -38,6 +38,7 @@ export function createNativeBackend(): Backend {
     taskUpdate: (id, patch) => invoke("task_update", { id, ...patch }),
     taskDelete: (id) => invoke("task_delete", { id }),
     tasksReorder: (ids) => invoke("tasks_reorder", { ids }),
+    deleteHistory: (kind, key) => invoke("delete_history", { kind, key }),
     voiceAvailable: () => invoke<boolean>("voice_available").catch(() => false),
     voiceListen: () => invoke("voice_listen"),
     voiceStop: () => invoke("voice_stop"),

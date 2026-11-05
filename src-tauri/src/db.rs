@@ -530,6 +530,16 @@ impl Db {
             .map_err(e)
     }
 
+    /// Delete one app's or site's recorded time, as listed in Stats: an app's
+    /// own time (not the sites visited in it), or one site. Tracking carries on.
+    pub fn delete_entity_history(&self, kind: &str, key: &str) -> DbResult<usize> {
+        let sql = match kind {
+            "site" => "DELETE FROM activity WHERE domain = ?1",
+            _ => "DELETE FROM activity WHERE app_id = ?1 AND domain IS NULL",
+        };
+        self.conn.lock().execute(sql, [key]).map_err(e)
+    }
+
     /// Sites in the history, most time first.
     pub fn site_domains(&self, limit: usize) -> DbResult<Vec<String>> {
         let conn = self.conn.lock();
@@ -945,6 +955,17 @@ mod tests {
         assert_eq!(order(&db), vec![d, a, c, b], "a new task becomes task 1");
         db.update_task(a, None, None, Some(true), 5).unwrap();
         assert_eq!(order(&db), vec![d, c, b, a], "done tasks go last");
+    }
+
+    #[test]
+    fn deleting_one_entry_keeps_the_rest() {
+        let db = Db::in_memory().unwrap();
+        db.insert_span(&span(0, 60_000, "google chrome", None)).unwrap();
+        db.insert_span(&span(60_000, 120_000, "google chrome", Some("chatgpt.com"))).unwrap();
+        db.insert_span(&span(120_000, 180_000, "google chrome", Some("reanime.to"))).unwrap();
+        assert_eq!(db.delete_entity_history("site", "reanime.to").unwrap(), 1);
+        assert_eq!(db.delete_entity_history("app", "google chrome").unwrap(), 1, "the browser's own time only");
+        assert_eq!(db.site_domains(10).unwrap(), vec!["chatgpt.com".to_string()]);
     }
 
     #[test]

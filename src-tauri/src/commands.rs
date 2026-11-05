@@ -163,6 +163,14 @@ pub fn task_create(state: State<AppState>, title: String, estimate: u32) -> CmdR
     state.db.create_task(&title, estimate, now_ms())
 }
 
+/// Forget an app's or site's recorded time once, without excluding it.
+#[tauri::command]
+pub fn delete_history(app: AppHandle, kind: String, key: String) -> CmdResult<()> {
+    app.state::<AppState>().db.delete_entity_history(&kind, &key)?;
+    let _ = app.emit("data://changed", ());
+    Ok(())
+}
+
 /// Set the priority order of tasks (ids, highest first).
 #[tauri::command]
 pub fn tasks_reorder(app: AppHandle, ids: Vec<i64>) -> CmdResult<()> {

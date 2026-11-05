@@ -2,13 +2,11 @@ Kairo is a calm focus timer that shows where your time goes, privately and on yo
 
 ## What's new
 
-- **Tell Kai what you're working on.** Tap Kai on the timer (or press **V**), say it, and pause: the words become your focus. Say a task's name, or "task two", and Kai links that task. It runs entirely on your computer with Whisper, OpenAI's open speech model, in its small English version, which ships with the app. Your voice is never recorded or sent anywhere.
-- **Dictate tasks.** The microphone in **Add a task** takes things like "landing page redesign, three blocks" and fills in the estimate too.
-- **Tasks 1 to 4 on the timer.** The link button is now four number buttons (and the keys **1–4**) for your top four tasks. Home's Up next list shows the same numbers.
-- **Put tasks in order.** Move any task up, down or to the top from its menu; new tasks start at the top.
-- **Add as task.** When your focus isn't a task yet, one tap turns it into one, linked to the timer.
-- The desktop downloads are about 32 MB bigger because the speech model comes with them. The first time you dictate, your computer asks to use the microphone.
-- **Android:** voice uses your keyboard's own dictation. If Android won't install this over your current version, export your data from **Settings** (Export on the privacy card) if you want a copy, uninstall the old app, then install this one.
+- **A steadier timer card.** A focus that wraps onto two lines no longer makes the card, and everything next to it, taller. Before a block starts, the hint and **Add as task** sit beside the play button, where there's room.
+- **New Focused today and Goal streak cards.** A ring fills up toward your daily goal, and a seven-day ring lights up each day you reached it. Both cards now match the rest of Home in light mode.
+- **Delete history without excluding.** In an app's or site's details (tap it in Stats or Apps & sites), **Delete history** removes its recorded time once. Kairo keeps tracking it, and it shows up again next time you use it. **Exclude & delete** still stops tracking it for good.
+- **A nicer menu bar menu**, with icons, a coloured dot for the timer's state, and the length of each break.
+- **Android:** if Android won't install this over your current version, export your data from **Settings** (Export on the privacy card) if you want a copy, uninstall the old app, then install this one.
 
 ## Downloads
 

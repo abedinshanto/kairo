@@ -68,15 +68,133 @@
   min-width: 0;
 }
 
-/* The tiles take up whatever height the timer card leaves: icon at the top,
-   the numbers settle at the bottom, so any height looks intentional. */
+/* The tiles take up whatever height the timer card leaves. */
 .home-side > .grid-2 {
   flex: 1;
 }
 
-.home-side .tile .big-number {
-  margin-top: auto;
-  padding-top: 12px;
+/* Focused today / Goal streak: label on top, a ring with the number in the
+   middle of whatever height there is, one line of context at the bottom. */
+.today-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  min-width: 0;
+}
+
+.today-head {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.today-head .icon-tile {
+  width: 36px;
+  height: 36px;
+}
+
+.today-head .icon-tile svg {
+  width: 18px;
+  height: 18px;
+}
+
+.today-head > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-ring {
+  position: relative;
+  flex: none;
+  width: min(140px, 100%);
+  aspect-ratio: 1;
+  margin: auto 0;
+}
+
+.today-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.today-ring .arc {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.today-ring .track,
+.today-ring .miss {
+  stroke: var(--surface-sunk);
+}
+
+.today-ring .miss.today {
+  stroke: var(--line-strong);
+}
+
+.today-ring .fill {
+  stroke: var(--brand);
+  transition: stroke-dashoffset 0.8s var(--ease);
+}
+
+.today-ring .hit {
+  stroke: var(--warn);
+}
+
+:root[data-theme="dark"] .today-ring .track,
+:root[data-theme="dark"] .today-ring .miss {
+  stroke: rgba(255, 255, 255, 0.07);
+}
+
+:root[data-theme="dark"] .today-ring .miss.today {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.today-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.today-num {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.today-num small {
+  margin-left: 2px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+
+.today-of {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.today-foot {
+  align-self: stretch;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--ink-2);
+  text-align: center;
 }
 
 /* ---------------------------------------------------------------- Timer hero card */
@@ -211,11 +329,15 @@
   margin: -10px -6px 0 0;
 }
 
-/* Intention: the card's big title (reference: "Wiring Dashboard Analytics") */
+/* Intention: the card's big title (reference: "Wiring Dashboard Analytics").
+   It always has room for two lines (or, once a block runs, one line and its
+   caption), so a longer focus fills that space instead of making the card and
+   its whole row taller. Before a block starts the caption sits beside play. */
 .intention {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 76px;
 }
 
 .intention-row {
@@ -309,8 +431,11 @@
 .intention-foot {
   display: flex;
   align-items: center;
-  min-height: 30px;
   min-width: 0;
+}
+
+.intention-foot:not(:empty) {
+  min-height: 30px;
 }
 
 .intention-caption {
@@ -509,6 +634,14 @@
 
 .timer-secondary .btn {
   height: 48px;
+}
+
+/* Before a block starts: the intention's caption (hint, "Add as task", listening…) */
+.timer-caption {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
 }
 
 /* Play stays on the right when the secondary tray is hidden (idle) */
@@ -714,19 +847,19 @@
 /* Deep focus is the calmest screen: one big number, Kai, the intention and play.
    The rest fades in on hover or keyboard focus. */
 
-.is-deep :is(.timer-top, .intention-tasks, .intention-foot, .timer-secondary) {
+.is-deep :is(.timer-top, .intention-tasks, .intention-foot, .timer-caption, .timer-secondary) {
   transition: opacity 0.3s var(--ease), visibility 0.3s;
 }
 
 @media (hover: hover) {
-  .timer-card.is-deep:not(:hover):not(:focus-within) :is(.timer-top, .intention-tasks, .intention-foot, .timer-secondary) {
+  .timer-card.is-deep:not(:hover):not(:focus-within) :is(.timer-top, .intention-tasks, .intention-foot, .timer-caption, .timer-secondary) {
     opacity: 0;
   }
 }
 
 /* Touch has no hover to reveal them: hide outright so nothing invisible can be tapped. Exit deep focus for the tray. */
 @media (hover: none) {
-  .is-deep :is(.timer-top, .intention-tasks, .intention-foot, .timer-secondary) {
+  .is-deep :is(.timer-top, .intention-tasks, .intention-foot, .timer-caption, .timer-secondary) {
     opacity: 0;
     visibility: hidden;
   }
@@ -846,6 +979,26 @@
 
   .intention-input {
     font-size: 22px;
+  }
+
+  .today-tile {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .today-head {
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .today-head .icon-tile {
+    width: 30px;
+    height: 30px;
+  }
+
+  .today-head .icon-tile svg {
+    width: 16px;
+    height: 16px;
   }
 
   /* Phones: the numbers get their own row under the intention, so it keeps its width */

@@ -316,6 +316,14 @@ export function createDemoBackend(): Backend {
       emit({ type: "data" });
     },
 
+    async deleteHistory(kind, key) {
+      for (let i = spans.length - 1; i >= 0; i--) {
+        const s = spans[i];
+        if (kind === "site" ? s.domain === key : s.appId === key && !s.domain) spans.splice(i, 1);
+      }
+      emit({ type: "data" });
+    },
+
     voiceAvailable: async () => true,
     voiceListen() {
       voice?.finish("");
