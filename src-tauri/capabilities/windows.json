@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "small-windows",
+  "description": "The menu bar panel and quick capture: core IPC and events only (no dialogs, no file access).",
+  "windows": ["panel", "capture"],
+  "platforms": ["macOS", "windows", "linux"],
+  "permissions": ["core:default"]
+}

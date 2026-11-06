@@ -82,7 +82,8 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .icon_as_template(true)
         .tooltip("Kairo")
         .menu(&menu)
-        .show_menu_on_left_click(cfg!(target_os = "macos"))
+        // Left click opens the panel; the menu is a right click away. Linux trays only do menus.
+        .show_menu_on_left_click(cfg!(target_os = "linux"))
         .on_menu_event(|app, event| match event.id().as_ref() {
             "toggle" => {
                 timer::perform(app, timer::Action::Toggle);
@@ -121,12 +122,11 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
                 button_state: MouseButtonState::Up,
+                rect,
                 ..
             } = event
             {
-                if !cfg!(target_os = "macos") {
-                    show_main_window(tray.app_handle());
-                }
+                crate::panel::toggle_panel(tray.app_handle(), rect);
             }
         })
         .build(app)?;

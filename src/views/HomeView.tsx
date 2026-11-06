@@ -1,12 +1,12 @@
 import {
-  Brain,
+  CalendarDays,
   Check,
+  Download,
   Globe,
   Power,
   ScrollText,
   ChevronDown,
   Clock,
-  CloudMoonRain,
   Flag,
   Flame,
   Headphones,
@@ -20,14 +20,12 @@ import {
   Plus,
   RotateCcw,
   SkipForward,
-  Sparkles,
   Square,
   Timer,
-  Trees,
-  Waves,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
+import { PRESET_ICONS } from "../components/soundIcons";
 import { Buddy, type BuddyMood, type BuddyTone } from "../components/Buddy";
 import { ProportionBar } from "../components/charts/Bars";
 import { Avatar, PageTitle, PillTabs, TopBar, cx } from "../components/ui";
@@ -39,22 +37,13 @@ import { useMediaQuery, useNow, useQuery } from "../lib/hooks";
 import { isMac, isMobileOS } from "../lib/platform";
 import { finishOrSkip, remainingNow, useApp } from "../lib/store";
 import { matchTask, parseSpokenTask, spokenTaskNumber } from "../lib/spoken";
-import { addDays, DAY, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
+import { addDays, DAY, dueInfo, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
 import type { Phase, Task, TimerSnapshot } from "../lib/types";
 import { useDictation } from "../lib/voice";
 import "../styles/views/home.css";
 
 const PHASE_LABEL: Record<Phase, string> = { focus: "Focus", short_break: "Short break", long_break: "Long break" };
 const TONE: Record<Phase, BuddyTone> = { focus: "cloud", short_break: "cloud", long_break: "cloud" };
-
-const PRESET_ICONS: Record<string, ReactNode> = {
-  "deep-work": <Brain />,
-  "rainy-night": <CloudMoonRain />,
-  "ocean-calm": <Waves />,
-  forest: <Trees />,
-  campfire: <Flame />,
-  flow: <Sparkles />,
-};
 
 /** A phase duration for the pill tabs: "25m" on screen, "25 minutes" to screen readers. */
 function minutes(n: number) {
@@ -431,10 +420,15 @@ function Intention({
     if (adding) return;
     setAdding(true);
     try {
-      const id = await backend.taskCreate(text, parseSpokenTask(text).estimate ?? 2);
-      await setIntention(text, id);
+      // "Call the gym tomorrow, one block": the title, its estimate and its day.
+      const spoken = parseSpokenTask(text);
+      const title = spoken.title || text;
+      const id = await backend.taskCreate(title, spoken.estimate ?? 2, spoken.dueDay ?? null);
+      await setIntention(title, id);
       useApp.getState().bumpData();
-      useApp.getState().toast({ title: "Added to your tasks", body: `“${text}” is task 1.`, tone: "success" });
+      const info = spoken.dueDay !== undefined ? dueInfo(spoken.dueDay) : null;
+      const due = !info ? "" : info.tone === "today" || info.tone === "soon" ? `, due ${info.label.toLowerCase()}` : `, due ${info.label}`;
+      useApp.getState().toast({ title: "Added to your tasks", body: `“${title}” is task 1${due}.`, tone: "success" });
     } catch (err) {
       useApp.getState().toast({ title: "Couldn't add the task", body: String(err), tone: "warning" });
     } finally {
@@ -710,9 +704,31 @@ function SetupTip() {
   const openSummary = useApp((s) => s.openSummary);
   const today = startOfDay(Date.now());
   // Evenings: the day's summary, until it's opened or put off.
-  const summaryDue = settings.dailySummary && Date.now() >= today + settings.dailySummaryMinutes * 60_000 && settings.summarySeenDay !== today;
+  const evening = Date.now() >= today + settings.dailySummaryMinutes * 60_000 && settings.summarySeenDay !== today;
+  const summaryDue = settings.dailySummary && evening;
+  // On the review day, the week takes the evening slot.
+  const weekDue = settings.weeklyReview && evening && new Date(today).getDay() === settings.weeklyReviewDay;
+  const newer = useApp((s) => s.update);
   let tip: Tip | null = null;
-  if (summaryDue) {
+  if (newer && !dismissed.includes(`update-${newer.version}`)) {
+    tip = {
+      id: `update-${newer.version}`,
+      icon: <Download />,
+      title: `Kairo ${newer.version} is out`,
+      body: "See what's new and download it from the releases page. Your data stays where it is.",
+      action: "Get it",
+      run: () => backend.updateOpen(),
+    };
+  } else if (weekDue) {
+    tip = {
+      id: "summary",
+      icon: <CalendarDays />,
+      title: "Your week, wrapped",
+      body: "How the focus went, your best day, what pulled you away, and a moment to plan the next week.",
+      action: "See the week",
+      run: () => openSummary(undefined, true),
+    };
+  } else if (summaryDue) {
     tip = {
       id: "summary",
       icon: <ScrollText />,

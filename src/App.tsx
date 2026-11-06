@@ -4,6 +4,9 @@ import { Toasts, cx } from "./components/ui";
 import { isNative } from "./lib/backend";
 import { useMediaQuery } from "./lib/hooks";
 import { TAB_VIEWS, finishOrSkip, useApp, type View } from "./lib/store";
+import { windowRole } from "./lib/windowRole";
+import { MenuPanel } from "./views/MenuPanel";
+import { QuickCapture } from "./views/QuickCapture";
 import { AppsView } from "./views/AppsView";
 import { HomeView } from "./views/HomeView";
 import { Onboarding } from "./views/Onboarding";
@@ -109,10 +112,26 @@ function CurrentView() {
   }
 }
 
+/** The panel and the capture box: the same store, no navigation. */
+function SmallWindow() {
+  const ready = useApp((s) => s.ready);
+  useTheme();
+  useEffect(() => {
+    void useApp.getState().init();
+  }, []);
+  if (!ready) return null;
+  return windowRole === "panel" ? <MenuPanel /> : <QuickCapture />;
+}
+
 export default function App() {
+  return windowRole === "main" ? <MainWindow /> : <SmallWindow />;
+}
+
+function MainWindow() {
   const ready = useApp((s) => s.ready);
   const onboarded = useApp((s) => s.settings.onboarded);
   const view = useApp((s) => s.view);
+  const routeKey = useApp((s) => s.routeKey);
   const deepFocus = useApp((s) => s.deepFocus);
   const phase = useApp((s) => s.timer?.phase);
   useTheme();
@@ -134,7 +153,7 @@ export default function App() {
       {/* macOS hides the title bar, so this strip is where the window is dragged from. */}
       <div className="drag-strip" data-tauri-drag-region aria-hidden />
       <main className="scroll">
-        <div className={cx("page", `view-${view}`)} key={view}>
+        <div className={cx("page", `view-${view}`)} key={`${view}:${routeKey}`}>
           <CurrentView />
         </div>
       </main>

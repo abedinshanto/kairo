@@ -12,7 +12,7 @@ macOS · Windows · Linux · Android · iOS
 
 ![Kairo home: focus timer, today's progress, soundscape and next tasks](docs/screenshots/home.png)
 
-Kairo combines a Pomodoro-style focus timer with automatic time tracking across your apps and websites. It then turns that history into plain-language insights: your sharpest hours, when distractions peak, and which apps cost you the most time. Everything is stored in a local SQLite database. Kairo has no account, no cloud and no analytics, and it makes no network requests (unless you ask it to download site icons).
+Kairo combines a Pomodoro-style focus timer with automatic time tracking across your apps and websites. It then turns that history into plain-language insights: your sharpest hours, when distractions peak, and which apps cost you the most time. Everything is stored in a local SQLite database. Kairo has no account, no cloud and no analytics, and it makes no network requests unless you turn one on (site icon downloads, or a daily check for new versions).
 
 ## Download
 
@@ -26,8 +26,9 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - Set an intention for each block and link it to a task, so blocks count toward the work they were for. The buttons **1–4** on the timer (or the keys <kbd>1</kbd>–<kbd>4</kbd>) pick your top four tasks; an intention that isn't a task yet becomes one with **Add as task**.
 - **Voice dictation, on your device.** Tap Kai (or press <kbd>V</kbd>) and say what you're working on; Kai listens until you pause, and the words fill in your focus. Say a task's name or "task two" to link it. In Tasks, the microphone in *Add a task* takes things like "landing page redesign, three blocks". Speech becomes text through [Whisper](https://github.com/openai/whisper) (OpenAI's open speech model, tiny English, 32 MB, via [whisper.cpp](https://github.com/ggml-org/whisper.cpp)) shipped with the app: no audio is stored or sent anywhere. Desktop only; phones have dictation on their keyboard.
 - **Kai**, a small focus buddy, keeps you company. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks, all ears while you dictate and asleep when nothing's playing.
-- **Tasks** are planned in focus blocks and kept in priority order (move any task up, down or to the top). The current task sits on its own card with a progress bar per block, and you slide to mark it done.
-- The countdown lives in the **menu bar / system tray** and keeps running with the window closed. The tray menu shows the timer's state and today at a glance, with start, pause, finish, skip and break controls.
+- **Tasks** are planned in focus blocks and kept in priority order: drag them by their handle (or use the arrow keys on it). Give a task a day (Today, Tomorrow, This week, Next week or any date, also by saying "…tomorrow" or "by Friday"), a one-line note, and a sound that plays when you focus on it. The **Today** tab shows what's due. The current task sits on its own card with a progress bar per block, and you slide to mark it done.
+- The countdown lives in the **menu bar / system tray** and keeps running with the window closed. Click the icon (macOS, Windows) for a small panel with the timer, your top four tasks, today's focus and the app in front; the full menu is on right-click (and on Linux, where trays only show menus).
+- **Quick capture** (default <kbd>⌘/Ctrl</kbd> <kbd>⌥/Alt</kbd> <kbd>K</kbd>): a box over whatever you're doing. Type or say a task ("call the gym tomorrow, one block") and press Enter to add it, or <kbd>⇧</kbd> Enter to focus on it now. Press the shortcut again to talk.
 - **Global shortcut** (default <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>Space</kbd>) starts or pauses the timer from any app.
 - **Deep focus mode** (<kbd>F</kbd>) leaves only the timer on screen.
 - Native notifications when a phase ends. On mobile the OS schedules them, so they fire even if the app is suspended.
@@ -46,21 +47,34 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - **Stats, today:** productive time, a productivity score, focus vs. goal, a distraction budget, app switches, a timeline of the day, an hour-by-hour breakdown, top apps & sites, categories and focus blocks.
 - **Stats, 7 or 30 days:** trends against the previous period, a daily breakdown, a weekday × hour *focus rhythm* heatmap, focus time vs. goal, *where time leaks*, and generated suggestions such as peak hours, distraction peaks, context switching, block follow-through, late nights and communication load.
 - **Focus persona:** a summary of your working style (for example *Early Bird Deep Diver*), saved as a shareable image that contains no app names, sites or timestamps.
+- **Weekly review** (Sunday evening by default, or any day): focus this week against the last, your best day, goal days, tasks done, what pulled you away, and a moment to put next week's tasks on Monday.
+- **Limits per category**, e.g. Social media 30 minutes a day: a heads-up near each limit, and its progress in Stats.
+- **Edit your history:** add time Kairo couldn't see (a meeting, a call, reading on paper), move or delete an entry, and point a focus block at the right task, from the Stats timeline. Time you add replaces whatever was recorded then, so nothing counts twice.
 - **Smart nudges:** *Focus guard* nudges you if you drift to a distracting app during a block. Kairo also suggests a block after a long distraction and a break after a long stretch, and lets you know once when the day's distraction budget is used up.
 
 **Sound**
-- 13 soundscapes synthesised on the device in real time: rain, thunder, ocean, wind, fireplace, stream, forest, night, white / pink / brown noise, binaural beats and an ambient pad. There are no audio files and nothing is streamed.
-- Mix any combination or start from a preset (Deep Work, Rainy Night, Ocean Calm, Forest Morning, Campfire, Flow State).
-- Optionally starts with a focus block and fades out on breaks. Choose a bell, soft or digital chime.
+- 16 soundscapes synthesised on the device in real time: rain, thunder, ocean, wind, fireplace, stream, forest, night, a café, a train, a library, white / pink / brown noise, binaural beats and an ambient pad. There are no audio files and nothing is streamed.
+- Mix any combination or start from a preset (Deep Work, Rainy Night, Ocean Calm, Forest Morning, Campfire, Flow State, Corner Café, Night Train, Reading Room).
+- A stop timer (15, 30 or 60 minutes, or the end of the block). Optionally starts with a focus block and fades out on breaks. Choose a bell, soft or digital chime.
 
 **Your data**
-- Export everything as JSON or CSV. Set a retention period, or delete everything in one click.
+- Export everything as JSON or CSV, and import a JSON export on another computer (anything already there is skipped).
+- **Weekly backups** of the database on your computer (the last four are kept); put any of them back from Settings.
+- Search in Settings (<kbd>/</kbd> or <kbd>⌘/Ctrl</kbd> <kbd>F</kbd>). Set a retention period, or delete everything in one click.
 
 | Stats | Tasks |
 | --- | --- |
 | ![Stats: productive time, score and top apps](docs/screenshots/stats.png) | ![Tasks: the current task card with slide to mark done](docs/screenshots/tasks.png) |
 | ![Soundscapes: player and presets](docs/screenshots/sounds.png) | ![Apps & sites: search, filters and time per app](docs/screenshots/apps.png) |
 | ![Daily summary: your day, wrapped](docs/screenshots/summary.png) | ![Settings: profile, privacy and preferences](docs/screenshots/settings.png) |
+
+**Menu bar panel and quick capture**
+
+<p align="center">
+  <img src="docs/screenshots/panel.png" width="250" alt="The menu bar panel: timer, tasks 1–4, today's focus and the app in front" />
+  &nbsp;
+  <img src="docs/screenshots/capture.png" width="520" alt="Quick capture: a task typed with its day and estimate understood" />
+</p>
 
 **Dark theme**
 
@@ -88,12 +102,13 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 
 ## Privacy
 
-- **No network access.** The app has no server, telemetry, crash reporting or update pings. The Content Security Policy in `src-tauri/tauri.conf.json` blocks all remote connections. The one exception is **Download site icons**, off unless you turn it on (see below).
-- **One local file.** Data lives in `kairo.db` in the OS app-data folder. Settings shows the path and size.
+- **No network access by default.** The app has no server, telemetry or crash reporting. The Content Security Policy in `src-tauri/tauri.conf.json` blocks all remote connections from the interface. Two features can go online, both off unless you turn them on: **Download site icons** (see below) and **Check for updates**.
+- **Update check (opt-in).** Once a day, one HTTPS request to GitHub's releases API asks for the latest version number. It carries nothing about you (just "Kairo" and its version, as GitHub requires). If there's a newer version, Kairo says so; nothing is downloaded or installed by itself.
+- **One local file.** Data lives in `kairo.db` in the OS app-data folder, with weekly backups next to it in `backups/`. Settings shows the path and size.
 - **Site icons.** Logos are bundled with the app or copied from your browser's own favicon cache on this computer. Only if you turn on **Download site icons** does Kairo ask a site with no saved icon for its own icon: requests to that site alone, over HTTPS, through the system's `curl`, carrying nothing about you.
 - **Microphone only while you dictate.** Speech is turned into text on your device by a bundled Whisper model; the audio is never saved or sent.
 - **Minimal by default.** Kairo stores app names and website domains. Window titles are off unless you turn them on, and full URLs are never stored.
-- **Least-privilege permissions.** The webview can only write files to a path you just picked in a save dialog.
+- **Least-privilege permissions.** The webview can only write files to a path you just picked in a save dialog, and an import reads only the file you picked. The menu bar panel and quick capture have no file or dialog access at all.
 - **You're in control.** Pause tracking, exclude apps and sites (which deletes their history), delete any one app's or site's history, choose a retention period, export, or delete everything.
 
 ## Getting started
@@ -170,6 +185,10 @@ src-tauri/                Rust core (Tauri 2)
   src/categories.rs       default app/site classification
   src/sites.rs            website detection from titles and URLs
   src/tray.rs             menu-bar / tray countdown and controls
+  src/panel.rs            the tray panel and quick-capture windows
+  src/daily.rs            daily summary, weekly review, budget and limit heads-ups
+  src/backups.rs          weekly local backups and restore
+  src/net.rs, update.rs   opt-in network use (system curl) and the opt-in update check
   src/voice.rs            on-device dictation: microphone (cpal) → Whisper (whisper.cpp)
   src/playback.rs         "is the app in front playing video?" so watching isn't idle
   src/icons/              app icons, browser-cached favicons, optional icon download

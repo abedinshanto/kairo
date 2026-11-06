@@ -293,3 +293,87 @@
     width: 100%;
   }
 }
+
+/* ================================================================ Weekly review */
+
+/* Focus per day: one bar each, the goal as a dashed line across */
+.week-bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 100px;
+  margin-top: auto;
+}
+
+.week .summary-hero-sub {
+  margin-bottom: 22px;
+}
+
+.week-col {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.week-bar {
+  display: block;
+  width: 100%;
+  border-radius: 8px 8px 4px 4px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.week-col.hit .week-bar {
+  background: #fff;
+}
+
+.week-col.best .week-bar {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+.week-goal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1.5px dashed rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+
+.week-axis {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--on-brand-2);
+}
+
+.week-axis span {
+  flex: 1;
+  text-align: center;
+}
+
+.week-plan {
+  margin-top: 24px;
+}
+
+.week-plan .list-row .chip {
+  flex: none;
+}
+
+@media (max-width: 760px) {
+  .week-plan {
+    margin-top: 16px;
+  }
+
+  .week-bars,
+  .week-axis {
+    gap: 6px;
+  }
+}
+
+.week-plan .list-title,
+.week-plan .list-sub {
+  display: block;
+}

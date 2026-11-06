@@ -3,6 +3,13 @@
 Ideas and requests waiting for a go-ahead. Nothing here is built until it's approved.
 Sizes are relative: **S** small, **M** medium, **L** large.
 
+## Shipped in 0.4.0
+
+From the plan below: 3 menu bar panel, 4 quick capture, 5 edit your history, 6 weekly review,
+7 Tasks 2.0, 8 limits per category, 12 more sounds, 13 your data, 16 opt-in update check, and
+the small issues listed at the end (except the first, which stays open). Still open: 1, 2, 9, 10
+(the multilingual model and "for 45 minutes"), 11, 14, 15 and 17.
+
 ## Plan for 0.4 (proposed 2026-11-06)
 
 ### New features

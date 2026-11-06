@@ -1,0 +1,487 @@
+/* ================================================================ Menu bar panel & quick capture
+   Frameless, see-through windows: the page is a rounded card on nothing. */
+
+html.win-panel,
+html.win-panel body,
+html.win-capture,
+html.win-capture body {
+  background: transparent;
+  overflow: hidden;
+}
+
+.mini {
+  height: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Linux draws these windows square (no see-through), so the card fills it. */
+html.os-linux .mini {
+  border-radius: 0;
+}
+
+/* ---------------------------------------------------------------- Panel */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-timer {
+  padding: 14px 16px;
+  margin: 8px 8px 0;
+  border-radius: 14px;
+  background: var(--hero);
+  color: var(--on-brand);
+}
+
+.panel-timer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--on-brand-2);
+}
+
+.panel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.panel-dot.on {
+  background: #6ee7a8;
+  box-shadow: 0 0 0 3px rgba(110, 231, 168, 0.25);
+}
+
+.panel-dot.paused {
+  background: #ffd27a;
+}
+
+.panel-timer .circle-btn.sm {
+  width: 32px;
+  height: 32px;
+}
+
+.panel-timer .circle-btn.sm svg {
+  width: 15px;
+  height: 15px;
+}
+
+.panel-clock {
+  margin-top: 2px;
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-bar {
+  height: 5px;
+  margin-top: 10px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+
+.panel-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+  transition: width 0.5s linear;
+}
+
+.panel-intention {
+  margin: 10px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.panel-main {
+  flex: 1;
+  height: 42px;
+}
+
+.panel-main svg.fill {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.panel-controls .circle-btn {
+  width: 42px;
+  height: 42px;
+}
+
+.panel-section {
+  margin: 0 8px;
+  padding: 10px 8px;
+}
+
+.panel-section + .panel-section {
+  border-top: 1px solid var(--line);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--brand-ink);
+}
+
+.panel-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.panel-link:hover {
+  background: var(--brand-tint);
+}
+
+.panel-tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.panel-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel-task:hover,
+.panel-task:focus-visible {
+  background: var(--surface-soft);
+  outline: none;
+}
+
+.panel-task.on {
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+}
+
+.panel-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.panel-task.on .panel-num {
+  background: var(--brand);
+  color: #fff;
+}
+
+.panel-task-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-due {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ink-3);
+}
+
+.panel-due.is-today,
+.panel-due.is-soon {
+  color: var(--brand-ink);
+}
+
+.panel-due.is-overdue {
+  color: var(--danger-ink);
+}
+
+.panel-live {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.panel-empty {
+  margin: 4px 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.panel-today,
+.panel-now {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-ring {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  transform: rotate(-90deg);
+}
+
+.panel-ring circle {
+  fill: none;
+  stroke-width: 4;
+}
+
+.panel-ring .track {
+  stroke: var(--surface-sunk);
+}
+
+.panel-ring .fill {
+  stroke: var(--brand);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s var(--ease);
+}
+
+.panel-today-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.panel-today-text strong {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.panel-now-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.panel-now-text small {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.panel-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding: 6px 16px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------- Quick capture */
+
+.capture {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px 20px;
+}
+
+.capture-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.capture-input {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.capture-input::placeholder {
+  color: var(--ink-3);
+  font-weight: 550;
+}
+
+.capture-mic {
+  --level: 0;
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+  transition: background 0.2s, color 0.2s;
+}
+
+.capture-mic svg {
+  width: 20px;
+  height: 20px;
+}
+
+.capture-mic svg.fill {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.capture-mic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(255, 90, 95, 0.22);
+  opacity: 0;
+  transform: scale(calc(1 + var(--level) * 0.6));
+  transition: transform 0.12s linear, opacity 0.25s;
+  pointer-events: none;
+}
+
+.capture-mic.is-listening {
+  background: #ff5a5f;
+  color: #fff;
+}
+
+.capture-mic.is-listening::before {
+  opacity: 1;
+}
+
+.capture-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.capture-parsed,
+.capture-done {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capture-parsed strong {
+  color: var(--ink);
+}
+
+.capture-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 650;
+  color: var(--good-ink);
+}
+
+.capture-done svg {
+  width: 15px;
+  height: 15px;
+}
+
+.capture-keys {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-3);
+}
+
+.capture-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  box-shadow: inset 0 -1px 0 var(--line-strong);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.capture-keys kbd + kbd {
+  margin-left: -2px;
+}
+
+.capture-keys kbd svg {
+  width: 12px;
+  height: 12px;
+}

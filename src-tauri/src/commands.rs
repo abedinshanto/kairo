@@ -1,5 +1,5 @@
-//! IPC surface for the UI. Everything here reads or writes the local database;
-//! there are no network calls anywhere in the app.
+//! IPC surface for the UI. Everything here reads or writes the local database.
+//! Kairo's only network use is opt-in: site icons and the update check.
 
 use std::{collections::HashMap, path::PathBuf};
 
@@ -10,7 +10,7 @@ use crate::{
     db::NewSpan,
     models::{
         ActivitySpan, BucketTotals, EntityTotal, FocusSession, Phase, Rule, Settings, Task,
-        TimerSnapshot, TrackerStatus,
+        TaskPatch, TimerSnapshot, TrackerStatus,
     },
     now_ms, timer, AppState,
 };
@@ -58,6 +58,9 @@ pub fn update_settings(app: AppHandle, settings: Settings) -> CmdResult<Settings
 
     #[cfg(desktop)]
     {
+        if old.capture_shortcut != settings.capture_shortcut {
+            crate::rebind_shortcut(&app, &old.capture_shortcut, &settings.capture_shortcut);
+        }
         if old.global_shortcut != settings.global_shortcut {
             crate::rebind_shortcut(&app, &old.global_shortcut, &settings.global_shortcut);
         }
@@ -156,11 +159,11 @@ pub fn tasks_list(state: State<AppState>) -> CmdResult<Vec<Task>> {
 }
 
 #[tauri::command]
-pub fn task_create(state: State<AppState>, title: String, estimate: u32) -> CmdResult<i64> {
+pub fn task_create(state: State<AppState>, title: String, estimate: u32, due_day: Option<i64>) -> CmdResult<i64> {
     if title.trim().is_empty() {
         return Err("A task needs a title".into());
     }
-    state.db.create_task(&title, estimate, now_ms())
+    state.db.create_task(&title, estimate, due_day, now_ms())
 }
 
 /// Forget an app's or site's recorded time once, without excluding it.
@@ -180,16 +183,53 @@ pub fn tasks_reorder(app: AppHandle, ids: Vec<i64>) -> CmdResult<()> {
 }
 
 #[tauri::command]
-pub fn task_update(
-    state: State<AppState>,
-    id: i64,
-    title: Option<String>,
-    estimate: Option<u32>,
-    done: Option<bool>,
-) -> CmdResult<()> {
-    state
-        .db
-        .update_task(id, title.as_deref(), estimate, done, now_ms())
+pub fn task_update(state: State<AppState>, id: i64, patch: TaskPatch) -> CmdResult<()> {
+    state.db.update_task(id, &patch, now_ms())
+}
+
+// ------------------------------------------------------------------ editing history
+
+/// Log time Kairo couldn't see (a meeting, a call, reading on paper).
+#[tauri::command]
+pub fn span_add(app: AppHandle, start: i64, end: i64, name: String, category: String, productivity: i8) -> CmdResult<i64> {
+    if name.trim().is_empty() || end <= start {
+        return Err("Give it a name and an end after its start.".into());
+    }
+    let id = app.state::<AppState>().db.add_manual_span(start, end, &name, &category, productivity.clamp(-1, 1))?;
+    let _ = app.emit("data://changed", ());
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn span_update(app: AppHandle, id: i64, start: i64, end: i64) -> CmdResult<()> {
+    if end <= start {
+        return Err("The end has to come after the start.".into());
+    }
+    app.state::<AppState>().db.update_span_times(id, start, end)?;
+    let _ = app.emit("data://changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn span_delete(app: AppHandle, id: i64) -> CmdResult<()> {
+    app.state::<AppState>().db.delete_span(id)?;
+    let _ = app.emit("data://changed", ());
+    Ok(())
+}
+
+/// Point a focus block at another task (or none).
+#[tauri::command]
+pub fn session_update(app: AppHandle, id: i64, task_id: Option<i64>, intention: String) -> CmdResult<()> {
+    app.state::<AppState>().db.update_session_task(id, task_id, &intention)?;
+    let _ = app.emit("data://changed", ());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn session_delete(app: AppHandle, id: i64) -> CmdResult<()> {
+    app.state::<AppState>().db.delete_session(id)?;
+    let _ = app.emit("data://changed", ());
+    Ok(())
 }
 
 #[tauri::command]
@@ -406,6 +446,53 @@ pub fn export_data(state: State<AppState>, path: String, format: String) -> CmdR
     }
 }
 
+/// Merge a Kairo JSON export into this device's data.
+#[tauri::command]
+pub fn import_data(app: AppHandle, path: String) -> CmdResult<crate::db::ImportCounts> {
+    let file = std::fs::File::open(&path).map_err(|e| format!("Couldn't open the file: {e}"))?;
+    let export: crate::db::ExportFile =
+        serde_json::from_reader(std::io::BufReader::new(file)).map_err(|_| "That isn't a Kairo export.".to_string())?;
+    if export.format != "kairo-export" {
+        return Err("That isn't a Kairo export.".into());
+    }
+    let counts = app.state::<AppState>().db.import_export(&export)?;
+    let _ = app.emit("data://changed", ());
+    Ok(counts)
+}
+
+#[tauri::command]
+pub fn backups_list(state: State<AppState>) -> Vec<crate::backups::Backup> {
+    crate::backups::list(&state.db_path)
+}
+
+#[tauri::command]
+pub fn backup_now(app: AppHandle) -> CmdResult<crate::backups::Backup> {
+    crate::backups::backup_now(&app)
+}
+
+/// Put a backup back and restart Kairo with it.
+#[tauri::command]
+pub fn backup_restore(app: AppHandle, name: String) -> CmdResult<()> {
+    crate::backups::restore(&app, &name)
+}
+
+/// What the last update check found (only ever set when the user turned checks on).
+#[tauri::command]
+pub fn update_status(app: AppHandle) -> Option<crate::update::UpdateInfo> {
+    app.state::<crate::update::Updates>().found.lock().clone()
+}
+
+/// "Check now" in Settings; off the main thread, it waits on the network.
+#[tauri::command]
+pub async fn update_check(app: AppHandle) -> Option<crate::update::UpdateInfo> {
+    tauri::async_runtime::spawn_blocking(move || crate::update::check_now(&app)).await.ok().flatten()
+}
+
+#[tauri::command]
+pub fn update_open() -> CmdResult<()> {
+    crate::update::open_releases()
+}
+
 #[tauri::command]
 pub fn wipe_data(app: AppHandle) -> CmdResult<()> {
     let state = app.state::<AppState>();
@@ -414,4 +501,28 @@ pub fn wipe_data(app: AppHandle) -> CmdResult<()> {
     state.db.kv_set("usage_synced_until", &now_ms().to_string())?;
     let _ = app.emit("data://changed", ());
     Ok(())
+}
+
+/// The panel or the capture box asks to go away (Escape, or done).
+#[tauri::command]
+pub fn window_hide(window: tauri::WebviewWindow) {
+    #[cfg(desktop)]
+    crate::panel::hide(&window);
+    #[cfg(mobile)]
+    let _ = window;
+}
+
+/// "Open Kairo" from the panel or the capture box: the main window comes up.
+#[tauri::command]
+pub fn window_open_main(app: AppHandle, window: tauri::WebviewWindow, view: Option<String>) {
+    #[cfg(desktop)]
+    {
+        crate::panel::hide(&window);
+        crate::show_main_window(&app);
+        if let Some(view) = view {
+            let _ = app.emit_to("main", "window://view", view);
+        }
+    }
+    #[cfg(mobile)]
+    let _ = (app, window, view);
 }

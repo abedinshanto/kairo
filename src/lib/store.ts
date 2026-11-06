@@ -1,10 +1,11 @@
 import { create } from "zustand";
-import { soundEngine, type SoundId } from "./audio/engine";
+import { PRESETS, soundEngine, type SoundId } from "./audio/engine";
 import { backend } from "./backend";
 import { DEFAULT_SETTINGS, withDefaults } from "./defaults";
 import { iconChanged } from "./icons";
 import { fmtDuration, startOfDay } from "./time";
-import type { Phase, Settings, SoundPrefs, TimerAction, TimerSnapshot, TrackerStatus } from "./types";
+import type { Phase, Settings, SoundPrefs, TimerAction, TimerSnapshot, TrackerStatus, UpdateInfo } from "./types";
+import { isMainWindow } from "./windowRole";
 
 export type View = "home" | "stats" | "sounds" | "tasks" | "settings" | "apps" | "summary";
 export const VIEWS: View[] = ["home", "stats", "sounds", "tasks", "settings", "apps", "summary"];
@@ -29,16 +30,26 @@ interface State {
   dataVersion: number;
   toasts: Toast[];
   soundPlaying: boolean;
+  /** Bumped when a link changes the current screen's options (e.g. #/stats?r=7 on Stats), so it re-reads them. */
+  routeKey: number;
+  /** A newer Kairo, when update checks are on and found one. */
+  update: UpdateInfo | null;
+  /** When the soundscape stops by itself: a time, the end of this focus block, or never. */
+  soundStop: number | "block" | null;
   deepFocus: boolean;
   /** The day the summary view shows (local midnight); null = today. */
   summaryDay: number | null;
+  /** The summary shows the week ending on `summaryDay` instead of the day. */
+  summaryWeek: boolean;
 
   init(): Promise<void>;
-  openSummary(day?: number): void;
+  openSummary(day?: number, week?: boolean): void;
   setView(v: View): void;
   setDeepFocus(on: boolean): void;
   updateSettings(patch: Partial<Settings>): void;
   updateSound(patch: Partial<SoundPrefs>): void;
+  /** Stop the soundscape in `minutes`, at the end of the focus block, or never. */
+  setSoundStop(when: number | "block" | null): void;
   timerAction(a: TimerAction): Promise<TimerSnapshot>;
   setPhase(p: Phase): Promise<void>;
   extend(minutes: number): Promise<void>;
@@ -75,8 +86,12 @@ export const useApp = create<State>((set, get) => ({
   dataVersion: 0,
   toasts: [],
   soundPlaying: false,
+  routeKey: 0,
+  update: null,
+  soundStop: null,
   deepFocus: false,
   summaryDay: null,
+  summaryWeek: false,
 
   async init() {
     const [settings, timer, tracker] = await Promise.all([
@@ -89,15 +104,22 @@ export const useApp = create<State>((set, get) => ({
     soundEngine.setMaster(s.sound!.master);
     set({ settings: s, timer, clockSkew: Date.now() - timer.now, tracker, ready: true });
 
-    soundEngine.subscribe(() => set({ soundPlaying: soundEngine.playing }));
+    soundEngine.subscribe(() => {
+      set({ soundPlaying: soundEngine.playing });
+      // Played or stopped by hand: that wins over what a break would bring back.
+      if (!autoSound) pausedForBreak = false;
+      if (!soundEngine.playing && get().soundStop !== null) get().setSoundStop(null);
+    });
 
     backend.subscribe((e) => {
       switch (e.type) {
         case "timer":
-          onTimer(get().timer, e.snapshot);
+          if (isMainWindow) onTimer(get().timer, e.snapshot);
           set({ timer: e.snapshot, clockSkew: Date.now() - e.snapshot.now });
           break;
         case "completed": {
+          // The panel and capture box see this too; only the main window chimes and toasts.
+          if (!isMainWindow) break;
           const sound = get().settings.sound!;
           void soundEngine.chime(sound.chime, sound.chimeVolume, e.completed.next === "focus");
           // Fires before the new timer state, so `timer` still describes the block that ended.
@@ -130,10 +152,25 @@ export const useApp = create<State>((set, get) => ({
           iconChanged(e.key);
           break;
         case "summary":
-          get().openSummary();
+          if (isMainWindow) get().openSummary(undefined, e.week);
+          break;
+        case "open-view":
+          if (isMainWindow && VIEWS.includes(e.view as View)) get().setView(e.view as View);
+          break;
+        case "shown":
+          get().bumpData();
+          void get().refreshTracker();
+          break;
+        case "update":
+          set({ update: e.update });
           break;
       }
     });
+
+    backend
+      .updateStatus()
+      .then((update) => update && set({ update }))
+      .catch(() => {});
 
     // Live views refresh periodically; mobile pulls OS usage when foregrounded.
     window.setInterval(() => get().bumpData(), 60_000);
@@ -142,7 +179,7 @@ export const useApp = create<State>((set, get) => ({
         .usageSync()
         .then((n) => n > 0 && get().bumpData())
         .catch(() => {});
-    void syncUsage();
+    if (isMainWindow) void syncUsage();
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         void syncUsage();
@@ -152,7 +189,10 @@ export const useApp = create<State>((set, get) => ({
     });
     window.addEventListener("hashchange", () => {
       const v = viewFromHash();
-      if (v && v !== get().view) set({ view: v });
+      if (!v) return;
+      // Same screen, other options: it starts over from the link.
+      if (v === get().view) set((st) => ({ routeKey: st.routeKey + 1 }));
+      else set({ view: v });
     });
   },
 
@@ -161,8 +201,8 @@ export const useApp = create<State>((set, get) => ({
     set({ view, deepFocus: false });
   },
 
-  openSummary(day) {
-    set({ summaryDay: day ?? null });
+  openSummary(day, week) {
+    set({ summaryDay: day ?? null, summaryWeek: !!week });
     get().setView("summary");
     get().updateSettings({ summarySeenDay: startOfDay(day ?? Date.now()) });
   },
@@ -202,10 +242,24 @@ export const useApp = create<State>((set, get) => ({
     get().updateSettings({ sound });
   },
 
+  setSoundStop(when) {
+    window.clearTimeout(soundStopTimer);
+    if (typeof when === "number") {
+      const at = Date.now() + when * 60_000;
+      soundStopTimer = window.setTimeout(() => {
+        set({ soundStop: null });
+        if (soundEngine.playing) soundEngine.pause();
+      }, at - Date.now());
+      set({ soundStop: at });
+    } else {
+      set({ soundStop: when });
+    }
+  },
+
   async timerAction(a) {
     if (a === "start" || a === "toggle" || a === "resume") void backend.ensureNotificationPermission().catch(() => {});
     const timer = await backend.timerAction(a);
-    onTimer(get().timer, timer);
+    if (isMainWindow) onTimer(get().timer, timer);
     set({ timer, clockSkew: Date.now() - timer.now });
     return timer;
   },
@@ -243,23 +297,63 @@ export const useApp = create<State>((set, get) => ({
   },
 }));
 
-/** Couple the soundscape to the timer: auto-play on focus, fade out on breaks. */
 /** The mix was faded out for a break, so it comes back when focus resumes. */
 let pausedForBreak = false;
+/** Set while the timer (not the user) starts or stops the sound. */
+let autoSound = false;
+let soundStopTimer: number | undefined;
 
+const autoPause = () => {
+  autoSound = true;
+  soundEngine.pause();
+  autoSound = false;
+};
+
+/** Couple the soundscape to the timer: auto-play on focus, fade out on breaks. */
 function onTimer(prev: TimerSnapshot | null, next: TimerSnapshot) {
-  const sound = useApp.getState().settings.sound;
+  const { settings, soundStop, setSoundStop } = useApp.getState();
+  const sound = settings.sound;
   if (!sound) return;
   const startedFocus = next.phase === "focus" && next.status === "running" && !(prev?.phase === "focus" && prev.status === "running");
+  // A new block, not one coming back from a pause.
+  const freshBlock = startedFocus && (prev?.phase !== "focus" || prev.startedAt !== next.startedAt);
+  const leftFocus = prev?.phase === "focus" && prev.startedAt !== null && (next.phase !== "focus" || next.startedAt === null);
   const enteredBreak = next.phase !== "focus" && prev?.phase === "focus";
   if (startedFocus) {
-    if ((sound.autoPlay || pausedForBreak) && soundEngine.hasMix && !soundEngine.playing) void soundEngine.play();
+    const resume = (sound.autoPlay || pausedForBreak) && soundEngine.hasMix && !soundEngine.playing;
     pausedForBreak = false;
+    if (freshBlock && next.taskId !== null) void playTaskSound(next.taskId, resume);
+    else if (resume) void soundEngine.play();
+  }
+  if (leftFocus && soundStop === "block") {
+    setSoundStop(null);
+    if (soundEngine.playing) autoPause();
   }
   if (enteredBreak && sound.pauseOnBreak && soundEngine.playing) {
-    soundEngine.pause();
+    autoPause();
     pausedForBreak = true;
   }
+}
+
+/** A task can bring its own sound to its focus blocks: a preset, or silence. */
+async function playTaskSound(taskId: number, resume: boolean) {
+  let sound: string | null = null;
+  try {
+    sound = (await backend.tasksList()).find((t) => t.id === taskId)?.sound ?? null;
+  } catch {
+    /* no task list: just carry on */
+  }
+  const preset = PRESETS.find((p) => p.id === sound);
+  if (sound === "off") {
+    if (soundEngine.playing) autoPause();
+    return;
+  }
+  if (preset) {
+    useApp.getState().updateSound({ levels: preset.levels as Record<string, number> });
+    if (!soundEngine.playing) void soundEngine.play();
+    return;
+  }
+  if (resume) void soundEngine.play();
 }
 
 /**

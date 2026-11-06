@@ -1,15 +1,33 @@
-import { ChevronRight, FileJson, FileSpreadsheet, Monitor, Moon, Play, Settings as SettingsIcon, ShieldCheck, Sun, Trash2, Volume1, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  ArchiveRestore,
+  ChevronRight,
+  DatabaseBackup,
+  FileJson,
+  FileSpreadsheet,
+  Monitor,
+  Moon,
+  Play,
+  Search,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Sun,
+  Trash2,
+  Upload,
+  Volume1,
+  X,
+} from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { Avatar, PageTitle, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
 import { soundEngine } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
-import { entityName } from "../lib/categories";
+import { CATEGORIES, categoryLabel, entityName } from "../lib/categories";
+import { categoryIcon } from "../lib/categoryIcons";
 import { confirmDialog } from "../lib/dialogs";
 import { useMediaQuery, useQuery } from "../lib/hooks";
 import { isMac, isMobileOS, os, shortcutLabel } from "../lib/platform";
 import { useApp } from "../lib/store";
-import { fmtDuration, fmtShortDay, fmtTime } from "../lib/time";
+import { fmtDay, fmtDuration, fmtShortDay, fmtTime } from "../lib/time";
 import type { ChimeId, DataInfo, ThemePref } from "../lib/types";
 import "../styles/views/settings.css";
 
@@ -30,6 +48,10 @@ const RETENTION: { value: number; label: string }[] = [
   { value: 90, label: "90 days" },
   { value: 30, label: "30 days" },
 ];
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const CAPTURE_SHORTCUTS = ["CommandOrControl+Alt+K", "CommandOrControl+Shift+K", "CommandOrControl+Alt+Space", ""];
 
 const SHORTCUTS = ["CommandOrControl+Shift+Space", "CommandOrControl+Shift+F", "CommandOrControl+Alt+P", ""];
 
@@ -63,6 +85,7 @@ function Row({
   below,
   wide,
   off,
+  keywords,
 }: {
   label: ReactNode;
   desc?: ReactNode;
@@ -70,9 +93,11 @@ function Row({
   below?: ReactNode;
   wide?: boolean;
   off?: boolean;
+  /** Other words people might search for this by. */
+  keywords?: string;
 }) {
   return (
-    <div className={cx("set-row", wide && "wide", below !== undefined && "has-below", off && "is-off")}>
+    <div className={cx("set-row", wide && "wide", below !== undefined && "has-below", off && "is-off")} data-keywords={keywords}>
       <div className="set-text">
         <div className="set-label">{label}</div>
         {desc && <div className="set-desc">{desc}</div>}
@@ -107,9 +132,53 @@ export function SettingsView() {
   }, []);
 
   const paused = !!tracker?.pausedUntil && tracker.pausedUntil > Date.now();
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<number | null>(null);
+  const page = useRef<HTMLDivElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+
+  // Search: rows whose name, line or keywords match stay; a group whose title matches stays whole.
+  useLayoutEffect(() => {
+    const el = page.current;
+    if (!el) return;
+    const q = query.trim().toLowerCase();
+    const has = (node: Element | null | undefined, extra = "") => !!node && `${node.textContent ?? ""} ${extra}`.toLowerCase().includes(q);
+    let count = 0;
+    el.querySelectorAll<HTMLElement>(".set-group").forEach((group) => {
+      const whole = !!q && has(group.querySelector(".section-title"));
+      let shown = 0;
+      group.querySelectorAll<HTMLElement>(".set-row").forEach((row) => {
+        const hit = !q || whole || has(row.querySelector(".set-text"), row.dataset.keywords);
+        row.hidden = !hit;
+        if (hit) shown++;
+      });
+      group.hidden = !!q && !shown;
+      if (q) count += shown;
+    });
+    el.querySelectorAll<HTMLElement>(".set-top > *").forEach((card) => {
+      const hit = !q || has(card, card.dataset.keywords);
+      card.hidden = !hit;
+      if (hit && q) count++;
+    });
+    setFound(q ? count : null);
+  });
+
+  // "/" or ⌘F / Ctrl+F jumps to the search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = e.target instanceof HTMLElement && (e.target.closest("input, textarea, select") || e.target.isContentEditable);
+      if ((e.key === "/" && !typing) || (e.key.toLowerCase() === "f" && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        search.current?.focus();
+        search.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
-    <div className="settings">
+    <div className="settings" ref={page}>
       <TopBar
         left={
           <>
@@ -134,6 +203,34 @@ export function SettingsView() {
         }
       />
       <PageTitle strong="Settings," dim="make it yours." />
+
+      <div className="input-wrap set-search">
+        <Search aria-hidden />
+        <input
+          ref={search}
+          className="input pill"
+          type="search"
+          placeholder="Search settings"
+          aria-label="Search settings"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Escape" && setQuery("")}
+        />
+        {query && (
+          <button className="circle-btn sm ghost set-search-clear" aria-label="Clear search" onClick={() => setQuery("")}>
+            <X />
+          </button>
+        )}
+      </div>
+      {found === 0 && (
+        <div className="card set-nothing">
+          <Buddy mood="idle" size={64} />
+          <div>
+            <strong>Nothing matches “{query.trim()}”</strong>
+            <span>Try another word, like “sound”, “backup” or “shortcut”.</span>
+          </div>
+        </div>
+      )}
 
       <div className="set-top">
         <ProfileCard />
@@ -173,7 +270,7 @@ export function SettingsView() {
         </Group>
 
         <Group id="nudges" title="Notifications & nudges">
-          <Row label="Notifications">
+          <Row label="Notifications" keywords="alerts">
             <Switch label="Notifications" checked={s.notificationsEnabled} onChange={(v) => update({ notificationsEnabled: v })} />
           </Row>
           <Row label="Daily summary" desc="What you got done and where the time went, once a day.">
@@ -190,6 +287,18 @@ export function SettingsView() {
                 if (Number.isFinite(h) && Number.isFinite(m)) update({ dailySummaryMinutes: h * 60 + m });
               }}
             />
+          </Row>
+          <Row label="Weekly review" desc="Your week at a glance, and a moment to plan the next.">
+            <Switch label="Weekly review" checked={s.weeklyReview} onChange={(v) => update({ weeklyReview: v })} />
+          </Row>
+          <Row label="Review day" desc="At your summary time." off={!s.weeklyReview}>
+            <select className="select" value={s.weeklyReviewDay} onChange={(e) => update({ weeklyReviewDay: Number(e.target.value) })} aria-label="Weekly review day">
+              {WEEKDAYS.map((d, i) => (
+                <option key={d} value={i}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </Row>
           {desktop && (
             <Row label="Focus guard" desc="A nudge if you drift mid-block.">
@@ -252,7 +361,7 @@ export function SettingsView() {
             </Row>
           )}
           {desktop && (
-            <Row label="Idle after" desc="Stop counting when you step away. Videos and calls keep counting.">
+            <Row label="Idle after" desc="Stop counting when you step away. Videos and calls keep counting." keywords="away afk inactive">
               <select className="select" value={s.idleThresholdSeconds} onChange={(e) => update({ idleThresholdSeconds: Number(e.target.value) })} aria-label="Idle threshold">
                 {[60, 120, 180, 300, 600, 900].map((v) => (
                   <option key={v} value={v}>
@@ -276,7 +385,7 @@ export function SettingsView() {
         </Group>
 
         <Group id="system" title="Appearance & system">
-          <Row label="Theme" wide>
+          <Row label="Theme" wide keywords="dark light mode appearance colour color">
             <Segmented<ThemePref>
               label="Theme"
               value={s.theme ?? "light"}
@@ -311,14 +420,26 @@ export function SettingsView() {
             </Row>
           )}
           {desktop && (
-            <Row label="Download site icons" desc="Only for sites your browser has no icon for. Nothing else goes online.">
+            <Row label="Download site icons" desc="Only for sites your browser has no icon for. Nothing else goes online." keywords="favicon network internet">
               <Switch label="Download site icons" checked={s.downloadSiteIcons} onChange={(v) => update({ downloadSiteIcons: v })} />
             </Row>
           )}
+          {desktop && <UpdateRow />}
           {desktop && (
-            <Row label="Global shortcut" desc="Start or pause from any app.">
+            <Row label="Global shortcut" desc="Start or pause from any app." keywords="keyboard hotkey">
               <select className="select" value={s.globalShortcut} onChange={(e) => update({ globalShortcut: e.target.value })} aria-label="Global shortcut">
                 {SHORTCUTS.map((a) => (
+                  <option key={a} value={a}>
+                    {a ? shortcutLabel(a) : "Off"}
+                  </option>
+                ))}
+              </select>
+            </Row>
+          )}
+          {desktop && (
+            <Row label="Quick capture" desc="Add a task or set your focus from any app. Press it twice to talk." keywords="keyboard hotkey shortcut add task dictate">
+              <select className="select" value={s.captureShortcut} onChange={(e) => update({ captureShortcut: e.target.value })} aria-label="Quick capture shortcut">
+                {CAPTURE_SHORTCUTS.filter((a) => !a || a !== s.globalShortcut).map((a) => (
                   <option key={a} value={a}>
                     {a ? shortcutLabel(a) : "Off"}
                   </option>
@@ -329,7 +450,7 @@ export function SettingsView() {
         </Group>
 
         <Group id="goals" title="Goals">
-          <Row label="Daily focus goal">
+          <Row label="Daily focus goal" keywords="target">
             <Stepper label="daily focus goal" value={s.dailyFocusGoalMinutes} onChange={(v) => update({ dailyFocusGoalMinutes: v })} min={30} max={600} step={30} format={hm} />
           </Row>
           <Row label="Distraction budget" desc="A daily allowance for distracting apps.">
@@ -343,6 +464,7 @@ export function SettingsView() {
               format={(v) => (v ? hm(v) : "Off")}
             />
           </Row>
+          <CategoryLimits />
         </Group>
 
         <DataGroup />
@@ -365,7 +487,7 @@ function ProfileCard() {
   const update = useApp((st) => st.updateSettings);
   const clean = name.trim();
   return (
-    <section className="card set-profile" aria-labelledby="set-profile-title">
+    <section className="card set-profile" aria-labelledby="set-profile-title" data-keywords="name profile greeting">
       <div className="set-kai">
         <Buddy mood={clean ? "happy" : "idle"} size={108} />
       </div>
@@ -401,10 +523,28 @@ function PrivacyCard({ info }: { info: DataInfo | undefined }) {
     if (await backend.exportData(format)) toast({ title: "Export saved", tone: "success" });
   };
 
+  // Bring in an export from another computer (or an older copy): anything already here is skipped.
+  const importFile = async () => {
+    try {
+      const added = await backend.importData();
+      if (!added) return;
+      useApp.getState().bumpData();
+      const parts = [
+        added.activity && `${added.activity.toLocaleString()} activities`,
+        added.sessions && `${added.sessions.toLocaleString()} focus blocks`,
+        added.tasks && `${added.tasks.toLocaleString()} tasks`,
+        added.rules && `${added.rules.toLocaleString()} rules`,
+      ].filter(Boolean);
+      toast({ title: "Import done", body: parts.length ? `Added ${parts.join(", ")}.` : "Everything in it was already here.", tone: "success" });
+    } catch (err) {
+      toast({ title: "Couldn't import that file", body: String(err), tone: "warning" });
+    }
+  };
+
   const mb = info ? (info.dbBytes / 1024 / 1024).toFixed(1) : null;
 
   return (
-    <section className="card tint set-privacy" aria-labelledby="set-privacy-title">
+    <section className="card tint set-privacy" aria-labelledby="set-privacy-title" data-keywords="export import json csv data privacy storage">
       <ShieldCheck className="set-privacy-mark" aria-hidden />
 
       <div className="set-privacy-copy">
@@ -440,6 +580,11 @@ function PrivacyCard({ info }: { info: DataInfo | undefined }) {
             <FileSpreadsheet /> CSV
           </button>
         </div>
+        {!isMobileOS && (
+          <button className="btn btn-soft btn-sm" onClick={() => void importFile()} title="Merge a Kairo JSON export into this device">
+            <Upload /> Import
+          </button>
+        )}
       </div>
 
       <p className="set-stored">
@@ -478,12 +623,190 @@ function DataGroup() {
           ))}
         </select>
       </Row>
-      <Row label="Delete all data" desc="Erases activity, focus history, tasks and rules. Settings stay.">
+      {!isMobileOS && <Backups />}
+      <Row label="Delete all data" desc="Erases activity, focus history, tasks and rules. Settings stay." keywords="wipe erase reset">
         <button className="btn btn-danger btn-sm" onClick={() => void wipe()}>
           <Trash2 aria-hidden /> Delete
         </button>
       </Row>
     </Group>
+  );
+}
+
+// ------------------------------------------------------------------ Limits per category
+
+/** "Social media ≤ 30 min a day": a heads-up near the limit, and its progress in Stats. */
+function CategoryLimits() {
+  const limits = useApp((st) => st.settings.categoryLimits);
+  const update = useApp((st) => st.updateSettings);
+  const set = (id: string, minutes: number | null) => {
+    const next = { ...limits };
+    if (minutes === null) delete next[id];
+    else next[id] = minutes;
+    update({ categoryLimits: next });
+  };
+  const limited = CATEGORIES.filter((c) => limits[c.id] !== undefined);
+  const free = CATEGORIES.filter((c) => limits[c.id] === undefined);
+  return (
+    <Row
+      label="Limits per category"
+      desc={limited.length ? "A heads-up as you near each one." : "e.g. Social media 30 min a day. Kairo gives you a heads-up near it."}
+      below={
+        limited.length ? (
+          <ul className="set-limits">
+            {limited.map((c) => (
+              <li key={c.id} className="set-limit">
+                <Avatar name={c.label} productivity={c.productivity} size={32} glyph={categoryIcon(c.id)} />
+                <span className="set-limit-name">{c.label}</span>
+                <Stepper label={`${c.label} limit`} value={limits[c.id]} onChange={(v) => set(c.id, v)} min={5} max={600} step={5} format={hm} />
+                <button className="circle-btn sm ghost" aria-label={`Remove the ${c.label} limit`} title="Remove" onClick={() => set(c.id, null)}>
+                  <X />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : undefined
+      }
+    >
+      <select
+        className="select"
+        value=""
+        aria-label="Add a limit for a category"
+        onChange={(e) => {
+          const id = e.target.value;
+          if (id) set(id, CATEGORIES.find((c) => c.id === id)!.productivity < 0 ? 30 : 60);
+        }}
+        disabled={!free.length}
+      >
+        <option value="">Add a limit</option>
+        {free.map((c) => (
+          <option key={c.id} value={c.id}>
+            {categoryLabel(c.id)}
+          </option>
+        ))}
+      </select>
+    </Row>
+  );
+}
+
+// ------------------------------------------------------------------ Updates
+
+/** Off by default: Kairo only asks GitHub about new versions when you say so. */
+function UpdateRow() {
+  const on = useApp((st) => st.settings.checkUpdates);
+  const update = useApp((st) => st.update);
+  const updateSettings = useApp((st) => st.updateSettings);
+  const toast = useApp((st) => st.toast);
+  const [checking, setChecking] = useState(false);
+
+  const check = async () => {
+    setChecking(true);
+    try {
+      const found = await backend.updateCheck();
+      if (found) useApp.setState({ update: found });
+      else toast({ title: "You're up to date", body: `Kairo ${__APP_VERSION__} is the latest.`, tone: "success" });
+    } catch (err) {
+      toast({ title: "Couldn't check", body: String(err), tone: "warning" });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <Row
+      label="Check for updates"
+      desc={update ? `Kairo ${update.version} is out.` : "Once a day, asks GitHub for the latest version. Nothing about you is sent."}
+      keywords="update version upgrade release new"
+      below={
+        on || update ? (
+          <div className="set-btns">
+            {update ? (
+              <button className="btn btn-primary btn-sm" onClick={() => void backend.updateOpen()}>
+                Get Kairo {update.version}
+              </button>
+            ) : (
+              <button className="btn btn-soft btn-sm" disabled={checking} onClick={() => void check()}>
+                {checking ? "Checking…" : "Check now"}
+              </button>
+            )}
+          </div>
+        ) : undefined
+      }
+    >
+      <Switch label="Check for updates" checked={on} onChange={(v) => updateSettings({ checkUpdates: v })} />
+    </Row>
+  );
+}
+
+// ------------------------------------------------------------------ Backups
+
+const fmtSize = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+
+/** Weekly copies of the database on this device, the last four kept; any can be put back. */
+function Backups() {
+  const enabled = useApp((st) => st.settings.backups);
+  const update = useApp((st) => st.updateSettings);
+  const toast = useApp((st) => st.toast);
+  const [busy, setBusy] = useState(false);
+  const { data: list } = useQuery(() => backend.backupsList(), []);
+
+  const now = async () => {
+    setBusy(true);
+    try {
+      const b = await backend.backupNow();
+      toast({ title: "Backed up", body: `${fmtSize(b.bytes)}, kept on this device.`, tone: "success" });
+      useApp.getState().bumpData();
+    } catch (err) {
+      toast({ title: "Couldn't back up", body: String(err), tone: "warning" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restore = async (name: string, at: number) => {
+    const ok = await confirmDialog(`Put back your data as it was on ${fmtDay(at)}? Anything since then is set aside (Kairo keeps a copy), and Kairo restarts.`, {
+      title: "Restore backup",
+      okLabel: "Restore",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await backend.backupRestore(name);
+    } catch (err) {
+      toast({ title: "Couldn't restore", body: String(err), tone: "warning" });
+    }
+  };
+
+  return (
+    <>
+      <Row label="Weekly backups" desc="A copy of everything each week, on this device. The last 4 are kept.">
+        <Switch label="Weekly backups" checked={enabled} onChange={(v) => update({ backups: v })} />
+      </Row>
+      <Row
+        label="Backups"
+        desc={list?.length ? `Last one ${fmtShortDay(list[0].at)}.` : "None yet."}
+        below={
+          list?.length ? (
+            <ul className="set-backups">
+              {list.map((b) => (
+                <li key={b.name}>
+                  <DatabaseBackup aria-hidden />
+                  <span className="set-backup-when">{fmtDay(b.at)}</span>
+                  <span className="set-backup-size">{fmtSize(b.bytes)}</span>
+                  <button className="btn btn-ghost btn-sm" onClick={() => void restore(b.name, b.at)} title="Put this copy back">
+                    <ArchiveRestore /> Restore
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : undefined
+        }
+      >
+        <button className="btn btn-soft btn-sm" disabled={busy} onClick={() => void now()}>
+          Back up now
+        </button>
+      </Row>
+    </>
   );
 }
 
@@ -496,7 +819,7 @@ function ChimeRows() {
 
   return (
     <>
-      <Row label="Chime" wide>
+      <Row label="Chime" wide keywords="sound bell alarm">
         <Segmented<ChimeId>
           label="Chime sound"
           value={sound.chime}

@@ -4,8 +4,15 @@ import { useApp } from "./store";
 import type { VoiceState } from "./types";
 
 let availability: Promise<boolean> | null = null;
-/** Whether on-device dictation works here (desktop, with the model and a microphone). */
-export const voiceAvailable = () => (availability ??= backend.voiceAvailable().catch(() => false));
+/**
+ * Whether on-device dictation works here (desktop, with the model and a
+ * microphone). A "no" is asked again when `fresh`: a microphone may have been
+ * plugged in since.
+ */
+export const voiceAvailable = async (fresh = false): Promise<boolean> => {
+  if (fresh && availability && !(await availability)) availability = null;
+  return (availability ??= backend.voiceAvailable().catch(() => false));
+};
 
 /** Only one place listens at a time (Home's Kai or the task composer). */
 let owner: symbol | null = null;
@@ -23,9 +30,16 @@ export function useDictation() {
 
   useEffect(() => {
     let live = true;
-    void voiceAvailable().then((a) => live && setAvailable(a));
+    const check = (fresh: boolean) => void voiceAvailable(fresh).then((a) => live && setAvailable(a));
+    check(false);
+    // Coming back to Kairo: a microphone may have turned up in the meantime.
+    const again = () => document.visibilityState === "visible" && check(true);
+    window.addEventListener("focus", again);
+    document.addEventListener("visibilitychange", again);
     return () => {
       live = false;
+      window.removeEventListener("focus", again);
+      document.removeEventListener("visibilitychange", again);
     };
   }, []);
 

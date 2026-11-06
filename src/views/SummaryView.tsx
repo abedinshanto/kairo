@@ -1,5 +1,5 @@
-import { ArrowLeft, ArrowRightLeft, Check, ChevronLeft, ChevronRight, Hourglass, ListChecks, Sparkles, Sun, Target, Timer, TriangleAlert } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowLeft, ArrowRightLeft, CalendarDays, Check, ChevronLeft, ChevronRight, Flame, Hourglass, ListChecks, Sparkles, Sun, Target, Timer, TriangleAlert } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { ProportionBar } from "../components/charts/Bars";
 import { Avatar, PageTitle, TopBar, cx } from "../components/ui";
@@ -7,7 +7,8 @@ import { backend } from "../lib/backend";
 import { categoryLabel, entityName } from "../lib/categories";
 import { useQuery } from "../lib/hooks";
 import { useApp } from "../lib/store";
-import { addDays, fmtDay, fmtDuration, fmtHour, fmtWeekday, hourBuckets, startOfDay } from "../lib/time";
+import { dueFromWords } from "../lib/spoken";
+import { addDays, dayBuckets, fmtDay, fmtDuration, fmtHour, fmtShortDay, fmtWeekday, hourBuckets, startOfDay } from "../lib/time";
 import type { BucketTotals, EntityTotal, FocusSession, Task } from "../lib/types";
 import "../styles/views/summary.css";
 
@@ -57,6 +58,11 @@ async function loadDay(day: number): Promise<Day> {
 
 /** The end-of-day summary: what got done, where the time went, what pulled you away. */
 export function SummaryView() {
+  const week = useApp((s) => s.summaryWeek);
+  return week ? <WeekReview /> : <DaySummary />;
+}
+
+function DaySummary() {
   const summaryDay = useApp((s) => s.summaryDay);
   const openSummary = useApp((s) => s.openSummary);
   const setView = useApp((s) => s.setView);
@@ -308,6 +314,280 @@ function WhereItWent({ data }: { data: Day }) {
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------ The weekly review
+
+interface Week {
+  first: number;
+  days: { day: number; totals: BucketTotals; focusMs: number; blocks: number }[];
+  focusMs: number;
+  prevFocusMs: number;
+  active: number;
+  distracting: number;
+  entities: EntityTotal[];
+  done: Task[];
+  open: Task[];
+}
+
+async function loadWeek(last: number): Promise<Week> {
+  const first = addDays(last, -6);
+  const end = Math.min(addDays(last, 1), Date.now());
+  const [totals, entities, sessions, prevSessions, tasks] = await Promise.all([
+    backend.bucketTotals(dayBuckets(first, 7)),
+    backend.entityTotals(first, end),
+    backend.focusSessions(first, end),
+    backend.focusSessions(addDays(first, -7), first),
+    backend.tasksList(),
+  ]);
+  const focus = sessions.filter((s) => s.kind === "focus");
+  const days = totals.map((t, i) => {
+    const day = addDays(first, i);
+    const mine = focus.filter((s) => s.start >= day && s.start < addDays(day, 1));
+    return { day, totals: t, focusMs: mine.reduce((a, s) => a + s.actualMs, 0), blocks: mine.filter((s) => s.completed).length };
+  });
+  return {
+    first,
+    days,
+    focusMs: days.reduce((a, d) => a + d.focusMs, 0),
+    prevFocusMs: prevSessions.filter((s) => s.kind === "focus").reduce((a, s) => a + s.actualMs, 0),
+    active: totals.reduce((a, t) => a + activeOf(t), 0),
+    distracting: totals.reduce((a, t) => a + t.distractingMs, 0),
+    entities: entities.slice().sort((a, b) => b.ms - a.ms),
+    done: tasks.filter((t) => t.done && t.completedAt !== null && t.completedAt >= first && t.completedAt < end),
+    open: tasks.filter((t) => !t.done),
+  };
+}
+
+/** Once a week: how the focus went, the best day, what pulled you away, and next week's plan. */
+function WeekReview() {
+  const summaryDay = useApp((s) => s.summaryDay);
+  const openSummary = useApp((s) => s.openSummary);
+  const setView = useApp((s) => s.setView);
+  const goal = useApp((s) => s.settings.dailyFocusGoalMinutes) * 60_000;
+  const today = startOfDay(Date.now());
+  const last = summaryDay ?? today;
+  const { data } = useQuery(() => loadWeek(last), [last]);
+  const thisWeek = last >= today;
+  const quiet = data && data.active < QUIET_MS && data.focusMs === 0;
+
+  return (
+    <div className="summary week">
+      <TopBar
+        left={
+          <>
+            <button className="circle-btn" aria-label="Back to Home" title="Back" onClick={() => setView("home")}>
+              <ArrowLeft />
+            </button>
+            <div style={{ minWidth: 0 }}>
+              <div className="who-name">Weekly review</div>
+              <div className="who-sub">
+                {fmtShortDay(addDays(last, -6))} – {fmtShortDay(last)}
+              </div>
+            </div>
+          </>
+        }
+        right={
+          <>
+            <button className="circle-btn" aria-label="Previous week" onClick={() => openSummary(addDays(last, -7), true)}>
+              <ChevronLeft />
+            </button>
+            <button className="circle-btn" aria-label="Next week" disabled={thisWeek} onClick={() => openSummary(Math.min(today, addDays(last, 7)), true)}>
+              <ChevronRight />
+            </button>
+          </>
+        }
+      />
+      <header className="summary-head">
+        <PageTitle strong={thisWeek ? "Your week," : "That week,"} dim="wrapped." />
+      </header>
+
+      {!data ? null : quiet ? (
+        <div className="card summary-empty">
+          <Buddy mood="sleep" size={96} />
+          <strong>A quiet week</strong>
+          <span>Nothing was tracked or timed in these seven days.</span>
+        </div>
+      ) : (
+        <>
+          <div className="summary-grid">
+            <WeekHero data={data} goal={goal} />
+            <WeekTiles data={data} goal={goal} />
+            <WeekNotes data={data} goal={goal} />
+            <TopOfWeek data={data} />
+          </div>
+          <PlanNextWeek tasks={data.open} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function WeekHero({ data, goal }: { data: Week; goal: number }) {
+  const change = data.prevFocusMs >= 10 * 60_000 ? Math.round(((data.focusMs - data.prevFocusMs) / data.prevFocusMs) * 100) : null;
+  const max = Math.max(goal, ...data.days.map((d) => d.focusMs), 1);
+  const best = data.days.reduce((a, d) => (d.focusMs > a.focusMs ? d : a), data.days[0]);
+  return (
+    <section className="card hero summary-hero" aria-label="Focus this week">
+      <div className="summary-hero-top">
+        <span className="summary-hero-label">Focused this week</span>
+        <Buddy mood={change !== null && change >= 0 ? "happy" : "idle"} tone="cloud" size={72} />
+      </div>
+      <div className="summary-hero-number">{fmtDuration(data.focusMs)}</div>
+      <div className="summary-hero-sub">
+        {change === null ? "Your first week with focus blocks" : change === 0 ? "The same as the week before" : `${Math.abs(change)}% ${change > 0 ? "more" : "less"} than the week before`}
+        {best.focusMs > 0 && ` · best day ${fmtWeekday(best.day)}`}
+      </div>
+      <div className="week-bars" role="img" aria-label={data.days.map((d) => `${fmtWeekday(d.day)} ${fmtDuration(d.focusMs)}`).join(", ")}>
+        {goal > 0 && <span className="week-goal" style={{ bottom: `${(goal / max) * 100}%` }} title={`Goal ${fmtDuration(goal)}`} />}
+        {data.days.map((d) => (
+          <span key={d.day} className={cx("week-col", goal > 0 && d.focusMs >= goal && "hit", d === best && d.focusMs > 0 && "best")} title={`${fmtDay(d.day)} · ${fmtDuration(d.focusMs)}`}>
+            <span className="week-bar" style={{ height: `${Math.max(d.focusMs ? 4 : 0, (d.focusMs / max) * 100)}%` }} />
+          </span>
+        ))}
+      </div>
+      <div className="week-axis" aria-hidden>
+        {data.days.map((d) => (
+          <span key={d.day}>{fmtWeekday(d.day).slice(0, 1)}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WeekTiles({ data, goal }: { data: Week; goal: number }) {
+  const budget = useApp((s) => s.settings.distractionBudgetMinutes) * 60_000;
+  const hit = goal ? data.days.filter((d) => d.focusMs >= goal).length : 0;
+  const blocks = data.days.reduce((a, d) => a + d.blocks, 0);
+  const activeDays = Math.max(1, data.days.filter((d) => activeOf(d.totals) >= QUIET_MS).length);
+  const overBudget = budget ? data.days.filter((d) => d.totals.distractingMs > budget).length : 0;
+  return (
+    <div className="summary-tiles">
+      <Tile icon={<Target />} tone="brand-solid" value={goal ? `${hit} of 7` : "—"} label="Goal days" meter={goal ? { ratio: hit / 7 } : undefined} foot={goal ? `Days with ${fmtDuration(goal)} of focus` : "No daily goal set"} />
+      <Tile icon={<Check />} tone="good" value={String(data.done.length)} label={data.done.length === 1 ? "Task done" : "Tasks done"} foot={`${blocks} focus block${blocks === 1 ? "" : "s"}`} />
+      <Tile
+        icon={<Hourglass />}
+        tone="warn"
+        value={fmtDuration(data.distracting / activeDays)}
+        label="Distracting a day"
+        foot={budget ? (overBudget ? `Over budget on ${overBudget} day${overBudget === 1 ? "" : "s"}` : "Within budget every day") : "No budget set"}
+      />
+      <Tile icon={<Sun />} tone="gray" value={fmtDuration(data.active / activeDays)} label="On screen a day" foot={`${activeDays} active day${activeDays === 1 ? "" : "s"}`} />
+    </div>
+  );
+}
+
+function WeekNotes({ data, goal }: { data: Week; goal: number }) {
+  const notes: Note[] = [];
+  const best = data.days.reduce((a, d) => (d.focusMs > a.focusMs ? d : a), data.days[0]);
+  if (best.focusMs > 0) notes.push({ tone: "good", icon: <Flame />, text: `${fmtWeekday(best.day)} was your best day: ${fmtDuration(best.focusMs)} of focus.` });
+  const hit = goal ? data.days.filter((d) => d.focusMs >= goal).length : 0;
+  if (goal) notes.push(hit >= 5 ? { tone: "good", icon: <Target />, text: `You hit your focus goal on ${hit} days. Steady.` } : { tone: "brand", icon: <Target />, text: hit ? `Focus goal reached on ${hit} day${hit === 1 ? "" : "s"}. One more next week?` : "No goal days this week. A smaller goal can get the streak going." });
+  const leaks = data.entities.filter((e) => e.productivity < 0).slice(0, 2);
+  if (leaks.length) {
+    const names = leaks.map((e) => `${entityName(e.kind, e.key, e.name)} (${fmtDuration(e.ms)})`).join(" and ");
+    notes.push({ tone: "warn", icon: <TriangleAlert />, text: `What pulled you away most: ${names}.` });
+  }
+  if (data.done.length) notes.push({ tone: "good", icon: <Check />, text: data.done.length === 1 ? `Finished “${data.done[0].title}”.` : `Finished ${data.done.length} tasks, including “${data.done[0].title}”.` });
+  const quietDays = data.days.filter((d) => d.focusMs === 0 && activeOf(d.totals) >= 60 * 60_000).length;
+  if (quietDays >= 2) notes.push({ tone: "brand", icon: <Timer />, text: `${quietDays} busy days had no focus blocks. Even one makes a difference.` });
+  return (
+    <section className="card">
+      <div className="card-title">How the week went</div>
+      <ul className="summary-notes">
+        {notes.map((n) => (
+          <li key={n.text}>
+            <span className={cx("icon-tile round", n.tone)}>{n.icon}</span>
+            <span>{n.text}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function TopOfWeek({ data }: { data: Week }) {
+  const top = data.entities.slice(0, 5);
+  const max = top[0]?.ms ?? 1;
+  return (
+    <section className="card">
+      <div className="card-title">Where the week went</div>
+      <ul className="list summary-where">
+        {top.map((e) => {
+          const name = entityName(e.kind, e.key, e.name);
+          return (
+            <li key={`${e.kind}:${e.key}`} className="list-row">
+              <Avatar name={name} productivity={e.productivity} size={38} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />
+              <span className="list-main">
+                <span className="list-title">{name}</span>
+                <span className={cx("summary-bar", e.productivity > 0 ? "productive" : e.productivity < 0 ? "distracting" : "neutral")}>
+                  <span style={{ width: `${Math.max(4, (e.ms / max) * 100)}%` }} />
+                </span>
+              </span>
+              <span className="list-trail">
+                {fmtDuration(e.ms)}
+                <small>{categoryLabel(e.category)}</small>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** Next week's plan: give open tasks a day, or head to the full list. */
+function PlanNextWeek({ tasks }: { tasks: Task[] }) {
+  const setView = useApp((s) => s.setView);
+  const monday = dueFromWords("next week") ?? addDays(startOfDay(Date.now()), 7);
+  const [planned, setPlanned] = useState<Record<number, boolean>>({});
+  const shown = tasks.slice(0, 5);
+  const plan = async (t: Task) => {
+    const on = !planned[t.id];
+    setPlanned((p) => ({ ...p, [t.id]: on }));
+    try {
+      await backend.taskUpdate(t.id, { dueDay: on ? monday : null });
+      useApp.getState().bumpData();
+    } catch (err) {
+      setPlanned((p) => ({ ...p, [t.id]: !on }));
+      useApp.getState().toast({ title: "Couldn't plan the task", body: String(err), tone: "warning" });
+    }
+  };
+  return (
+    <section className="card week-plan" aria-labelledby="week-plan-title">
+      <div className="card-head">
+        <div>
+          <h2 className="card-title" id="week-plan-title">
+            Plan next week
+          </h2>
+          <div className="card-sub">{shown.length ? `Put what matters on Monday, ${fmtShortDay(monday)}.` : "Nothing open. Add what's coming up."}</div>
+        </div>
+        <button className="btn btn-soft btn-sm" onClick={() => setView("tasks")}>
+          <ListChecks /> All tasks
+        </button>
+      </div>
+      {shown.length > 0 && (
+        <ul className="list">
+          {shown.map((t) => {
+            const on = planned[t.id] ?? t.dueDay === monday;
+            return (
+              <li key={t.id} className="list-row">
+                <span className="list-main">
+                  <span className="list-title">{t.title}</span>
+                  <span className="list-sub">
+                    {t.pomodoros} of {t.estimate} blocks{t.dueDay !== null && t.dueDay !== monday ? ` · due ${fmtShortDay(t.dueDay)}` : ""}
+                  </span>
+                </span>
+                <button className={cx("chip", on && "active")} aria-pressed={on} onClick={() => void plan(t)}>
+                  <CalendarDays /> {on ? "Monday" : "Add to Monday"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

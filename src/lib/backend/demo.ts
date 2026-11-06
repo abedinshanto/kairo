@@ -2,9 +2,11 @@
 // sample data and an in-memory timer. Nothing is persisted except UI prefs.
 
 import { DEFAULT_SETTINGS, withDefaults } from "../defaults";
+import { startOfDay } from "../time";
 import type {
   ActivitySpan,
   Backend,
+  Backup,
   BackendEvent,
   BucketTotals,
   CurrentActivity,
@@ -50,14 +52,23 @@ export function createDemoBackend(): Backend {
   let settings = loadPrefs();
   const seed = generateSeed(98);
   const spans: SeedSpan[] = seed.spans;
+  let nextSpanId = 1;
+  for (const s of spans) s.id = nextSpanId++;
   const sessions: FocusSession[] = seed.sessions;
   let nextSessionId = sessions.length + 1;
-  let tasks = SEED_TASKS.map((t) => ({ ...t, createdAt: Date.now() - 6 * 86_400_000 }));
+  const today = startOfDay(Date.now());
+  // A couple of due dates, so Today and the badges have something to show.
+  const SEED_DUE: Record<number, number> = { 1: today, 3: startOfDay(today + 36 * 3_600_000) };
+  let tasks = SEED_TASKS.map((t) => ({ ...t, createdAt: Date.now() - 6 * 86_400_000, dueDay: (SEED_DUE[t.id] ?? null) as number | null }));
   let nextTaskId = tasks.length + 1;
   const rules = new Map<string, Rule>();
   let autostart = false;
   const timer = new TimerEngine(settings);
   const listeners = new Set<(e: BackendEvent) => void>();
+  const backups: Backup[] = [7, 14, 21].map((days) => {
+    const at = Date.now() - days * 86_400_000;
+    return { name: `kairo-${new Date(at).toISOString().slice(0, 10)}.db`, at, bytes: 2_400_000 - days * 18_000 };
+  });
   let pausedUntil: number | null = null;
   let current: CurrentActivity | null = null;
 
@@ -144,7 +155,7 @@ export function createDemoBackend(): Backend {
       last.end = now;
     } else {
       const start = last && now - last.end < 60_000 ? last.end : now - 20_000;
-      spans.push({ ...app, start, end: now, cont: false });
+      spans.push({ ...app, id: nextSpanId++, start, end: now, cont: false });
       const eff = effective(spans[spans.length - 1]);
       current = { appId: app.appId, appName: app.appName, domain: app.domain, ...eff, since: start };
       emit({ type: "current", current });
@@ -166,8 +177,30 @@ export function createDemoBackend(): Backend {
     current,
   });
 
+  /** Like the core: time logged or moved into a window replaces what was there. */
+  const makeRoom = (start: number, end: number, keep?: number) => {
+    for (let i = spans.length - 1; i >= 0; i--) {
+      const s = spans[i];
+      if (s.id === keep || s.end <= start || s.start >= end) continue;
+      if (s.start >= start && s.end <= end) spans.splice(i, 1);
+      else if (s.start < start && s.end > end) {
+        insertSpan({ ...s, id: nextSpanId++, start: end, cont: true });
+        s.end = start;
+      } else if (s.start < start) s.end = start;
+      else s.start = end;
+    }
+    spans.sort((a, b) => a.start - b.start);
+  };
+
+  /** Keeps `spans` sorted by start, which the range lookups rely on. */
+  const insertSpan = (s: SeedSpan) => {
+    let i = spans.length;
+    while (i > 0 && spans[i - 1].start > s.start) i--;
+    spans.splice(i, 0, s);
+  };
+
   const toSpan = (s: SeedSpan, i: number, from: number, to: number): ActivitySpan => ({
-    id: i,
+    id: s.id ?? -i,
     start: Math.max(s.start, from),
     end: Math.min(s.end, to),
     appId: s.appId,
@@ -289,12 +322,23 @@ export function createDemoBackend(): Backend {
     },
 
     tasksList: async () => taskStats(),
-    async taskCreate(title, estimate) {
+    async taskCreate(title, estimate, dueDay) {
       const id = nextTaskId++;
-      tasks.unshift({ id, title: title.trim(), estimate, done: false, createdAt: Date.now(), completedAt: null });
+      tasks.unshift({
+        id,
+        title: title.trim(),
+        estimate,
+        done: false,
+        createdAt: Date.now(),
+        completedAt: null,
+        dueDay: dueDay ?? null,
+        notes: null,
+        sound: null,
+      });
       return id;
     },
     async taskUpdate(id, patch) {
+      const clean = (v: string | null | undefined) => (v == null ? null : v.trim() || null);
       tasks = tasks.map((t) =>
         t.id === id
           ? {
@@ -302,6 +346,9 @@ export function createDemoBackend(): Backend {
               ...(patch.title !== undefined ? { title: patch.title } : {}),
               ...(patch.estimate !== undefined ? { estimate: patch.estimate } : {}),
               ...(patch.done !== undefined ? { done: patch.done, completedAt: patch.done ? Date.now() : null } : {}),
+              ...(patch.dueDay !== undefined ? { dueDay: patch.dueDay } : {}),
+              ...(patch.notes !== undefined ? { notes: clean(patch.notes)?.slice(0, 500) ?? null } : {}),
+              ...(patch.sound !== undefined ? { sound: clean(patch.sound) } : {}),
             }
           : t,
       );
@@ -322,6 +369,77 @@ export function createDemoBackend(): Backend {
         if (kind === "site" ? s.domain === key : s.appId === key && !s.domain) spans.splice(i, 1);
       }
       emit({ type: "data" });
+    },
+
+    async spanAdd({ start, end, name, category, productivity }) {
+      if (!(end > start)) throw new Error("The end has to be after the start");
+      makeRoom(start, end);
+      const id = nextSpanId++;
+      insertSpan({ id, start, end, appId: `manual:${name.trim().toLowerCase()}`, appName: name.trim(), domain: null, category, productivity, source: "manual", cont: false });
+      emit({ type: "data" });
+      return id;
+    },
+    async spanUpdate(id, start, end) {
+      if (!(end > start)) throw new Error("The end has to be after the start");
+      const i = spans.findIndex((s) => s.id === id);
+      if (i < 0) throw new Error("That entry is gone");
+      makeRoom(start, end, id);
+      const at = spans.findIndex((x) => x.id === id);
+      const [s] = spans.splice(at, 1);
+      insertSpan({ ...s, start, end });
+      emit({ type: "data" });
+    },
+    async spanDelete(id) {
+      const i = spans.findIndex((s) => s.id === id);
+      if (i >= 0) spans.splice(i, 1);
+      emit({ type: "data" });
+    },
+    async sessionUpdate(id, taskId, intention) {
+      const s = sessions.find((x) => x.id === id);
+      if (s) {
+        s.taskId = taskId;
+        s.intention = intention.trim().slice(0, 200);
+      }
+      emit({ type: "data" });
+    },
+    async sessionDelete(id) {
+      const i = sessions.findIndex((x) => x.id === id);
+      if (i >= 0) sessions.splice(i, 1);
+      emit({ type: "data" });
+    },
+
+    importData: async () => {
+      throw new Error("Importing works in the Kairo app; the browser preview only has sample data.");
+    },
+    backupsList: async () => [...backups].sort((a, b) => b.at - a.at),
+    async backupNow() {
+      const b = { name: `kairo-${new Date().toISOString().slice(0, 10)}.db`, at: Date.now(), bytes: spans.length * 160 };
+      const same = backups.findIndex((x) => x.name === b.name);
+      if (same >= 0) backups.splice(same, 1);
+      backups.push(b);
+      backups.sort((a, c) => c.at - a.at);
+      backups.length = Math.min(backups.length, 4);
+      return b;
+    },
+    backupRestore: async () => {
+      throw new Error("Restoring works in the Kairo app; the browser preview only has sample data.");
+    },
+
+    // The preview opens the small windows as pages (#panel, #capture).
+    async windowHide() {
+      window.location.hash = "#/home";
+      window.location.reload();
+    },
+    async windowOpenMain(view) {
+      window.location.hash = `#/${view ?? "home"}`;
+      window.location.reload();
+    },
+
+    // The preview never goes online; it's always "up to date".
+    updateStatus: async () => null,
+    updateCheck: async () => null,
+    async updateOpen() {
+      window.open("https://github.com/abedinshanto/kairo/releases/latest", "_blank", "noopener");
     },
 
     voiceAvailable: async () => true,

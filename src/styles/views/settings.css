@@ -377,6 +377,44 @@
   fill: currentColor;
 }
 
+/* Limits per category */
+.set-limits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.set-limit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.set-limit-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.set-limit .circle-btn.ghost {
+  background: transparent;
+  color: var(--ink-3);
+  box-shadow: none;
+}
+
+.set-limit .circle-btn.ghost:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
 /* Excluded apps */
 .set-chips {
   display: flex;
@@ -636,5 +674,111 @@
   width: 130px;
   height: 44px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- Search */
+
+.settings [hidden] {
+  display: none !important;
+}
+
+.set-search {
+  max-width: 520px;
+  margin: 20px 0 24px;
+}
+
+@media (max-width: 760px) {
+  .set-search {
+    max-width: none;
+    margin: 16px 0 20px;
+  }
+}
+
+.set-search .input {
+  padding-right: 52px;
+  box-shadow: var(--shadow-sm);
+}
+
+.set-search .input:focus {
+  box-shadow: var(--shadow-sm), inset 0 0 0 1.5px var(--brand), 0 0 0 4px var(--brand-tint-2);
+}
+
+.set-search .input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.set-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.set-search .circle-btn.ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-3);
+}
+
+.set-nothing {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+
+.set-nothing > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.set-nothing strong {
+  font-size: 16px;
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- Backups */
+
+.set-backups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.set-backups li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.set-backups li > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--ink-3);
+}
+
+.set-backup-when {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.set-backup-size {
+  color: var(--ink-2);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

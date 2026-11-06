@@ -1,13 +1,6 @@
 //! Only when the user turns on "Download site icons": ask a site for its own
 //! icon, for sites no browser on this computer has saved one for. The request
 //! goes to that site alone, over HTTPS, and carries nothing about the user.
-//! It uses the system's curl (part of macOS, Windows 10 and later, and nearly
-//! every Linux system), so Kairo itself ships no networking code.
-
-use std::{
-    io::Read,
-    process::{Command, Stdio},
-};
 
 use tauri::Url;
 
@@ -59,47 +52,8 @@ pub fn fetch(domain: &str) -> Option<Icon> {
     })
 }
 
-/// GET over HTTPS (redirects too), giving up on anything slow or too big.
 fn get(url: &str, max: usize) -> Option<Vec<u8>> {
-    let max_s = max.to_string();
-    let mut cmd = Command::new("curl");
-    cmd.args([
-        "--silent",
-        "--fail",
-        "--location",
-        "--max-redirs",
-        "5",
-        "--max-time",
-        "8",
-        "--proto",
-        "=https",
-        "--proto-redir",
-        "=https",
-        "--max-filesize",
-        &max_s,
-        "--user-agent",
-        USER_AGENT,
-        url,
-    ])
-    .stdin(Stdio::null())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::null());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        // No console window flashing up.
-        cmd.creation_flags(0x0800_0000);
-    }
-    let mut child = cmd.spawn().ok()?;
-    let mut body = Vec::new();
-    let read = child.stdout.take()?.take(max as u64 + 1).read_to_end(&mut body);
-    if read.is_err() || body.len() > max {
-        let _ = child.kill();
-        let _ = child.wait();
-        return None;
-    }
-    let ok = child.wait().ok()?.success();
-    (ok && !body.is_empty()).then_some(body)
+    crate::net::get(url, max, USER_AGENT, None)
 }
 
 /// Icons a page links to, best first: big PNGs (apple-touch-icon), SVGs, then

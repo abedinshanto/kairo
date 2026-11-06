@@ -25,6 +25,8 @@ export interface Settings {
   autoStartFocus: boolean;
   dailyFocusGoalMinutes: number;
   distractionBudgetMinutes: number;
+  /** Daily minutes allowed per category ("social" → 30). */
+  categoryLimits: Record<string, number>;
   trackingEnabled: boolean;
   idleThresholdSeconds: number;
   storeWindowTitles: boolean;
@@ -41,9 +43,18 @@ export interface Settings {
   dailySummary: boolean;
   /** Local time of day for the summary, in minutes after midnight. */
   dailySummaryMinutes: number;
+  /** A look back at the week, on `weeklyReviewDay` (0 = Sunday) at the summary time. */
+  weeklyReview: boolean;
+  weeklyReviewDay: number;
+  /** Weekly local backups of the database (the last 4 kept). */
+  backups: boolean;
+  /** Ask GitHub once a day whether a newer Kairo is out. */
+  checkUpdates: boolean;
   showTimerInTray: boolean;
   hideDockIcon: boolean;
   globalShortcut: string;
+  /** Opens quick capture from anywhere ("" = off). */
+  captureShortcut: string;
   /** Ask a site for its icon when the browser hasn't saved one. */
   downloadSiteIcons: boolean;
   // UI-owned (stored in the core's `extra` map)
@@ -138,6 +149,11 @@ export interface Task {
   completedAt: number | null;
   pomodoros: number;
   focusMs: number;
+  /** Local midnight of the day it's due. */
+  dueDay: number | null;
+  notes: string | null;
+  /** Soundscape preset to play while focusing on it. */
+  sound: string | null;
 }
 
 export interface Rule {
@@ -176,6 +192,31 @@ export interface TaskPatch {
   title?: string;
   estimate?: number;
   done?: boolean;
+  /** null clears it. */
+  dueDay?: number | null;
+  notes?: string | null;
+  sound?: string | null;
+}
+
+/** A weekly copy of the database, kept on this device. */
+export interface Backup {
+  name: string;
+  at: number;
+  bytes: number;
+}
+
+/** A newer Kairo on GitHub (only known when update checks are on). */
+export interface UpdateInfo {
+  version: string;
+  url: string;
+}
+
+/** What an import added (anything already here is skipped). */
+export interface ImportCounts {
+  activity: number;
+  sessions: number;
+  tasks: number;
+  rules: number;
 }
 
 export type BackendEvent =
@@ -187,11 +228,19 @@ export type BackendEvent =
   | { type: "data" }
   /** The core just stored a real icon for this app. */
   | { type: "icon"; key: string }
-  /** The user tapped the end-of-day summary notification. */
-  | { type: "summary" }
+  /** The user tapped the end-of-day (or weekly) summary notification. */
+  | { type: "summary"; week?: boolean }
   /** Dictation: listening (with the microphone level) or turning speech into text. */
   | { type: "voice"; state: VoiceState }
-  | { type: "voice-level"; level: number };
+  | { type: "voice-level"; level: number }
+  /** The daily check found a newer Kairo. */
+  | { type: "update"; update: UpdateInfo }
+  /** This (small) window was just shown. */
+  | { type: "shown" }
+  /** The capture shortcut was pressed again while the box was open. */
+  | { type: "capture-again" }
+  /** The main window was asked to show a view. */
+  | { type: "open-view"; view: string };
 
 export type VoiceState = "listening" | "thinking";
 
@@ -214,11 +263,38 @@ export interface Backend {
   appIcons(keys: string[]): Promise<Record<string, string>>;
 
   tasksList(): Promise<Task[]>;
-  taskCreate(title: string, estimate: number): Promise<number>;
+  taskCreate(title: string, estimate: number, dueDay?: number | null): Promise<number>;
   taskUpdate(id: number, patch: TaskPatch): Promise<void>;
   taskDelete(id: number): Promise<void>;
   /** Priority order of tasks, highest first (task 1, 2, 3…). */
   tasksReorder(ids: number[]): Promise<void>;
+
+  /** Log time Kairo couldn't see, with the category chosen for it. */
+  spanAdd(entry: { start: number; end: number; name: string; category: string; productivity: Productivity }): Promise<number>;
+  spanUpdate(id: number, start: number, end: number): Promise<void>;
+  spanDelete(id: number): Promise<void>;
+  /** Point a focus block at another task (or none). */
+  sessionUpdate(id: number, taskId: number | null, intention: string): Promise<void>;
+  sessionDelete(id: number): Promise<void>;
+
+  /** Pick a Kairo JSON export and merge it into this device's data (null: cancelled). */
+  importData(): Promise<ImportCounts | null>;
+  backupsList(): Promise<Backup[]>;
+  backupNow(): Promise<Backup>;
+  /** Put a backup back; Kairo restarts with it. */
+  backupRestore(name: string): Promise<void>;
+
+  /** The newer release the last check found, if any. */
+  updateStatus(): Promise<UpdateInfo | null>;
+  /** Ask GitHub now (only offered when checks are on). */
+  updateCheck(): Promise<UpdateInfo | null>;
+  /** Open the releases page in the browser. */
+  updateOpen(): Promise<void>;
+
+  /** The panel or capture box hides itself. */
+  windowHide(): Promise<void>;
+  /** Bring up the main window (on a view), from the panel or capture box. */
+  windowOpenMain(view?: string): Promise<void>;
 
   /** Forget an app's own time, or a site's, once (tracking carries on). */
   deleteHistory(kind: "app" | "site", key: string): Promise<void>;

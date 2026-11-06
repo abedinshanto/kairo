@@ -46,6 +46,8 @@ export function DayTimeline({
   hours,
   labelLeft = COLUMN_PAD.left,
   axis = true,
+  onSpan,
+  onSession,
 }: {
   day: number;
   spans: ActivitySpan[];
@@ -54,6 +56,9 @@ export function DayTimeline({
   labelLeft?: number;
   /** Hour labels under the lanes; turn off when an hour-aligned chart below carries them. */
   axis?: boolean;
+  /** Click (or Enter on) an entry or a focus block, e.g. to edit it. */
+  onSpan?: (span: ActivitySpan) => void;
+  onSession?: (session: FocusSession) => void;
 }) {
   const [ref, { width }] = useSize<HTMLDivElement>();
   const [tip, setTip] = useState<TipData | null>(null);
@@ -118,21 +123,35 @@ export function DayTimeline({
     note: `${fmtTime(hit.start)} – ${fmtTime(hit.end)}${hit.domain ? ` · in ${hit.appName}` : ""}`,
   });
 
-  const onMove = (e: MouseEvent<SVGSVGElement>) => {
+  /** What's under the pointer: a focus block below the lane, else an entry. */
+  const hitAt = (e: MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
     const t = x0 + ((px - labelLeft) / plotW) * span;
-    setKb(null);
     if (py > LANE_H + 2) {
       const s = focus.find((f) => t >= f.start - 60_000 && t <= f.end + 60_000);
-      if (s) return setTip(focusTip(s, px));
+      if (s) return { px, session: s };
     }
     const hit =
       spans.find((s) => t >= s.start && t <= s.end) ??
       spans.find((s) => Math.abs(x(s.start) - px) < 3);
-    setTip(hit ? spanTip(hit, px) : null);
+    return { px, span: hit };
   };
+
+  const onMove = (e: MouseEvent<SVGSVGElement>) => {
+    setKb(null);
+    const hit = hitAt(e);
+    if (hit.session) return setTip(focusTip(hit.session, hit.px));
+    setTip(hit.span ? spanTip(hit.span, hit.px) : null);
+  };
+
+  const onClick = (e: MouseEvent<SVGSVGElement>) => {
+    const hit = hitAt(e);
+    if (hit.session) onSession?.(hit.session);
+    else if (hit.span) onSpan?.(hit.span);
+  };
+  const editable = !!(onSpan || onSession);
 
   // Arrow keys walk the spans (or, after ↓, the focus blocks); the tooltip follows.
   const show = (lane: 0 | 1, i: number) => {
@@ -161,6 +180,9 @@ export function DayTimeline({
     else if (e.key === "Escape") {
       setKb(null);
       setTip(null);
+    } else if ((e.key === "Enter" || e.key === " ") && kb) {
+      if (kb.lane === 0 && spans[kb.i]) onSpan?.(spans[kb.i]);
+      else if (kb.lane === 1 && focus[kb.i]) onSession?.(focus[kb.i]);
     } else return;
     e.preventDefault();
   };
@@ -180,12 +202,14 @@ export function DayTimeline({
           width={width}
           height={height}
           role="img"
-          aria-label={`${caption}. Use the arrow keys to read each stretch; down for focus blocks.`}
+          aria-label={`${caption}. Use the arrow keys to read each stretch; down for focus blocks.${editable ? " Enter to edit." : ""}`}
           tabIndex={0}
           onKeyDown={onKey}
           onBlur={clear}
           onMouseMove={onMove}
           onMouseLeave={clear}
+          onClick={editable ? onClick : undefined}
+          style={editable ? { cursor: "pointer" } : undefined}
         >
           <defs>
             <clipPath id={clipId}>

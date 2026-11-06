@@ -8,6 +8,7 @@ import type {
   TimerCompleted,
   TimerSnapshot,
   TrackerStatus,
+  UpdateInfo,
   VoiceState,
 } from "../types";
 
@@ -34,8 +35,32 @@ export function createNativeBackend(): Backend {
     focusSessions: (from, to) => invoke("focus_sessions", { from, to }),
 
     tasksList: () => invoke("tasks_list"),
-    taskCreate: (title, estimate) => invoke("task_create", { title, estimate }),
-    taskUpdate: (id, patch) => invoke("task_update", { id, ...patch }),
+    taskCreate: (title, estimate, dueDay) => invoke("task_create", { title, estimate, dueDay: dueDay ?? null }),
+    taskUpdate: (id, patch) => invoke("task_update", { id, patch }),
+    spanAdd: (entry) => invoke("span_add", entry),
+    spanUpdate: (id, start, end) => invoke("span_update", { id, start, end }),
+    spanDelete: (id) => invoke("span_delete", { id }),
+    sessionUpdate: (id, taskId, intention) => invoke("session_update", { id, taskId, intention }),
+    sessionDelete: (id) => invoke("session_delete", { id }),
+    async importData() {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const path = await open({
+        title: "Import a Kairo export",
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Kairo export (JSON)", extensions: ["json"] }],
+      });
+      if (!path) return null;
+      return invoke("import_data", { path });
+    },
+    backupsList: () => invoke("backups_list"),
+    backupNow: () => invoke("backup_now"),
+    backupRestore: (name) => invoke("backup_restore", { name }),
+    updateStatus: () => invoke("update_status"),
+    updateCheck: () => invoke("update_check"),
+    updateOpen: () => invoke("update_open"),
+    windowHide: () => invoke("window_hide"),
+    windowOpenMain: (view) => invoke("window_open_main", { view: view ?? null }),
     taskDelete: (id) => invoke("task_delete", { id }),
     tasksReorder: (ids) => invoke("tasks_reorder", { ids }),
     deleteHistory: (kind, key) => invoke("delete_history", { kind, key }),
@@ -109,6 +134,11 @@ export function createNativeBackend(): Backend {
         listen("data://changed", () => listener({ type: "data" })),
         listen<string>("icons://changed", (e) => listener({ type: "icon", key: e.payload })),
         listen("summary://open", () => listener({ type: "summary" })),
+        listen("summary://week", () => listener({ type: "summary", week: true })),
+        listen<UpdateInfo>("update://available", (e) => listener({ type: "update", update: e.payload })),
+        listen("window://shown", () => listener({ type: "shown" })),
+        listen("capture://again", () => listener({ type: "capture-again" })),
+        listen<string>("window://view", (e) => listener({ type: "open-view", view: e.payload })),
         listen<VoiceState>("voice://state", (e) => listener({ type: "voice", state: e.payload })),
         listen<number>("voice://level", (e) => listener({ type: "voice-level", level: e.payload })),
       ];

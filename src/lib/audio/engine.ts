@@ -3,13 +3,16 @@
 import type { ChimeId } from "../types";
 import {
   fillBrown,
+  fillCafe,
   fillFire,
   fillForest,
+  fillLibrary,
   fillNight,
   fillOcean,
   fillPink,
   fillRain,
   fillStream,
+  fillTrain,
   fillWhite,
   renderLoop,
   renderThunder,
@@ -17,12 +20,13 @@ import {
 
 export type SoundId =
   | "rain" | "thunder" | "ocean" | "wind" | "fire" | "stream" | "forest" | "night"
+  | "cafe" | "train" | "library"
   | "white" | "pink" | "brown" | "binaural" | "drone";
 
 export interface SoundMeta {
   id: SoundId;
   label: string;
-  group: "Nature" | "Noise" | "Tones";
+  group: "Nature" | "Places" | "Noise" | "Tones";
   hint: string;
 }
 
@@ -35,6 +39,9 @@ export const SOUNDS: SoundMeta[] = [
   { id: "stream", label: "Stream", group: "Nature", hint: "Bubbling brook" },
   { id: "forest", label: "Forest", group: "Nature", hint: "Birdsong and leaves" },
   { id: "night", label: "Night", group: "Nature", hint: "Crickets at dusk" },
+  { id: "cafe", label: "Café", group: "Places", hint: "Murmured chatter, cups and spoons" },
+  { id: "train", label: "Train", group: "Places", hint: "Wheels on the rails, a gentle sway" },
+  { id: "library", label: "Library", group: "Places", hint: "Turning pages, quiet footsteps" },
   { id: "white", label: "White noise", group: "Noise", hint: "Masks speech and clatter" },
   { id: "pink", label: "Pink noise", group: "Noise", hint: "Balanced and soft" },
   { id: "brown", label: "Brown noise", group: "Noise", hint: "Deep, warm rumble" },
@@ -56,11 +63,15 @@ export const PRESETS: Preset[] = [
   { id: "forest", name: "Forest Morning", description: "Birdsong by a stream", levels: { forest: 0.6, stream: 0.4, wind: 0.15 } },
   { id: "campfire", name: "Campfire", description: "Crackling fire, crickets", levels: { fire: 0.7, night: 0.45 } },
   { id: "flow", name: "Flow State", description: "Binaural beats over a soft pad", levels: { binaural: 0.45, drone: 0.4, pink: 0.15 } },
+  { id: "corner-cafe", name: "Corner Café", description: "Chatter and cups, rain outside", levels: { cafe: 0.65, rain: 0.25 } },
+  { id: "night-train", name: "Night Train", description: "Rails, rain on the window", levels: { train: 0.7, rain: 0.3 } },
+  { id: "library", name: "Reading Room", description: "Pages, footsteps, soft air", levels: { library: 0.75, brown: 0.2 } },
 ];
 
 /** Per-sound loudness trim so presets sit at similar volumes. */
 const TRIM: Record<SoundId, number> = {
   rain: 0.9, thunder: 1.1, ocean: 0.9, wind: 0.9, fire: 1.0, stream: 0.6, forest: 1.1, night: 1.0,
+  cafe: 0.75, train: 0.55, library: 1.3,
   white: 0.35, pink: 0.7, brown: 0.8, binaural: 0.22, drone: 0.5,
 };
 
@@ -233,6 +244,16 @@ class SoundEngine {
         break;
       case "night":
         playBuffer(this.loop("night", 14, fillNight));
+        break;
+      case "cafe":
+        playBuffer(this.loop("cafe", 24, fillCafe));
+        break;
+      // A whole number of seconds: the rail joints come once a second.
+      case "train":
+        playBuffer(this.loop("train", 16, fillTrain));
+        break;
+      case "library":
+        playBuffer(this.loop("library", 40, fillLibrary));
         break;
       case "wind": {
         const filter = ctx.createBiquadFilter();

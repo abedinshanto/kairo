@@ -15,14 +15,36 @@ use crate::{
     categories,
     models::{
         ActivitySpan, BucketTotals, EntityTotal, FocusSession, Phase, Rule, Settings, Task,
+        TaskPatch,
     },
 };
+
+/// A Kairo JSON export, as read back in. Unknown or missing parts are skipped.
+#[derive(Debug, Default, serde::Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct ExportFile {
+    pub format: String,
+    pub activity: Vec<ActivitySpan>,
+    pub sessions: Vec<FocusSession>,
+    pub tasks: Vec<Task>,
+    pub rules: Vec<Rule>,
+}
+
+/// What an import added (anything already here is skipped).
+#[derive(Debug, Default, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportCounts {
+    pub activity: usize,
+    pub sessions: usize,
+    pub tasks: usize,
+    pub rules: usize,
+}
 
 /// Spans are split so none is longer than this; range queries rely on it to
 /// stay index-bound (`start_ts >= from - MAX_SPAN_MS`).
 pub const MAX_SPAN_MS: i64 = 60 * 60 * 1000;
 
-const SCHEMA_VERSION: i32 = 3;
+const SCHEMA_VERSION: i32 = 4;
 
 pub type DbResult<T> = Result<T, String>;
 
@@ -142,6 +164,15 @@ impl Db {
                     WHERE t2.created_at > tasks.created_at
                        OR (t2.created_at = tasks.created_at AND t2.id > tasks.id)
                  );",
+            )
+            .map_err(e)?;
+        }
+        if version < 4 {
+            // Tasks 2.0: a due day, a note, a soundscape to focus with.
+            conn.execute_batch(
+                "ALTER TABLE tasks ADD COLUMN due_day INTEGER;
+                 ALTER TABLE tasks ADD COLUMN notes TEXT;
+                 ALTER TABLE tasks ADD COLUMN sound TEXT;",
             )
             .map_err(e)?;
         }
@@ -661,6 +692,18 @@ impl Db {
             .map_err(e)
     }
 
+    pub fn focus_ms_between(&self, from: i64, to: i64) -> DbResult<i64> {
+        self.conn
+            .lock()
+            .query_row(
+                "SELECT COALESCE(SUM(actual_ms), 0) FROM sessions
+                 WHERE kind = 'focus' AND start_ts >= ?1 AND start_ts < ?2",
+                [from, to],
+                |r| r.get(0),
+            )
+            .map_err(e)
+    }
+
     // ---------------------------------------------------------------- tasks
 
     pub fn tasks(&self) -> DbResult<Vec<Task>> {
@@ -669,7 +712,7 @@ impl Db {
             .prepare_cached(
                 "SELECT t.id, t.title, t.estimate, t.done, t.created_at, t.completed_at,
                         COALESCE(SUM(CASE WHEN s.completed = 1 THEN 1 ELSE 0 END), 0),
-                        COALESCE(SUM(s.actual_ms), 0)
+                        COALESCE(SUM(s.actual_ms), 0), t.due_day, t.notes, t.sound
                  FROM tasks t
                  LEFT JOIN sessions s ON s.task_id = t.id AND s.kind = 'focus'
                  GROUP BY t.id
@@ -689,6 +732,9 @@ impl Db {
                     completed_at: r.get(5)?,
                     pomodoros: r.get(6)?,
                     focus_ms: r.get(7)?,
+                    due_day: r.get(8)?,
+                    notes: r.get(9)?,
+                    sound: r.get(10)?,
                 })
             })
             .map_err(e)?
@@ -698,15 +744,112 @@ impl Db {
     }
 
     /// New tasks go to the top of the list (task 1).
-    pub fn create_task(&self, title: &str, estimate: u32, now: i64) -> DbResult<i64> {
+    pub fn create_task(&self, title: &str, estimate: u32, due_day: Option<i64>, now: i64) -> DbResult<i64> {
         let conn = self.conn.lock();
         conn.execute(
-            "INSERT INTO tasks(title, estimate, created_at, position)
-             VALUES(?1, ?2, ?3, (SELECT COALESCE(MIN(position), 0) - 1 FROM tasks))",
-            params![title.trim(), estimate.clamp(1, 20), now],
+            "INSERT INTO tasks(title, estimate, created_at, position, due_day)
+             VALUES(?1, ?2, ?3, (SELECT COALESCE(MIN(position), 0) - 1 FROM tasks), ?4)",
+            params![title.trim(), estimate.clamp(1, 20), now, due_day],
         )
         .map_err(e)?;
         Ok(conn.last_insert_rowid())
+    }
+
+    // ---------------------------------------------------------------- editing history
+
+    /// Time Kairo couldn't see (a meeting, a call, reading on paper), with the
+    /// category the user chose. Grouped under its name like an app.
+    /// Log time Kairo couldn't see. It replaces whatever was recorded in that
+    /// window, so nothing is counted twice.
+    pub fn add_manual_span(&self, start: i64, end: i64, name: &str, category: &str, productivity: i8) -> DbResult<i64> {
+        let name = name.trim();
+        let app_id = format!("manual:{}", name.to_lowercase());
+        let mut conn = self.conn.lock();
+        let tx = conn.transaction().map_err(e)?;
+        make_room(&tx, start, end, None)?;
+        // In pieces of at most an hour, like tracked time (range queries rely on it).
+        let mut first = None;
+        let mut at = start;
+        while at < end {
+            let to = (at + MAX_SPAN_MS).min(end);
+            tx.execute(
+                "INSERT INTO activity(start_ts, end_ts, app_id, app_name, domain, title, category,
+                                      productivity, source, cont)
+                 VALUES(?1, ?2, ?3, ?4, NULL, NULL, ?5, ?6, 'manual', ?7)",
+                params![at, to, app_id, name, category, productivity, first.is_some() as i64],
+            )
+            .map_err(e)?;
+            first.get_or_insert(tx.last_insert_rowid());
+            at = to;
+        }
+        tx.commit().map_err(e)?;
+        Ok(first.unwrap_or_default())
+    }
+
+    /// Move a recorded span's start and end (the caller keeps start < end). Like
+    /// logged time, the edited span wins over anything it now overlaps.
+    pub fn update_span_times(&self, id: i64, start: i64, end: i64) -> DbResult<()> {
+        let mut conn = self.conn.lock();
+        let tx = conn.transaction().map_err(e)?;
+        make_room(&tx, start, end, Some(id))?;
+        let first_end = (start + MAX_SPAN_MS).min(end);
+        tx.execute(
+            "UPDATE activity SET start_ts = ?1, end_ts = ?2 WHERE id = ?3",
+            params![start, first_end, id],
+        )
+        .map_err(e)?;
+        // Longer than an hour: the rest follows in hour-long pieces.
+        let mut at = first_end;
+        while at < end {
+            let to = (at + MAX_SPAN_MS).min(end);
+            tx.execute(
+                "INSERT INTO activity(start_ts, end_ts, app_id, app_name, domain, title, category,
+                                      productivity, source, cont)
+                 SELECT ?1, ?2, app_id, app_name, domain, title, category, productivity, source, 1
+                 FROM activity WHERE id = ?3",
+                params![at, to, id],
+            )
+            .map_err(e)?;
+            at = to;
+        }
+        tx.commit().map_err(e)
+    }
+
+    /// Point a focus block at another task (or none), and its intention with it.
+    pub fn update_session_task(&self, id: i64, task_id: Option<i64>, intention: &str) -> DbResult<()> {
+        self.conn
+            .lock()
+            .execute(
+                "UPDATE sessions SET task_id = ?1, intention = ?2 WHERE id = ?3",
+                params![task_id, intention.trim(), id],
+            )
+            .map(|_| ())
+            .map_err(e)
+    }
+
+    pub fn delete_session(&self, id: i64) -> DbResult<()> {
+        self.conn
+            .lock()
+            .execute("DELETE FROM sessions WHERE id = ?1", [id])
+            .map(|_| ())
+            .map_err(e)
+    }
+
+    /// Time per category in `[from, to)`, clipped to the range.
+    pub fn category_totals(&self, from: i64, to: i64) -> DbResult<Vec<(String, i64)>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn
+            .prepare_cached(
+                "SELECT category, SUM(MIN(end_ts, ?2) - MAX(start_ts, ?1)) FROM activity
+                 WHERE end_ts > ?1 AND start_ts < ?2 GROUP BY category",
+            )
+            .map_err(e)?;
+        let rows = stmt
+            .query_map(params![from, to], |r| Ok((r.get(0)?, r.get(1)?)))
+            .map_err(e)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(e);
+        rows
     }
 
     /// Put tasks in this order (highest priority first); others keep their place.
@@ -724,32 +867,38 @@ impl Db {
         tx.commit().map_err(e)
     }
 
-    pub fn update_task(
-        &self,
-        id: i64,
-        title: Option<&str>,
-        estimate: Option<u32>,
-        done: Option<bool>,
-        now: i64,
-    ) -> DbResult<()> {
+    pub fn update_task(&self, id: i64, patch: &TaskPatch, now: i64) -> DbResult<()> {
         let conn = self.conn.lock();
-        if let Some(title) = title {
+        if let Some(title) = patch.title.as_deref() {
             conn.execute("UPDATE tasks SET title = ?1 WHERE id = ?2", params![title.trim(), id])
                 .map_err(e)?;
         }
-        if let Some(estimate) = estimate {
+        if let Some(estimate) = patch.estimate {
             conn.execute(
                 "UPDATE tasks SET estimate = ?1 WHERE id = ?2",
                 params![estimate.clamp(1, 20), id],
             )
             .map_err(e)?;
         }
-        if let Some(done) = done {
+        if let Some(done) = patch.done {
             conn.execute(
                 "UPDATE tasks SET done = ?1, completed_at = ?2 WHERE id = ?3",
                 params![done as i64, if done { Some(now) } else { None }, id],
             )
             .map_err(e)?;
+        }
+        if let Some(due) = patch.due_day {
+            conn.execute("UPDATE tasks SET due_day = ?1 WHERE id = ?2", params![due, id])
+                .map_err(e)?;
+        }
+        if let Some(notes) = &patch.notes {
+            let notes = notes.as_deref().map(str::trim).filter(|n| !n.is_empty());
+            conn.execute("UPDATE tasks SET notes = ?1 WHERE id = ?2", params![notes, id])
+                .map_err(e)?;
+        }
+        if let Some(sound) = &patch.sound {
+            conn.execute("UPDATE tasks SET sound = ?1 WHERE id = ?2", params![sound, id])
+                .map_err(e)?;
         }
         Ok(())
     }
@@ -838,6 +987,118 @@ impl Db {
         w.flush().map_err(e)
     }
 
+    /// Merge an export into this database: records already here (same start
+    /// and app, same block, same task) are skipped, existing rules win.
+    pub fn import_export(&self, file: &ExportFile) -> DbResult<ImportCounts> {
+        let mut counts = ImportCounts::default();
+        let mut conn = self.conn.lock();
+        let tx = conn.transaction().map_err(e)?;
+        // Tasks first, so blocks can point at their new ids.
+        let mut task_ids: HashMap<i64, i64> = HashMap::new();
+        let mut next_position: i64 = tx
+            .query_row("SELECT COALESCE(MAX(position), 0) + 1 FROM tasks", [], |r| r.get(0))
+            .map_err(e)?;
+        for t in &file.tasks {
+            let existing: Option<i64> = tx
+                .query_row(
+                    "SELECT id FROM tasks WHERE title = ?1 AND created_at = ?2",
+                    params![t.title, t.created_at],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(e)?;
+            let id = match existing {
+                Some(id) => id,
+                None => {
+                    tx.execute(
+                        "INSERT INTO tasks(title, estimate, done, created_at, completed_at, position,
+                                           due_day, notes, sound)
+                         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                        params![
+                            t.title, t.estimate.clamp(1, 20), t.done as i64, t.created_at, t.completed_at,
+                            next_position, t.due_day, t.notes, t.sound
+                        ],
+                    )
+                    .map_err(e)?;
+                    next_position += 1;
+                    counts.tasks += 1;
+                    tx.last_insert_rowid()
+                }
+            };
+            task_ids.insert(t.id, id);
+        }
+        for s in &file.sessions {
+            let seen: Option<i64> = tx
+                .query_row(
+                    "SELECT 1 FROM sessions WHERE start_ts = ?1 AND kind = ?2",
+                    params![s.start, s.kind.as_str()],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(e)?;
+            if seen.is_some() {
+                continue;
+            }
+            tx.execute(
+                "INSERT INTO sessions(kind, start_ts, end_ts, planned_ms, actual_ms, completed, intention,
+                                      task_id, interruptions)
+                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    s.kind.as_str(), s.start, s.end, s.planned_ms, s.actual_ms, s.completed as i64,
+                    s.intention, s.task_id.and_then(|id| task_ids.get(&id).copied()), s.interruptions
+                ],
+            )
+            .map_err(e)?;
+            counts.sessions += 1;
+        }
+        {
+            let mut seen = tx
+                .prepare("SELECT 1 FROM activity WHERE start_ts = ?1 AND app_id = ?2 AND domain IS ?3")
+                .map_err(e)?;
+            let mut insert = tx
+                .prepare(
+                    "INSERT INTO activity(start_ts, end_ts, app_id, app_name, domain, title, category,
+                                          productivity, source, cont)
+                     VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0)",
+                )
+                .map_err(e)?;
+            for a in &file.activity {
+                if a.end <= a.start || seen.exists(params![a.start, a.app_id, a.domain]).map_err(e)? {
+                    continue;
+                }
+                insert
+                    .execute(params![
+                        a.start, a.end, a.app_id, a.app_name, a.domain, a.title, a.category, a.productivity,
+                        a.source
+                    ])
+                    .map_err(e)?;
+                counts.activity += 1;
+            }
+        }
+        for r in &file.rules {
+            counts.rules += tx
+                .execute(
+                    "INSERT OR IGNORE INTO rules(key, category, productivity) VALUES(?1, ?2, ?3)",
+                    params![r.key, r.category, r.productivity],
+                )
+                .map_err(e)?;
+        }
+        tx.commit().map_err(e)?;
+        drop(conn);
+        self.reload_rules()?;
+        Ok(counts)
+    }
+
+    /// A consistent copy of the whole database at `path` (SQLite's VACUUM INTO).
+    pub fn backup_to(&self, path: &Path) -> DbResult<()> {
+        let _ = std::fs::remove_file(path);
+        self.conn
+            .lock()
+            .execute("VACUUM INTO ?1", [path.to_string_lossy()])
+            .map(|_| ())
+            .map_err(e)
+    }
+
     pub fn export_csv(&self, path: &Path) -> DbResult<()> {
         let mut w = BufWriter::new(File::create(path).map_err(e)?);
         writeln!(w, "start,end,duration_seconds,app,app_id,website,category,productivity,source,title")
@@ -889,6 +1150,37 @@ fn csv_field(s: &str) -> String {
     } else {
         s
     }
+}
+
+/// Clear [start, end) of recorded activity (but `keep`): spans inside go, spans
+/// across an edge are trimmed, and one covering the whole window is split in two.
+fn make_room(conn: &Connection, start: i64, end: i64, keep: Option<i64>) -> DbResult<()> {
+    let keep = keep.unwrap_or(-1);
+    // Split a span that covers the whole window: its tail becomes a new span.
+    conn.execute(
+        "INSERT INTO activity(start_ts, end_ts, app_id, app_name, domain, title, category,
+                              productivity, source, cont)
+         SELECT ?2, end_ts, app_id, app_name, domain, title, category, productivity, source, 1
+         FROM activity WHERE start_ts < ?1 AND end_ts > ?2 AND id != ?3",
+        params![start, end, keep],
+    )
+    .map_err(e)?;
+    conn.execute(
+        "UPDATE activity SET end_ts = ?1 WHERE start_ts < ?1 AND end_ts > ?1 AND id != ?2",
+        params![start, keep],
+    )
+    .map_err(e)?;
+    conn.execute(
+        "UPDATE activity SET start_ts = ?1 WHERE start_ts < ?1 AND end_ts > ?1 AND start_ts >= ?2 AND id != ?3",
+        params![end, start, keep],
+    )
+    .map_err(e)?;
+    conn.execute(
+        "DELETE FROM activity WHERE start_ts >= ?1 AND end_ts <= ?2 AND id != ?3",
+        params![start, end, keep],
+    )
+    .map_err(e)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -944,17 +1236,43 @@ mod tests {
     #[test]
     fn new_tasks_go_on_top_and_reordering_sticks() {
         let db = Db::in_memory().unwrap();
-        let a = db.create_task("Write docs", 2, 1).unwrap();
-        let b = db.create_task("Fix login", 1, 2).unwrap();
-        let c = db.create_task("Plan sprint", 1, 3).unwrap();
+        let a = db.create_task("Write docs", 2, None, 1).unwrap();
+        let b = db.create_task("Fix login", 1, None, 2).unwrap();
+        let c = db.create_task("Plan sprint", 1, None, 3).unwrap();
         let order = |db: &Db| db.tasks().unwrap().into_iter().map(|t| t.id).collect::<Vec<_>>();
         assert_eq!(order(&db), vec![c, b, a], "newest first");
         db.reorder_tasks(&[a, c, b]).unwrap();
         assert_eq!(order(&db), vec![a, c, b]);
-        let d = db.create_task("Reply to Sam", 1, 4).unwrap();
+        let d = db.create_task("Reply to Sam", 1, Some(86_400_000), 4).unwrap();
         assert_eq!(order(&db), vec![d, a, c, b], "a new task becomes task 1");
-        db.update_task(a, None, None, Some(true), 5).unwrap();
+        db.update_task(a, &TaskPatch { done: Some(true), ..Default::default() }, 5).unwrap();
+        assert_eq!(db.tasks().unwrap()[0].due_day, Some(86_400_000));
+        db.update_task(d, &TaskPatch { due_day: Some(None), notes: Some(Some("  Ask about the invoice ".into())), ..Default::default() }, 6).unwrap();
+        let first = &db.tasks().unwrap()[0];
+        assert_eq!((first.due_day, first.notes.as_deref()), (None, Some("Ask about the invoice")));
         assert_eq!(order(&db), vec![d, c, b, a], "done tasks go last");
+    }
+
+    #[test]
+    fn an_export_imports_once() {
+        let a = Db::in_memory().unwrap();
+        let task = a.create_task("Write docs", 2, Some(86_400_000), 1).unwrap();
+        a.insert_span(&span(0, 60_000, "code", None)).unwrap();
+        a.insert_span(&span(60_000, 120_000, "google chrome", Some("github.com"))).unwrap();
+        a.insert_session(Phase::Focus, 0, 1_500_000, 1_500_000, 1_500_000, true, "Docs", Some(task), 0).unwrap();
+        a.set_rule(&Rule { key: "app:code".into(), category: "writing".into(), productivity: 1 }).unwrap();
+        let path = std::env::temp_dir().join(format!("kairo-export-test-{}.json", std::process::id()));
+        a.export_json(&path, &Settings::default(), 5).unwrap();
+        let file: ExportFile = serde_json::from_reader(std::fs::File::open(&path).unwrap()).unwrap();
+        let _ = std::fs::remove_file(&path);
+
+        let b = Db::in_memory().unwrap();
+        let first = b.import_export(&file).unwrap();
+        assert_eq!((first.activity, first.sessions, first.tasks, first.rules), (2, 1, 1, 1));
+        let again = b.import_export(&file).unwrap();
+        assert_eq!((again.activity, again.sessions, again.tasks, again.rules), (0, 0, 0, 0), "duplicates are skipped");
+        let imported = &b.tasks().unwrap()[0];
+        assert_eq!((imported.title.as_str(), imported.due_day, imported.pomodoros), ("Write docs", Some(86_400_000), 1), "the block follows its task");
     }
 
     #[test]
@@ -966,6 +1284,43 @@ mod tests {
         assert_eq!(db.delete_entity_history("site", "reanime.to").unwrap(), 1);
         assert_eq!(db.delete_entity_history("app", "google chrome").unwrap(), 1, "the browser's own time only");
         assert_eq!(db.site_domains(10).unwrap(), vec!["chatgpt.com".to_string()]);
+    }
+
+    #[test]
+    fn logged_time_replaces_what_was_tracked_then() {
+        let db = Db::in_memory().unwrap();
+        // 0–100 one long span, 100–200 three short ones, 200–300 one more.
+        db.insert_span(&span(0, 100_000, "slack", None)).unwrap();
+        db.insert_span(&span(100_000, 130_000, "figma", None)).unwrap();
+        db.insert_span(&span(130_000, 160_000, "notion", None)).unwrap();
+        db.insert_span(&span(160_000, 200_000, "figma", None)).unwrap();
+        db.insert_span(&span(200_000, 300_000, "safari", None)).unwrap();
+        // A meeting from 50 to 250: trims Slack and Safari, drops the three between.
+        db.add_manual_span(50_000, 250_000, "Design review", "meetings", 0).unwrap();
+        let spans = db.spans(0, 400_000).unwrap();
+        let got: Vec<(i64, i64, &str)> = spans.iter().map(|s| (s.start, s.end, s.app_id.as_str())).collect();
+        assert_eq!(
+            got,
+            vec![(0, 50_000, "slack"), (50_000, 250_000, "manual:design review"), (250_000, 300_000, "safari")]
+        );
+        // Inside one span: it splits around the new one.
+        db.add_manual_span(10_000, 20_000, "Call", "meetings", 0).unwrap();
+        let spans = db.spans(0, 50_000).unwrap();
+        let got: Vec<(i64, i64, &str)> = spans.iter().map(|s| (s.start, s.end, s.app_id.as_str())).collect();
+        assert_eq!(got, vec![(0, 10_000, "slack"), (10_000, 20_000, "manual:call"), (20_000, 50_000, "slack")]);
+        // Stretching an entry pushes its neighbour back, and leaves itself alone.
+        let call = spans[1].id;
+        db.update_span_times(call, 10_000, 30_000).unwrap();
+        let spans = db.spans(0, 50_000).unwrap();
+        let got: Vec<(i64, i64)> = spans.iter().map(|s| (s.start, s.end)).collect();
+        assert_eq!(got, vec![(0, 10_000), (10_000, 30_000), (30_000, 50_000)]);
+        // A long meeting is stored in hour-long pieces, so hourly totals find it.
+        let day = 10 * MAX_SPAN_MS;
+        db.add_manual_span(day, day + 2 * MAX_SPAN_MS + 60_000, "Workshop", "meetings", 0).unwrap();
+        let pieces = db.spans(day, day + 3 * MAX_SPAN_MS).unwrap();
+        assert_eq!(pieces.len(), 3);
+        let late = db.spans(day + 2 * MAX_SPAN_MS, day + 3 * MAX_SPAN_MS).unwrap();
+        assert_eq!(late.len(), 1, "the last piece is found from its own hour");
     }
 
     #[test]

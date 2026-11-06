@@ -1,8 +1,9 @@
-import { AppWindow, Check, ChevronLeft, ChevronRight, Download, Flame, Hourglass, ScrollText, Sparkles, Timer } from "lucide-react";
+import { AppWindow, Check, ChevronLeft, ChevronRight, Download, Flame, Hourglass, Plus, ScrollText, Sparkles, Timer } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { BarList, ProportionBar, type BarRow } from "../components/charts/Bars";
 import { EntitySheet, ruleKey } from "../components/EntitySheet";
+import { AddTimeSheet, runAround, SessionSheet, SpanSheet, type SpanRun } from "../components/HistoryEdit";
 import { Legend, SERIES, FOCUS_COLOR } from "../components/charts/common";
 import { activeHourRange, DayTimeline } from "../components/charts/DayTimeline";
 import { Heatmap } from "../components/charts/Heatmap";
@@ -228,6 +229,7 @@ export function StatsView() {
   const [range, setRange] = useState<Range>(initial.range);
   const [day, setDay] = useState(initial.day);
   const [sheet, setSheet] = useState<SheetKind>(null);
+  const [editBlock, setEditBlock] = useState<FocusSession | null>(null);
   const settings = useApp((s) => s.settings);
   const setView = useApp((s) => s.setView);
   const openSummary = useApp((s) => s.openSummary);
@@ -336,8 +338,12 @@ export function StatsView() {
                 </button>
               </div>
             )}
-            {dayMode && (
+            {dayMode ? (
               <button className="circle-btn" aria-label="Daily summary" title="Daily summary" onClick={() => openSummary(day)}>
+                <ScrollText />
+              </button>
+            ) : (
+              <button className="circle-btn" aria-label="Weekly review" title="Weekly review" onClick={() => openSummary(today, true)}>
                 <ScrollText />
               </button>
             )}
@@ -410,8 +416,13 @@ export function StatsView() {
             setSheet(null);
             setView("home");
           }}
+          onEdit={(s) => {
+            setSheet(null);
+            setEditBlock(s);
+          }}
         />
       )}
+      {editBlock && <SessionSheet session={editBlock} onClose={() => setEditBlock(null)} />}
     </div>
   );
 }
@@ -670,6 +681,11 @@ const PARTIAL_SWATCH = "radial-gradient(circle, var(--surface) 0 2.6px, var(--fo
 
 function DayChart({ model }: { model: Model }) {
   const [mode, setMode] = useState<"hours" | "timeline">("hours");
+  // Fixing the record: an entry, a focus block, time Kairo couldn't see, or an app's category.
+  const [entry, setEntry] = useState<SpanRun | null>(null);
+  const [block, setBlock] = useState<FocusSession | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [entity, setEntity] = useState<EntityTotal | null>(null);
   const isToday = model.first === startOfDay(Date.now());
   const [h0, h1] = useMemo(() => activeHourRange(model.spans, model.first, 10), [model.spans, model.first]);
   const spans = model.spans;
@@ -691,17 +707,22 @@ function DayChart({ model }: { model: Model }) {
             {spans.length ? `${fmtTime(spans[0].start)} – ${fmtTime(spans[spans.length - 1].end)} · ${fmtDuration(model.now.activeMs)} active` : "Nothing recorded yet"}
           </div>
         </div>
-        {spans.length > 0 && (
-          <Segmented
-            label="Chart"
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: "hours", label: "Hours" },
-              { value: "timeline", label: "Timeline" },
-            ]}
-          />
-        )}
+        <div className="stats-chart-tools">
+          {spans.length > 0 && (
+            <Segmented
+              label="Chart"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "hours", label: "Hours" },
+                { value: "timeline", label: "Timeline" },
+              ]}
+            />
+          )}
+          <button className="circle-btn sm soft" aria-label="Add time Kairo couldn't see" title="Add time (a meeting, a call…)" onClick={() => setAdding(true)}>
+            <Plus />
+          </button>
+        </div>
       </div>
       {spans.length ? (
         mode === "hours" ? (
@@ -726,8 +747,16 @@ function DayChart({ model }: { model: Model }) {
           <>
             <Legend className="stats-legend" items={timelineLegend} />
             <div className="stats-timeline">
-              <DayTimeline day={model.first} spans={spans} sessions={model.sessions} hours={[h0, h1]} />
+              <DayTimeline
+                day={model.first}
+                spans={spans}
+                sessions={model.sessions}
+                hours={[h0, h1]}
+                onSpan={(s) => setEntry(runAround(spans, s))}
+                onSession={setBlock}
+              />
             </div>
+            <p className="stats-timeline-hint">Click an entry or a focus block to change it.</p>
           </>
         )
       ) : (
@@ -736,6 +765,26 @@ function DayChart({ model }: { model: Model }) {
           <strong>{isToday ? "Nothing tracked yet today" : "No activity recorded"}</strong>
           {isToday ? "Kairo quietly notes which app is in front. Check back in a bit." : "Kairo wasn't running, or you were away."}
         </div>
+      )}
+      {entry && (
+        <SpanSheet
+          run={entry}
+          onClose={() => setEntry(null)}
+          onCategory={(e) => {
+            setEntry(null);
+            setEntity(e);
+          }}
+        />
+      )}
+      {block && <SessionSheet session={block} onClose={() => setBlock(null)} />}
+      {adding && <AddTimeSheet day={model.first} onClose={() => setAdding(false)} />}
+      {entity && (
+        <EntitySheet
+          e={model.entities.find((x) => x.key === entity.key && x.kind === entity.kind) ?? entity}
+          total={model.entities.reduce((a, x) => a + x.ms, 0)}
+          period={isToday ? "today" : "that day"}
+          onClose={() => setEntity(null)}
+        />
       )}
     </section>
   );
@@ -818,6 +867,7 @@ type AppsMode = "apps" | "categories" | "leaks";
 function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () => void }) {
   const [mode, setMode] = useState<AppsMode>("apps");
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const limits = useApp((s) => s.settings.categoryLimits);
   const entities = model?.entities ?? [];
   const activeDays = Math.max(1, model?.now.activeDays ?? 1);
   const dayMode = !model || model.range === "day";
@@ -841,16 +891,33 @@ function TopApps({ model, onSeeAll }: { model: Model | undefined; onSeeAll: () =
       };
     });
   } else if (mode === "categories") {
-    rows = categoryTotals(entities)
-      .slice(0, 5)
-      .map((c) => ({
+    const all = categoryTotals(entities);
+    // The top five, plus any category with a limit, so its progress is always in view.
+    const shown = all.filter((c, i) => i < 5 || limits[c.category] !== undefined);
+    rows = shown.map((c) => {
+      const limit = limits[c.category];
+      const perDay = c.ms / (dayMode ? 1 : activeDays);
+      const over = limit !== undefined && perDay > limit * MINUTE;
+      return {
         key: c.category,
         icon: <Avatar name={categoryLabel(c.category)} productivity={c.productivity} size={42} glyph={categoryIcon(c.category)} />,
         label: categoryLabel(c.category),
-        sub: PRODUCTIVITY_LABEL[Math.sign(c.productivity) as -1 | 0 | 1],
+        sub:
+          limit === undefined
+            ? PRODUCTIVITY_LABEL[Math.sign(c.productivity) as -1 | 0 | 1]
+            : dayMode
+              ? `${fmtDuration(c.ms)} of ${fmtDuration(limit * MINUTE)} limit`
+              : `${fmtDuration(perDay)} a day · limit ${fmtDuration(limit * MINUTE)}`,
         value: c.ms,
         productivity: c.productivity,
-      }));
+        trailing:
+          limit === undefined ? undefined : (
+            <span className={cx("badge stats-limit", over ? "is-over" : "is-under")} title={over ? "Over the daily limit" : "Within the daily limit"}>
+              {over ? "Over" : `${Math.round((perDay / (limit * MINUTE)) * 100)}%`}
+            </span>
+          ),
+      };
+    });
   } else {
     rows = entities
       .filter((e) => e.productivity < 0)
@@ -941,7 +1008,19 @@ function Insights({ insights, className, columns }: { insights: Insight[] | null
 
 // ------------------------------------------------------------------ Focus blocks (day) — opened from the Focus tile
 
-function FocusBlocksSheet({ sessions, isToday, onClose, onStart }: { sessions: FocusSession[]; isToday: boolean; onClose: () => void; onStart: () => void }) {
+function FocusBlocksSheet({
+  sessions,
+  isToday,
+  onClose,
+  onStart,
+  onEdit,
+}: {
+  sessions: FocusSession[];
+  isToday: boolean;
+  onClose: () => void;
+  onStart: () => void;
+  onEdit: (s: FocusSession) => void;
+}) {
   const ordered = [...sessions].reverse();
   const done = sessions.filter((s) => s.completed).length;
   const total = sessions.reduce((a, s) => a + s.actualMs, 0);
@@ -955,18 +1034,20 @@ function FocusBlocksSheet({ sessions, isToday, onClose, onStart }: { sessions: F
         {sessions.length ? (
           <ul className="list">
             {ordered.map((s) => (
-              <li key={s.id} className="list-row block-row">
-                <span className={cx("block-check", s.completed && "done")} aria-label={blockLabel(s)}>
-                  {s.completed && <Check />}
-                </span>
-                <div className="list-main">
-                  <div className="list-title">{s.intention || "Untitled focus block"}</div>
-                  <div className="list-sub">
-                    {fmtTime(s.start)} · {blockLabel(s)}
-                    {s.interruptions ? ` · ${s.interruptions} detour${s.interruptions > 1 ? "s" : ""}` : ""}
+              <li key={s.id}>
+                <button type="button" className="list-row block-row" title="Change or delete this block" onClick={() => onEdit(s)}>
+                  <span className={cx("block-check", s.completed && "done")} aria-label={blockLabel(s)}>
+                    {s.completed && <Check />}
+                  </span>
+                  <div className="list-main">
+                    <div className="list-title">{s.intention || "Untitled focus block"}</div>
+                    <div className="list-sub">
+                      {fmtTime(s.start)} · {blockLabel(s)}
+                      {s.interruptions ? ` · ${s.interruptions} detour${s.interruptions > 1 ? "s" : ""}` : ""}
+                    </div>
                   </div>
-                </div>
-                <span className="list-trail">{fmtDuration(s.actualMs)}</span>
+                  <span className="list-trail">{fmtDuration(s.actualMs)}</span>
+                </button>
               </li>
             ))}
           </ul>

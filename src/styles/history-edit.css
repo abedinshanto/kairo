@@ -1,0 +1,123 @@
+/* Editing history: add time, change or delete an entry, relink a focus block */
+
+.hx {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: opacity 0.2s;
+}
+
+.hx.busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.hx-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 44px;
+}
+
+.hx-head-text {
+  min-width: 0;
+}
+
+.hx-head .card-sub {
+  margin-top: 4px;
+}
+
+.hx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.hx-field > .input,
+.hx-field > .select {
+  color: var(--ink);
+}
+
+.hx-select {
+  height: 52px;
+  border-radius: var(--r-md);
+  font-size: 15px;
+}
+
+.hx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hx-chips .chip {
+  height: 34px;
+}
+
+.hx-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.hx-time {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.hx-time .input {
+  color: var(--ink);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color-scheme: light dark;
+}
+
+.hx-note {
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.hx-note.bad {
+  color: var(--danger-ink);
+}
+
+.hx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.hx-save {
+  margin-left: auto;
+}
+
+.hx-danger,
+.hx-danger svg {
+  color: var(--danger);
+}
+
+@media (hover: hover) {
+  .hx-danger:hover:not(:disabled) {
+    background: var(--danger-tint);
+  }
+}
+
+@media (max-width: 480px) {
+  .hx-actions .btn {
+    flex: 1;
+  }
+
+  .hx-save {
+    flex-basis: 100%;
+    order: -1;
+  }
+}

@@ -94,3 +94,23 @@ export function greeting(now = new Date()): string {
   if (h < 17) return "Good afternoon";
   return "Good evening";
 }
+
+/** A due day as a task shows it: "Today", "Tomorrow", "Fri", "Nov 12"; past days are overdue. */
+export function dueInfo(day: number, now = Date.now()): { label: string; tone: "overdue" | "today" | "soon" | "later" } {
+  const today = startOfDay(now);
+  if (day < today) return { label: "Overdue", tone: "overdue" };
+  if (day === today) return { label: "Today", tone: "today" };
+  if (day === addDays(today, 1)) return { label: "Tomorrow", tone: "soon" };
+  if (day < addDays(today, 7)) return { label: weekdayFmt.format(day), tone: "later" };
+  return { label: shortDayFmt.format(day), tone: "later" };
+}
+
+/** `<input type="date">` values, in local time. */
+export const toDateInput = (day: number) => {
+  const d = new Date(day);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+export const fromDateInput = (value: string): number | null => {
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime() : null;
+};

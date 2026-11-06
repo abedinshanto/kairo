@@ -221,6 +221,57 @@
   overflow: hidden;
 }
 
+/* Stop timer: a small glass chip under the mix */
+.sky-stop {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.sky-stop svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.sky-stop select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding-right: 4px;
+  cursor: pointer;
+  outline: none;
+  field-sizing: content;
+}
+
+.sky-stop select option {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.sky-stop:focus-within {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .sky-stop:hover {
+    background: var(--hero-glass-hover);
+  }
+}
+
 .sky-controls {
   align-self: stretch;
   display: flex;
@@ -310,9 +361,13 @@
 .preset-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: minmax(150px, 1fr);
-  gap: 14px;
+  gap: 12px;
+}
+
+.preset-grid .preset {
+  padding: 16px;
 }
 
 .sounds .preset {
@@ -359,6 +414,21 @@
   --p-bot: #b9a6ff;
   --p-ink: #5b3fd0;
 }
+.sounds .preset.art-corner-cafe {
+  --p-top: #f6ece2;
+  --p-bot: #d9b99a;
+  --p-ink: #7a4a22;
+}
+.sounds .preset.art-night-train {
+  --p-top: #e6e4f3;
+  --p-bot: #a7a3cf;
+  --p-ink: #45407e;
+}
+.sounds .preset.art-library {
+  --p-top: #f3eedf;
+  --p-bot: #cfc29a;
+  --p-ink: #6a5a24;
+}
 
 :root[data-theme="dark"] .sounds .preset {
   --p-top: #2d4280;
@@ -389,6 +459,21 @@
   --p-top: #3d3370;
   --p-bot: #251f47;
   --p-ink: #c2b2ff;
+}
+:root[data-theme="dark"] .sounds .preset.art-corner-cafe {
+  --p-top: #4f3a2a;
+  --p-bot: #2f231b;
+  --p-ink: #e8bf98;
+}
+:root[data-theme="dark"] .sounds .preset.art-night-train {
+  --p-top: #34315c;
+  --p-bot: #201e3a;
+  --p-ink: #bcb6f0;
+}
+:root[data-theme="dark"] .sounds .preset.art-library {
+  --p-top: #4a4329;
+  --p-bot: #2d291a;
+  --p-ink: #ddd09a;
 }
 
 /* the shared artwork sheen reads milky on the dark tiles; keep it a whisper */
@@ -808,6 +893,11 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: 150px;
     gap: 12px;
+  }
+
+  /* An odd one out spans the row instead of leaving a hole */
+  .preset-grid .preset:last-child:nth-child(odd) {
+    grid-column: span 2;
   }
 
   .sounds .preset {

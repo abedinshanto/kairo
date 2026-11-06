@@ -34,7 +34,7 @@
   margin-top: 26px;
 }
 
-/* Two tabs always fit: let the active pill's soft shadow breathe instead of clipping it */
+/* The tabs always fit: let the active pill's soft shadow breathe instead of clipping it */
 .tasks-tabs .pills {
   overflow: visible;
 }
@@ -136,6 +136,15 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
+}
+
+/* The task menu is taller than the hero's free space: let it spill out (the sheen keeps the corners) */
+.card.hero.task-hero {
+  overflow: visible;
+}
+
+.card.hero.task-hero::after {
+  border-radius: inherit;
 }
 
 .task-hero-tags {
@@ -462,6 +471,99 @@ h2.task-hero-title {
   }
 }
 
+/* Due: a chip that becomes the day once there is one */
+.due-wrap {
+  position: relative;
+  flex: none;
+}
+
+.composer-due {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 11px;
+  border-radius: var(--r-pill);
+  background: var(--surface-soft);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+
+.composer-due svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+@media (hover: hover) {
+  .composer-due:hover {
+    background: var(--surface-sunk);
+    color: var(--ink);
+  }
+}
+
+.composer-due.is-set {
+  padding: 0 14px 0 12px;
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+}
+
+.composer-due.is-overdue {
+  background: var(--danger-tint);
+  color: var(--danger-ink);
+}
+
+.due-pop {
+  width: 280px;
+  padding-bottom: 10px;
+}
+
+/* The badge on rows and the hero */
+.task-due {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  gap: 4px;
+  font-size: 11.5px;
+}
+
+.task-due svg {
+  width: 12px;
+  height: 12px;
+}
+
+.task-due.is-today,
+.task-due.is-soon {
+  background: var(--brand-tint);
+  color: var(--brand-ink);
+}
+
+.task-due.is-overdue {
+  background: var(--danger-tint);
+  color: var(--danger-ink);
+}
+
+.task-hero .task-due {
+  height: 30px;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.task-hero .task-due svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tasks .task-due.glass.is-overdue {
+  background: rgba(255, 90, 95, 0.32);
+}
+
 /* ---------------------------------------------------------------- List card & rows */
 
 .task-card {
@@ -610,6 +712,118 @@ h2.task-hero-title {
   color: var(--ink-2);
 }
 
+/* Notes: one quiet line under the title */
+.task-note {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.task-hero-note {
+  margin: -4px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 34em;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--on-brand);
+  opacity: 0.85;
+}
+
+.task-note-edit {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.task-note-edit.on-brand {
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  color: var(--on-brand);
+}
+
+.task-note-edit.on-brand::placeholder {
+  color: var(--on-brand);
+  opacity: 0.7;
+}
+
+/* Drag handle: in the card's left padding, there when you need it */
+.task-grip {
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 40px;
+  margin-top: -20px;
+  border-radius: 8px;
+  color: var(--ink-4);
+  cursor: grab;
+  touch-action: none;
+  transition: opacity 0.18s var(--ease), color 0.15s;
+}
+
+.task-grip svg {
+  width: 16px;
+  height: 16px;
+}
+
+.task-grip:hover,
+.task-grip:focus-visible {
+  color: var(--ink-2);
+}
+
+@media (hover: hover) {
+  .task-grip {
+    opacity: 0;
+  }
+
+  .task-row:hover .task-grip,
+  .task-grip:focus-visible,
+  .task-list.is-sorting .task-grip {
+    opacity: 1;
+  }
+}
+
+.task-list.is-sorting {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.task-list.is-sorting .task-row {
+  animation: none;
+  transition: transform 0.18s var(--ease);
+}
+
+.task-list.is-sorting .task-row.is-dragging {
+  z-index: 5;
+  transition: none;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--line);
+}
+
+.task-list.is-sorting .task-row.is-dragging .task-grip {
+  cursor: grabbing;
+  color: var(--brand);
+}
+
+.task-list.is-sorting .task-row.is-dragging + .task-row,
+.task-list.is-sorting .task-row.is-dragging {
+  border-top-color: transparent;
+}
+
 .task-edit {
   height: 44px;
   padding: 0 16px;
@@ -737,7 +951,10 @@ h2.task-hero-title {
   z-index: 30;
   top: calc(100% + 8px);
   right: 0;
-  width: 236px;
+  width: 272px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px;
   border-radius: var(--r-lg);
   background: var(--surface);
@@ -795,6 +1012,93 @@ h2.task-hero-title {
 .task-menu [role="menuitem"].danger:hover,
 .task-menu [role="menuitem"].danger:focus-visible {
   background: var(--danger-tint);
+}
+
+.task-menu-sep {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--line);
+}
+
+.task-menu-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.task-menu-label svg {
+  width: 14px;
+  height: 14px;
+}
+
+.task-menu-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 2px;
+  padding: 0 4px 0 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.task-menu-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task-menu-field svg {
+  width: 17px;
+  height: 17px;
+  color: var(--ink-2);
+}
+
+.task-menu-field .select {
+  height: 40px;
+  max-width: 140px;
+  font-size: 13.5px;
+}
+
+/* Due: quick picks, then any day */
+.due-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 6px 4px;
+}
+
+.due-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.due-chips .chip {
+  height: 32px;
+  padding: 0 12px;
+}
+
+.due-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.due-date {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color-scheme: light dark;
 }
 
 .task-menu-est {
@@ -904,6 +1208,44 @@ h2.task-hero-title {
 
   .task-card {
     padding: 20px 14px 6px 20px;
+  }
+}
+
+@media (max-width: 760px) {
+  .task-grip {
+    left: -20px;
+    width: 20px;
+  }
+}
+
+/* Narrow phones: the title gets its own line, the chips sit under it */
+@media (max-width: 560px) {
+  .composer {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    min-height: 0;
+    padding: 6px 8px 10px 20px;
+    border-radius: 30px;
+  }
+
+  .composer-input {
+    flex: 1 0 calc(100% - 64px);
+  }
+
+  .composer-add {
+    order: 1;
+  }
+
+  .composer-mic,
+  .due-wrap,
+  .composer-est {
+    order: 2;
+  }
+
+  .composer .due-pop {
+    left: 0;
+    right: auto;
+    transform-origin: top left;
   }
 }
 

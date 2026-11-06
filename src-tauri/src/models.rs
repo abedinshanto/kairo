@@ -1,4 +1,6 @@
-use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
 
 /// User preferences. Fields the core needs are typed; anything the UI wants to
@@ -17,6 +19,8 @@ pub struct Settings {
     // Goals
     pub daily_focus_goal_minutes: u32,
     pub distraction_budget_minutes: u32,
+    /// Daily minutes allowed per category ("social" → 30); a heads-up when reached.
+    pub category_limits: BTreeMap<String, u32>,
 
     // Tracking
     pub tracking_enabled: bool,
@@ -39,11 +43,23 @@ pub struct Settings {
     pub daily_summary: bool,
     /// Local time of day, in minutes after midnight.
     pub daily_summary_minutes: u32,
+    /// A look back at the week, on `weekly_review_day` at the summary time.
+    pub weekly_review: bool,
+    /// 0 = Sunday … 6 = Saturday.
+    pub weekly_review_day: u8,
+
+    // Data
+    /// Copy the database to a local backups folder once a week (the last 4 are kept).
+    pub backups: bool,
+    /// Ask GitHub once a day whether a newer Kairo is out (off unless turned on).
+    pub check_updates: bool,
 
     // Desktop
     pub show_timer_in_tray: bool,
     pub hide_dock_icon: bool,
     pub global_shortcut: String,
+    /// Opens quick capture from anywhere ("" = off).
+    pub capture_shortcut: String,
     /// Ask a site for its icon when the browser hasn't saved one (the only
     /// network request Kairo makes, and only when this is on).
     pub download_site_icons: bool,
@@ -63,6 +79,7 @@ impl Default for Settings {
             auto_start_focus: false,
             daily_focus_goal_minutes: 240,
             distraction_budget_minutes: 60,
+            category_limits: BTreeMap::new(),
             tracking_enabled: true,
             idle_threshold_seconds: 180,
             store_window_titles: false,
@@ -77,9 +94,14 @@ impl Default for Settings {
             nudge_break_minutes: 90,
             daily_summary: true,
             daily_summary_minutes: 18 * 60,
+            weekly_review: true,
+            weekly_review_day: 0,
+            backups: true,
+            check_updates: false,
             show_timer_in_tray: true,
             hide_dock_icon: false,
             global_shortcut: "CommandOrControl+Shift+Space".into(),
+            capture_shortcut: "CommandOrControl+Alt+K".into(),
             download_site_icons: false,
             extra: Map::new(),
         }
@@ -105,8 +127,17 @@ impl Settings {
             *site = s.strip_prefix("www.").unwrap_or(&s).to_string();
         }
         self.excluded_sites.retain(|s| s.contains('.'));
+        self.weekly_review_day = self.weekly_review_day.min(6);
+        self.category_limits.retain(|c, m| !c.is_empty() && *m > 0);
+        for m in self.category_limits.values_mut() {
+            *m = (*m).min(24 * 60);
+        }
         self.excluded_sites.sort();
         self.excluded_sites.dedup();
+        // One key, one job: quick capture gives way to start/pause.
+        if self.capture_shortcut == self.global_shortcut {
+            self.capture_shortcut.clear();
+        }
         self
     }
 }
@@ -237,8 +268,39 @@ pub struct Task {
     pub done: bool,
     pub created_at: i64,
     pub completed_at: Option<i64>,
+    #[serde(default)]
     pub pomodoros: u32,
+    #[serde(default)]
     pub focus_ms: i64,
+    /// Local midnight of the day it's due.
+    #[serde(default)]
+    pub due_day: Option<i64>,
+    #[serde(default)]
+    pub notes: Option<String>,
+    /// Soundscape preset to play while focusing on it.
+    #[serde(default)]
+    pub sound: Option<String>,
+}
+
+/// Changes to a task. For the optional fields, a JSON `null` clears the value
+/// and a missing key leaves it alone.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct TaskPatch {
+    pub title: Option<String>,
+    pub estimate: Option<u32>,
+    pub done: Option<bool>,
+    #[serde(deserialize_with = "present")]
+    pub due_day: Option<Option<i64>>,
+    #[serde(deserialize_with = "present")]
+    pub notes: Option<Option<String>>,
+    #[serde(deserialize_with = "present")]
+    pub sound: Option<Option<String>>,
+}
+
+/// A key that is present: `Some(value)`, where the value itself may be `None` (null).
+fn present<'de, T: Deserialize<'de>, D: Deserializer<'de>>(d: D) -> Result<Option<T>, D::Error> {
+    T::deserialize(d).map(Some)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -303,5 +365,14 @@ mod tests {
         assert_eq!(s.focus_minutes, 1);
         assert_eq!(s.excluded_apps, vec!["slack".to_string()]);
         assert_eq!(s.excluded_sites, vec!["reddit.com".to_string()]);
+    }
+
+    #[test]
+    fn task_patch_tells_missing_from_null() {
+        let p: TaskPatch = serde_json::from_str(r#"{"dueDay": null, "notes": "Call first"}"#).unwrap();
+        assert_eq!(p.due_day, Some(None), "null clears");
+        assert_eq!(p.notes, Some(Some("Call first".into())));
+        assert_eq!(p.sound, None, "missing leaves it alone");
+        assert_eq!(p.title, None);
     }
 }

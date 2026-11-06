@@ -32,6 +32,9 @@ const TRAILING_SILENCE: Duration = Duration::from_millis(1300);
 /// Give up if nothing is said at all.
 const NOTHING_SAID: Duration = Duration::from_secs(8);
 const MAX_UTTERANCE: Duration = Duration::from_secs(20);
+/// The first time, macOS asks before Kairo hears anything (the microphone gives
+/// exact silence meanwhile): wait this long for an answer.
+const PERMISSION_WAIT: Duration = Duration::from_secs(45);
 /// Free the model's memory (~100 MB) after this long unused.
 const UNLOAD_AFTER: Duration = Duration::from_secs(5 * 60);
 
@@ -231,6 +234,8 @@ fn record<R: Runtime>(app: &AppHandle<R>, session: &Session) -> CmdResult<Vec<f3
     let _ = app.emit("voice://state", "listening");
 
     let started = Instant::now();
+    // When real sound first came through (not the exact silence of a pending permission prompt).
+    let mut live_since: Option<Instant> = None;
     let mut vad = Vad::default();
     let mut read = 0;
     let window = (rate as usize / 20).max(1); // 50 ms
@@ -244,16 +249,30 @@ fn record<R: Runtime>(app: &AppHandle<R>, session: &Session) -> CmdResult<Vec<f3
         }
         let buf = buffer.lock();
         while read + window <= buf.len() {
-            let level = vad.push(&buf[read..read + window], window as f32 / rate as f32);
+            let chunk = &buf[read..read + window];
             read += window;
+            if live_since.is_none() {
+                if chunk.iter().all(|s| *s == 0.0) {
+                    let _ = app.emit("voice://level", 0.0_f32);
+                    continue;
+                }
+                live_since = Some(Instant::now());
+            }
+            let level = vad.push(chunk, window as f32 / rate as f32);
             let _ = app.emit("voice://level", level);
         }
         drop(buf);
-        let elapsed = started.elapsed();
-        let done = session.stop.load(Ordering::Relaxed)
-            || (vad.heard && vad.quiet_for >= TRAILING_SILENCE.as_secs_f32())
-            || (!vad.heard && elapsed >= NOTHING_SAID)
-            || elapsed >= MAX_UTTERANCE;
+        let done = match live_since {
+            Some(since) => {
+                let elapsed = since.elapsed();
+                session.stop.load(Ordering::Relaxed)
+                    || (vad.heard && vad.quiet_for >= TRAILING_SILENCE.as_secs_f32())
+                    || (!vad.heard && elapsed >= NOTHING_SAID)
+                    || elapsed >= MAX_UTTERANCE
+            }
+            // Still waiting on the permission answer (or a muted microphone).
+            None => session.stop.load(Ordering::Relaxed) || started.elapsed() >= PERMISSION_WAIT,
+        };
         if done {
             break;
         }

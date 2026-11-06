@@ -1,18 +1,48 @@
-import { ArrowDown, ArrowUp, ArrowUpToLine, Check, Clock, Ellipsis, ListChecks, LoaderCircle, Mic, Pencil, Play, Plus, RotateCcw, Square, Timer, Trash2 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type Ref } from "react";
+import {
+  ArrowUpToLine,
+  CalendarDays,
+  Check,
+  Clock,
+  Ellipsis,
+  GripVertical,
+  ListChecks,
+  LoaderCircle,
+  Mic,
+  Music2,
+  Pencil,
+  Play,
+  Plus,
+  RotateCcw,
+  Square,
+  StickyNote,
+  Timer,
+  Trash2,
+} from "lucide-react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type Ref,
+} from "react";
 import { Buddy, type BuddyMood } from "../components/Buddy";
 import { PageTitle, PillTabs, SlideToConfirm, Stepper, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
 import { confirmDialog } from "../lib/dialogs";
 import { useQuery } from "../lib/hooks";
-import { parseSpokenTask } from "../lib/spoken";
+import { PRESETS } from "../lib/audio/engine";
+import { dueFromWords, parseSpokenTask, splitDue } from "../lib/spoken";
 import { useApp } from "../lib/store";
-import { addDays, fmtDuration, fmtShortDay, MINUTE, relativeDayLabel, startOfDay } from "../lib/time";
+import { addDays, dueInfo, fmtDay, fmtDuration, fmtShortDay, fromDateInput, MINUTE, relativeDayLabel, startOfDay, toDateInput } from "../lib/time";
 import type { Task } from "../lib/types";
 import { useDictation } from "../lib/voice";
 import "../styles/views/tasks.css";
 
-type Tab = "todo" | "done";
+type Tab = "todo" | "today" | "done";
 
 const MAX_ESTIMATE = 12;
 const COMPOSER_ID = "task-composer-input";
@@ -27,13 +57,26 @@ const blocksLeft = (t: Task) => Math.max(0, t.estimate - t.pomodoros);
 let stickyHeroId: number | null = null;
 
 /** `#/tasks?tab=done` deep-links (and survives a reload). */
-const tabFromHash = (): Tab => (/[?&]tab=done\b/.test(window.location.hash) ? "done" : "todo");
+const tabFromHash = (): Tab => {
+  const m = window.location.hash.match(/[?&]tab=(done|today)\b/);
+  return m ? (m[1] as Tab) : "todo";
+};
 function writeTab(tab: Tab) {
-  const next = tab === "done" ? "#/tasks?tab=done" : "#/tasks";
+  const next = tab === "todo" ? "#/tasks" : `#/tasks?tab=${tab}`;
   if (window.location.hash !== next) window.history.replaceState(null, "", next);
 }
 
 // ------------------------------------------------------------------ Actions (shared by hero, rows and menus)
+
+/** Due today, or overdue. */
+const dueByToday = (t: Task) => t.dueDay !== null && t.dueDay <= startOfDay(Date.now());
+
+/** `subset`, re-ordered, put back into the slots its tasks held in `order`. */
+function reorderWithin(order: number[], subset: number[]): number[] {
+  const mine = new Set(subset);
+  let i = 0;
+  return order.map((id) => (mine.has(id) ? subset[i++] : id));
+}
 
 /** Run a backend call, surface failures as a toast, then refresh every query. */
 async function run(what: string, fn: () => Promise<unknown>): Promise<boolean> {
@@ -72,6 +115,16 @@ const actions = {
 
   estimate: (task: Task, estimate: number) => run("change the estimate", () => backend.taskUpdate(task.id, { estimate })),
 
+  due: (task: Task, dueDay: number | null) => (task.dueDay === dueDay ? Promise.resolve(true) : run("change the due date", () => backend.taskUpdate(task.id, { dueDay }))),
+
+  note: (task: Task, notes: string) => {
+    const next = notes.trim();
+    if (next === (task.notes ?? "")) return Promise.resolve(true);
+    return run("save the note", () => backend.taskUpdate(task.id, { notes: next || null }));
+  },
+
+  sound: (task: Task, sound: string | null) => run("change the sound", () => backend.taskUpdate(task.id, { sound })),
+
   async remove(task: Task) {
     const ok = await confirmDialog(`Delete “${task.title}”? Its focus time stays in your stats.`, {
       title: "Delete task",
@@ -82,12 +135,10 @@ const actions = {
   },
 
   /** Change a task's priority: `order` is the open tasks' ids, highest first. */
-  move(task: Task, order: number[], to: "top" | "up" | "down") {
-    const from = order.indexOf(task.id);
-    if (from < 0) return Promise.resolve(false);
+  move(task: Task, order: number[], to: "top") {
+    if (!order.includes(task.id)) return Promise.resolve(false);
     const next = order.filter((id) => id !== task.id);
-    const at = to === "top" ? 0 : to === "up" ? Math.max(0, from - 1) : Math.min(next.length, from + 1);
-    next.splice(at, 0, task.id);
+    if (to === "top") next.unshift(task.id);
     return run("reorder the tasks", () => backend.tasksReorder(next));
   },
 
@@ -118,10 +169,13 @@ export function TasksView() {
   const loaded = data !== undefined;
   const all = data ?? [];
   const open = all.filter((t) => !t.done);
+  const today = open.filter(dueByToday);
   const done = all.filter((t) => t.done).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
+  // The Today tab is the same list, narrowed to what's due.
+  const shown = tab === "today" ? today : open;
   // Hero: the task linked to the timer, else the one already on screen, else the first open task.
-  const hero = open.find((t) => t.id === timer.taskId) ?? open.find((t) => t.id === stickyHeroId) ?? open[0];
-  const rest = open.filter((t) => t !== hero);
+  const hero = shown.find((t) => t.id === timer.taskId) ?? shown.find((t) => t.id === stickyHeroId) ?? shown[0];
+  const rest = shown.filter((t) => t !== hero);
   // Priority order: the first four are the 1–4 buttons on the timer.
   const order = open.map((t) => t.id);
   const left = open.reduce((a, t) => a + blocksLeft(t), 0);
@@ -168,6 +222,7 @@ export function TasksView() {
             onChange={setTab}
             options={[
               { value: "todo", label: "To do", count: loaded ? open.length : undefined },
+              { value: "today", label: "Today", count: loaded ? today.length : undefined },
               { value: "done", label: "Done", count: loaded ? done.length : undefined },
             ]}
           />
@@ -177,9 +232,11 @@ export function TasksView() {
       <div className="tasks-grid">
         <section className="tasks-main">
           {loaded &&
-            (tab === "todo" ? (
+            (tab !== "done" ? (
               hero ? (
                 <HeroTask key={hero.id} task={hero} order={order} />
+              ) : tab === "today" ? (
+                <EmptyToday others={open.length} />
               ) : (
                 <EmptyHero cleared={done.length > 0} />
               )
@@ -190,19 +247,15 @@ export function TasksView() {
 
         {loaded && (
           <aside className="tasks-side">
-            {tab === "todo" ? (
+            {tab !== "done" ? (
               <>
-                <Composer />
+                <Composer key={tab} defaultDue={tab === "today" ? startOfDay(Date.now()) : null} />
                 {rest.length > 0 && (
                   <div className="card task-card">
                     <div className="task-card-head">
-                      <div className="card-title">Up next</div>
+                      <div className="card-title">{tab === "today" ? "Also today" : "Up next"}</div>
                     </div>
-                    <ul className="task-list">
-                      {rest.map((t) => (
-                        <TaskRow key={t.id} task={t} order={order} />
-                      ))}
-                    </ul>
+                    <SortableTasks tasks={rest} order={order} />
                   </div>
                 )}
               </>
@@ -240,8 +293,10 @@ function HeroTask({ task, order }: { task: Task; order: number[] }) {
   const timer = useApp((s) => s.timer)!;
   const focusMin = useApp((s) => s.settings.focusMinutes);
   const [editing, setEditing] = useState(false);
+  const [noting, setNoting] = useState(false);
   const inFocus = timer.taskId === task.id;
   const left = blocksLeft(task);
+  const rank = rankOf(task, order);
   const mood: BuddyMood =
     inFocus && timer.status === "running" && timer.phase === "focus" ? "focus" : task.pomodoros >= task.estimate ? "happy" : "idle";
 
@@ -257,19 +312,20 @@ function HeroTask({ task, order }: { task: Task; order: number[] }) {
               <Clock />
               {task.focusMs > 0 ? `${fmtDuration(task.focusMs)} focused` : "Not started"}
             </span>
-            <TaskMenu task={task} order={order} onRename={() => setEditing(true)} onBrand />
+            <TaskMenu task={task} order={order} onRename={() => setEditing(true)} onNote={() => setNoting(true)} onBrand />
           </div>
         </div>
 
         <div className="task-hero-text">
           {/* The block bar below carries the estimate; the tag only marks a task the timer is on. */}
-          {(inFocus || rankOf(task, order)) && (
+          {(inFocus || rank || task.dueDay !== null) && (
             <div className="task-hero-tags">
-              {rankOf(task, order) && (
-                <span className="badge glass task-rank-badge" title={`Press ${rankOf(task, order)} on the timer to focus on this`}>
-                  Task {rankOf(task, order)}
+              {rank && (
+                <span className="badge glass task-rank-badge" title={`Press ${rank} on the timer to focus on this`}>
+                  Task {rank}
                 </span>
               )}
+              {task.dueDay !== null && <DueBadge day={task.dueDay} glass />}
               {inFocus && (
                 <span className="badge glass">
                   <span className="live-dot" aria-hidden />
@@ -279,6 +335,15 @@ function HeroTask({ task, order }: { task: Task; order: number[] }) {
             </div>
           )}
           <TaskTitle task={task} editing={editing} setEditing={setEditing} variant="hero" />
+          {noting ? (
+            <NoteEditor task={task} onDone={() => setNoting(false)} variant="hero" />
+          ) : (
+            task.notes && (
+              <p className="task-hero-note" onDoubleClick={() => setNoting(true)} title="Double-click to edit the note">
+                {task.notes}
+              </p>
+            )
+          )}
         </div>
 
         <div className="task-hero-progress">
@@ -339,6 +404,33 @@ function EmptyHero({ cleared }: { cleared: boolean }) {
   );
 }
 
+function EmptyToday({ others }: { others: number }) {
+  return (
+    <div className="task-stack">
+      <div className="card hero task-hero task-hero-empty">
+        <Buddy mood="idle" tone="cloud" size={128} />
+        <h2 className="task-empty-title">Nothing due today</h2>
+        <p className="task-empty-copy">
+          {others
+            ? "Give a task a day from its ••• menu, or add one here: it's due today."
+            : "Add a task here and it's due today. Saying “…tomorrow” or “by Friday” works too."}
+        </p>
+        <button
+          type="button"
+          className="btn btn-on-brand task-empty-cta"
+          onClick={() => {
+            const input = document.getElementById(COMPOSER_ID);
+            input?.scrollIntoView({ behavior: "smooth", block: "center" });
+            input?.focus({ preventScroll: true });
+          }}
+        >
+          <Plus /> Add something for today
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Top-bar avatar: how much of the planned work is already done. */
 function PlanRing({ done, total, allDone }: { done: number; total: number; allDone: boolean }) {
   const pct = total ? Math.min(1, done / total) : allDone ? 1 : 0;
@@ -387,15 +479,21 @@ function DoneSummary({ tasks }: { tasks: Task[] }) {
 
 // ------------------------------------------------------------------ Add a task
 
-function Composer() {
+/** `defaultDue`: the day new tasks get unless one is said, typed or picked (the Today tab's). */
+function Composer({ defaultDue }: { defaultDue: number | null }) {
   const [title, setTitle] = useState("");
   const [estimate, setEstimate] = useState(2);
+  // "auto": whatever the title says ("…tomorrow"), else the default.
+  const [due, setDue] = useState<number | null | "auto">("auto");
   const [busy, setBusy] = useState(false);
   const [missed, setMissed] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const dictation = useDictation();
+  const typed = splitDue(title);
+  const fromTitle = due === "auto" && typed.dueDay !== undefined;
+  const dueDay = due === "auto" ? (typed.dueDay ?? defaultDue) : due;
 
-  // Say it: "Landing page redesign, three blocks". The field fills in; Enter adds it.
+  // Say it: "Landing page redesign, three blocks, by Friday". The field fills in; Enter adds it.
   const dictate = async () => {
     if (dictation.state === "listening") return dictation.stop();
     if (dictation.busy) return;
@@ -406,21 +504,25 @@ function Composer() {
     const spoken = parseSpokenTask(text);
     setTitle(spoken.title);
     if (spoken.estimate) setEstimate(spoken.estimate);
+    if (spoken.dueDay !== undefined) setDue(spoken.dueDay);
     input.current?.focus();
   };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const t = title.trim();
+    const t = (fromTitle ? typed.title : title).trim();
     // Nothing typed yet: the add button just points you at the field.
     if (!t) return input.current?.focus();
     if (busy) return;
     setBusy(true);
-    if (await run("add the task", () => backend.taskCreate(t, estimate))) setTitle("");
+    if (await run("add the task", () => backend.taskCreate(t, estimate, dueDay))) {
+      setTitle("");
+      setDue("auto");
+    }
     setBusy(false);
   };
 
-  // One pill: the title, a small estimate chip (native picker), and a solid add circle.
+  // One pill: the title, the mic, a due chip, an estimate chip (native picker) and a solid add circle.
   return (
     <form className="composer" onSubmit={submit}>
       <input
@@ -449,12 +551,13 @@ function Composer() {
           className={cx("composer-mic", `is-${dictation.state}`)}
           aria-label={dictation.state === "listening" ? "Done talking" : "Say a task"}
           aria-pressed={dictation.state === "listening"}
-          title={dictation.state === "listening" ? "Done talking (or just pause)" : "Say a task, e.g. “Landing page, three blocks”"}
+          title={dictation.state === "listening" ? "Done talking (or just pause)" : "Say a task, e.g. “Landing page, three blocks, by Friday”"}
           onClick={() => void dictate()}
         >
           {dictation.state === "listening" ? <Square className="fill" /> : dictation.state === "thinking" ? <LoaderCircle className="spin" /> : <Mic />}
         </button>
       )}
+      <DueButton value={dueDay} fromTitle={fromTitle} onPick={setDue} />
       <select
         className="select composer-est"
         value={estimate}
@@ -468,17 +571,277 @@ function Composer() {
           </option>
         ))}
       </select>
-      <button className="circle-btn brand" type="submit" aria-label="Add task" title="Add task (Enter)" disabled={busy}>
+      <button className="circle-btn brand composer-add" type="submit" aria-label="Add task" title="Add task (Enter)" disabled={busy}>
         <Plus />
       </button>
     </form>
   );
 }
 
+// ------------------------------------------------------------------ Due dates
+
+/** Today, tomorrow, this week, next week: the days people mean most. */
+function dueChoices() {
+  const now = Date.now();
+  const today = startOfDay(now);
+  const all = [
+    { label: "Today", day: today },
+    { label: "Tomorrow", day: addDays(today, 1) },
+    { label: "This week", day: dueFromWords("this week", now) ?? today },
+    { label: "Next week", day: dueFromWords("next week", now) ?? addDays(today, 7) },
+  ];
+  return all.filter((c, i) => all.findIndex((o) => o.day === c.day) === i);
+}
+
+/** Quick picks, any day, or none. `onChose` runs after a pick that's final (not mid-typing a date). */
+function DueOptions({ value, onPick, onChose }: { value: number | null; onPick: (day: number | null) => void; onChose?: () => void }) {
+  const choose = (day: number | null) => {
+    onPick(day);
+    onChose?.();
+  };
+  return (
+    <div className="due-options">
+      <div className="due-chips" role="group" aria-label="Due">
+        {dueChoices().map((c) => (
+          <button key={c.label} type="button" className={cx("chip", value === c.day && "active")} aria-pressed={value === c.day} title={fmtDay(c.day)} onClick={() => choose(c.day)}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+      <div className="due-row">
+        <input
+          type="date"
+          className="input due-date"
+          value={value !== null ? toDateInput(value) : ""}
+          onChange={(e) => {
+            const day = fromDateInput(e.target.value);
+            if (day !== null) onPick(day);
+          }}
+          aria-label="Pick a day"
+        />
+        {value !== null && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => choose(null)}>
+            No date
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DueBadge({ day, glass }: { day: number; glass?: boolean }) {
+  const info = dueInfo(day);
+  return (
+    <span className={cx("badge task-due", `is-${info.tone}`, glass && "glass")} title={`Due ${fmtDay(day)}`}>
+      <CalendarDays />
+      {info.label}
+    </span>
+  );
+}
+
+/** The composer's due chip: a calendar until there's a day, then the day. */
+function DueButton({ value, fromTitle, onPick }: { value: number | null; fromTitle: boolean; onPick: (day: number | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const info = value !== null ? dueInfo(value) : null;
+  usePopover(open, () => setOpen(false), wrap, ".composer-due");
+
+  return (
+    <div className={cx("due-wrap", open && "open")} ref={wrap}>
+      <button
+        type="button"
+        className={cx("composer-due", info && "is-set", info && `is-${info.tone}`)}
+        aria-label={info ? `Due ${info.label}. Change the day` : "Add a due date"}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        title={info ? (fromTitle ? `Due ${fmtDay(value!)}, from the title. Pick “No date” to keep those words` : `Due ${fmtDay(value!)}`) : "Due date"}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <CalendarDays />
+        {info && <span className="composer-due-label">{info.label}</span>}
+      </button>
+      {open && (
+        <div className="task-menu due-pop" role="dialog" aria-label="Due date">
+          <div className="task-menu-label">Due</div>
+          <DueOptions value={value} onPick={onPick} onChose={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Close a popover on a click outside it or Escape (focus goes back to its button). */
+function usePopover(open: boolean, close: () => void, wrap: React.RefObject<HTMLElement | null>, button: string) {
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => !wrap.current?.contains(e.target as Node) && closeRef.current();
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      closeRef.current();
+      wrap.current?.querySelector<HTMLElement>(button)?.focus();
+    };
+    document.addEventListener("pointerdown", away);
+    window.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      window.removeEventListener("keydown", esc);
+    };
+  }, [open, wrap, button]);
+}
+
+/** One line of notes under a title: Enter saves, Escape cancels. */
+function NoteEditor({ task, onDone, variant }: { task: Task; onDone: () => void; variant: "hero" | "row" }) {
+  const [value, setValue] = useState(task.notes ?? "");
+  const cancelled = useRef(false);
+  const finish = () => {
+    onDone();
+    if (!cancelled.current) void actions.note(task, value);
+  };
+  return (
+    <input
+      className={cx("input pill task-note-edit", variant === "hero" && "on-brand")}
+      value={value}
+      maxLength={500}
+      autoFocus
+      placeholder="Add a note…"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={finish}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        } else if (e.key === "Escape") {
+          e.stopPropagation();
+          cancelled.current = true;
+          e.currentTarget.blur();
+        }
+      }}
+      aria-label={`Note for ${task.title}`}
+    />
+  );
+}
+
 // ------------------------------------------------------------------ Calm list rows
 
-function TaskRow({ task, order = [] }: { task: Task; order?: number[] }) {
+interface Grip {
+  onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerMove: (e: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerUp: (e: ReactPointerEvent<HTMLButtonElement>) => void;
+  onPointerCancel: (e: ReactPointerEvent<HTMLButtonElement>) => void;
+  onKeyDown: (e: ReactKeyboardEvent<HTMLButtonElement>) => void;
+}
+
+/** Drag rows by their handle (or use ↑ ↓ on it) to set the order. */
+function SortableTasks({ tasks, order }: { tasks: Task[]; order: number[] }) {
+  const list = useRef<HTMLUListElement>(null);
+  type Drag = { id: number; from: number; to: number; dy: number; startY: number; height: number; mids: number[] };
+  const dragRef = useRef<Drag | null>(null);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  // A dropped order shows straight away, until the reload brings it.
+  const [pending, setPending] = useState<number[] | null>(null);
+  const refocus = useRef<number | null>(null);
+  const key = tasks.map((t) => t.id).join(",");
+  useEffect(() => setPending(null), [key]);
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const shown = pending && pending.length === tasks.length && pending.every((id) => byId.has(id)) ? pending.map((id) => byId.get(id)!) : tasks;
+
+  useLayoutEffect(() => {
+    if (refocus.current === null) return;
+    list.current?.querySelector<HTMLElement>(`[data-grip="${refocus.current}"]`)?.focus({ preventScroll: true });
+    refocus.current = null;
+  });
+
+  const commit = (ids: number[]) => {
+    setPending(ids);
+    void run("reorder the tasks", () => backend.tasksReorder(reorderWithin(order, ids))).then((ok) => {
+      if (!ok) setPending(null);
+    });
+  };
+  const moved = (from: number, to: number) => {
+    const ids = shown.map((t) => t.id);
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    return ids;
+  };
+
+  const grip = (task: Task, index: number): Grip => ({
+    onPointerDown(e) {
+      if (e.button !== 0 || shown.length < 2) return;
+      const rows = [...(list.current?.children ?? [])] as HTMLElement[];
+      const rects = rows.map((r) => r.getBoundingClientRect());
+      if (rects.length !== shown.length) return;
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const d: Drag = {
+        id: task.id,
+        from: index,
+        to: index,
+        dy: 0,
+        startY: e.clientY,
+        height: rects[index].height,
+        mids: rects.map((r) => r.top + r.height / 2),
+      };
+      dragRef.current = d;
+      setDrag(d);
+    },
+    onPointerMove(e) {
+      const d = dragRef.current;
+      if (!d) return;
+      const dy = e.clientY - d.startY;
+      const centre = d.mids[d.from] + dy;
+      let to = d.from;
+      for (let i = d.from + 1; i < d.mids.length; i++) if (centre > d.mids[i]) to = i;
+      for (let i = d.from - 1; i >= 0; i--) if (centre < d.mids[i]) to = i;
+      const next = { ...d, dy, to };
+      dragRef.current = next;
+      setDrag(next);
+    },
+    onPointerUp() {
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (d && d.to !== d.from) commit(moved(d.from, d.to));
+    },
+    onPointerCancel() {
+      dragRef.current = null;
+      setDrag(null);
+    },
+    onKeyDown(e) {
+      const to = e.key === "ArrowUp" ? index - 1 : e.key === "ArrowDown" ? index + 1 : -1;
+      if (to < 0 || to >= shown.length) return;
+      e.preventDefault();
+      refocus.current = task.id;
+      commit(moved(index, to));
+    },
+  });
+
+  // While dragging, the row follows the pointer and the ones it passes make room.
+  const styleFor = (i: number): CSSProperties | undefined => {
+    if (!drag) return undefined;
+    if (i === drag.from) return { transform: `translateY(${drag.dy}px)` };
+    if (drag.from < drag.to && i > drag.from && i <= drag.to) return { transform: `translateY(${-drag.height}px)` };
+    if (drag.to < drag.from && i >= drag.to && i < drag.from) return { transform: `translateY(${drag.height}px)` };
+    return undefined;
+  };
+
+  return (
+    <>
+      <ul className={cx("task-list", drag && "is-sorting")} ref={list}>
+        {shown.map((t, i) => (
+          <TaskRow key={t.id} task={t} order={order} grip={grip(t, i)} style={styleFor(i)} dragging={drag?.id === t.id} />
+        ))}
+      </ul>
+      <p id="task-grip-help" className="sr-only">
+        Up and down arrow keys move the task.
+      </p>
+    </>
+  );
+}
+
+function TaskRow({ task, order = [], grip, style, dragging }: { task: Task; order?: number[]; grip?: Grip; style?: CSSProperties; dragging?: boolean }) {
   const [editing, setEditing] = useState(false);
+  const [noting, setNoting] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
   const toggle = () => {
@@ -487,9 +850,24 @@ function TaskRow({ task, order = [] }: { task: Task; order?: number[] }) {
   };
 
   const when = task.completedAt ? doneWhen(task.completedAt) : null;
+  const rank = task.done ? null : rankOf(task, order);
+  const busy = editing || noting;
 
   return (
-    <li className={cx("task-row", task.done && "is-done", leaving && "is-leaving", editing && "is-editing")}>
+    <li className={cx("task-row", task.done && "is-done", leaving && "is-leaving", busy && "is-editing", dragging && "is-dragging")} style={style}>
+      {grip && !busy && (
+        <button
+          type="button"
+          className="task-grip"
+          data-grip={task.id}
+          aria-label={`Reorder “${task.title}”`}
+          aria-describedby="task-grip-help"
+          title="Drag to reorder (or ↑ ↓)"
+          {...grip}
+        >
+          <GripVertical />
+        </button>
+      )}
       <button
         type="button"
         className="task-check"
@@ -505,37 +883,45 @@ function TaskRow({ task, order = [] }: { task: Task; order?: number[] }) {
 
       <div className="task-main">
         <div className="task-title-line">
-          {!task.done && rankOf(task, order) && (
-            <span className="task-rank" title={`Press ${rankOf(task, order)} on the timer to focus on this`}>
-              {rankOf(task, order)}
+          {rank && (
+            <span className="task-rank" title={`Press ${rank} on the timer to focus on this`}>
+              {rank}
             </span>
           )}
           <TaskTitle task={task} editing={editing} setEditing={setEditing} variant="row" />
         </div>
-        {!editing && (
-          <div className="task-sub">
-            {task.done ? (
-              <span className="task-sub-text">
-                {[task.pomodoros > 0 && plural(task.pomodoros, "block"), task.focusMs > 0 && fmtDuration(task.focusMs), when ?? "Finished"].filter(Boolean).join(" · ")}
-              </span>
-            ) : (
-              <span className="task-sub-text">
-                {task.pomodoros} of {plural(task.estimate, "block")}
-                {task.focusMs > 0 && <span className="task-sub-time"> · {fmtDuration(task.focusMs)}</span>}
-              </span>
-            )}
-          </div>
+        {noting ? (
+          <NoteEditor task={task} onDone={() => setNoting(false)} variant="row" />
+        ) : (
+          !editing && (
+            <>
+              {task.notes && <p className="task-note">{task.notes}</p>}
+              <div className="task-sub">
+                {!task.done && task.dueDay !== null && <DueBadge day={task.dueDay} />}
+                {task.done ? (
+                  <span className="task-sub-text">
+                    {[task.pomodoros > 0 && plural(task.pomodoros, "block"), task.focusMs > 0 && fmtDuration(task.focusMs), when ?? "Finished"].filter(Boolean).join(" · ")}
+                  </span>
+                ) : (
+                  <span className="task-sub-text">
+                    {task.pomodoros} of {plural(task.estimate, "block")}
+                    {task.focusMs > 0 && <span className="task-sub-time"> · {fmtDuration(task.focusMs)}</span>}
+                  </span>
+                )}
+              </div>
+            </>
+          )
         )}
       </div>
 
-      {!editing && (
+      {!busy && (
         <div className="task-actions">
           {!task.done && (
             <button className="circle-btn soft task-play" aria-label={`Focus on ${task.title}`} title="Focus on this" onClick={() => void actions.focus(task)}>
               <Play className="fill" />
             </button>
           )}
-          <TaskMenu task={task} order={order} onRename={() => setEditing(true)} />
+          <TaskMenu task={task} order={order} onRename={() => setEditing(true)} onNote={() => setNoting(true)} />
         </div>
       )}
     </li>
@@ -641,37 +1027,47 @@ function TaskTitle({
 
 // ------------------------------------------------------------------ Overflow menu (rename · estimate · delete)
 
-function TaskMenu({ task, order = [], onRename, onBrand }: { task: Task; order?: number[]; onRename: () => void; onBrand?: boolean }) {
+function TaskMenu({
+  task,
+  order = [],
+  onRename,
+  onNote,
+  onBrand,
+}: {
+  task: Task;
+  order?: number[];
+  onRename: () => void;
+  onNote: () => void;
+  onBrand?: boolean;
+}) {
   const at = order.indexOf(task.id);
   const [open, setOpen] = useState(false);
   const [up, setUp] = useState(false);
   const [estimate, setEstimate] = useState(task.estimate);
+  const [due, setDue] = useState(task.dueDay);
   const wrap = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
+  usePopover(open, () => setOpen(false), wrap, ".task-more");
 
-  const toggle = () => {
-    // Open upwards when the floating nav would cover the menu.
-    const rect = wrap.current?.getBoundingClientRect();
-    setUp(!!rect && window.innerHeight - rect.bottom < 300 && rect.top > 300);
-    setOpen((v) => !v);
-  };
+  useLayoutEffect(() => {
+    if (!open) {
+      setUp(false);
+      return;
+    }
+    // Open upwards when there's no room below (the floating nav covers the bottom).
+    const el = menu.current;
+    const anchor = wrap.current?.getBoundingClientRect();
+    if (el && anchor && !up) {
+      const below = window.innerHeight - anchor.bottom - 96;
+      if (el.offsetHeight > below && anchor.top - 16 > below) setUp(true);
+    }
+  }, [open, up]);
 
   useEffect(() => {
     if (!open) return;
     setEstimate(task.estimate);
+    setDue(task.dueDay);
     menu.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus({ preventScroll: true });
-    const away = (e: PointerEvent) => !wrap.current?.contains(e.target as Node) && setOpen(false);
-    const esc = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      wrap.current?.querySelector<HTMLElement>(".task-more")?.focus();
-    };
-    document.addEventListener("pointerdown", away);
-    window.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("pointerdown", away);
-      window.removeEventListener("keydown", esc);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -689,7 +1085,7 @@ function TaskMenu({ task, order = [], onRename, onBrand }: { task: Task; order?:
         title="More"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={toggle}
+        onClick={() => setOpen((v) => !v)}
       >
         <Ellipsis />
       </button>
@@ -704,21 +1100,40 @@ function TaskMenu({ task, order = [], onRename, onBrand }: { task: Task; order?:
               <button type="button" role="menuitem" onClick={pick(onRename)}>
                 <Pencil /> Rename
               </button>
+              <button type="button" role="menuitem" onClick={pick(onNote)}>
+                <StickyNote /> {task.notes ? "Edit note" : "Add a note"}
+              </button>
               {at > 0 && (
                 <button type="button" role="menuitem" onClick={pick(() => void actions.move(task, order, "top"))}>
                   <ArrowUpToLine /> Move to top
                 </button>
               )}
-              {at > 1 && (
-                <button type="button" role="menuitem" onClick={pick(() => void actions.move(task, order, "up"))}>
-                  <ArrowUp /> Move up
-                </button>
-              )}
-              {at >= 0 && at < order.length - 1 && (
-                <button type="button" role="menuitem" onClick={pick(() => void actions.move(task, order, "down"))}>
-                  <ArrowDown /> Move down
-                </button>
-              )}
+              <div className="task-menu-sep" role="separator" />
+              <div className="task-menu-label">
+                <CalendarDays /> Due
+              </div>
+              <DueOptions
+                value={due}
+                onPick={(day) => {
+                  setDue(day);
+                  void actions.due(task, day);
+                }}
+                onChose={() => setOpen(false)}
+              />
+              <label className="task-menu-field">
+                <span>
+                  <Music2 /> Sound
+                </span>
+                <select className="select" value={task.sound ?? ""} onChange={(e) => void actions.sound(task, e.target.value || null)} title="Plays when a focus block on this task starts">
+                  <option value="">As it is</option>
+                  <option value="off">Silence</option>
+                  {PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="task-menu-est">
                 <span>Blocks</span>
                 <Stepper
@@ -732,6 +1147,7 @@ function TaskMenu({ task, order = [], onRename, onBrand }: { task: Task; order?:
                   }}
                 />
               </div>
+              <div className="task-menu-sep" role="separator" />
             </>
           )}
           <button type="button" role="menuitem" className="danger" onClick={pick(() => void actions.remove(task))}>

@@ -266,3 +266,244 @@ export function renderThunder(ctx: BaseAudioContext): AudioBuffer {
   }
   return buf;
 }
+
+/** A two-pole band-pass (RBJ cookbook, 0 dB at the peak) whose centre can move. */
+class Resonator {
+  private b0 = 0;
+  private a1 = 0;
+  private a2 = 0;
+  private x1 = 0;
+  private x2 = 0;
+  private y1 = 0;
+  private y2 = 0;
+  private sr: number;
+  constructor(sr: number) {
+    this.sr = sr;
+  }
+  set(freq: number, q: number) {
+    const w = (2 * Math.PI * freq) / this.sr;
+    const alpha = Math.sin(w) / (2 * q);
+    const a0 = 1 + alpha;
+    this.b0 = alpha / a0;
+    this.a1 = (-2 * Math.cos(w)) / a0;
+    this.a2 = (1 - alpha) / a0;
+    return this;
+  }
+  run(x: number) {
+    const y = this.b0 * (x - this.x2) - this.a1 * this.y1 - this.a2 * this.y2;
+    this.x2 = this.x1;
+    this.x1 = x;
+    this.y2 = this.y1;
+    this.y1 = y;
+    return y;
+  }
+}
+
+/** A one-pole low-pass as a running function, for shaping single events. */
+const smoother = (cutoff: number, sr: number) => {
+  const a = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
+  let y = 0;
+  return (x: number) => (y += a * (x - y));
+};
+
+export const fillCafe: Fill = (out, ch, sr) => {
+  const n = out.length;
+  const seconds = n / sr;
+  // The room: a low, warm bed under everything.
+  fillBrown(out);
+  onePoleLowpass(out, 320, sr);
+  for (let i = 0; i < n; i++) out[i] *= 0.3;
+
+  // Chatter: voices around the room, too many and too far away to follow.
+  // Each is a soft buzz (the voice) through two moving resonances (the vowels),
+  // in syllables and phrases with pauses between. Distance takes everything
+  // above ~2 kHz away, so they're made at a quarter of the rate and scaled up.
+  const step = 4;
+  const vr = sr / step;
+  const m = Math.ceil(n / step) + 1;
+  const low = new Float32Array(m);
+  const voices = 10;
+  for (let v = 0; v < voices; v++) {
+    const near = Math.random() < 0.5 ? ch === 0 : ch === 1;
+    const gain = (0.3 + Math.random() * 0.7) * (near ? 1 : 0.55);
+    const pitch = Math.random() < 0.5 ? 100 + Math.random() * 35 : 180 + Math.random() * 50;
+    const f1 = new Resonator(vr);
+    const f2 = new Resonator(vr);
+    const tilt = smoother(500, vr);
+    let i = Math.floor(Math.random() * vr * 3);
+    let phase = 0;
+    let drift = 0;
+    while (i < m) {
+      const syllables = 3 + Math.floor(Math.random() * 10);
+      for (let s = 0; s < syllables && i < m; s++) {
+        const len = Math.floor(vr * (0.1 + Math.random() * 0.17));
+        f1.set(300 + Math.random() * 500, 5);
+        f2.set(900 + Math.random() * 1500, 7);
+        const amp = 0.45 + Math.random() * 0.55;
+        // Phrases fall in pitch towards their end.
+        const f0 = pitch * (1.12 - (0.2 * s) / syllables);
+        for (let k = 0; k < len && i < m; k++, i++) {
+          drift += (Math.random() - 0.5) * 0.004;
+          drift *= 0.996;
+          phase += (f0 * (1 + drift)) / vr;
+          if (phase >= 1) phase -= 1;
+          const buzz = tilt(phase * 2 - 1) + white() * 0.04;
+          const env = Math.sqrt(Math.sin((Math.PI * k) / len));
+          low[i] += (f1.run(buzz) + 0.55 * f2.run(buzz)) * env * amp * gain;
+        }
+      }
+      i += Math.floor(vr * (0.25 + Math.random() * 1.8));
+    }
+  }
+  const talk = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = i / step;
+    const j = Math.floor(x);
+    talk[i] = low[j] + (low[j + 1] - low[j]) * (x - j);
+  }
+  onePoleLowpass(talk, 2200, sr);
+  onePoleHighpass(talk, 170, sr);
+  for (let i = 0; i < n; i++) out[i] += talk[i] * 1.6;
+
+  // Cups and spoons: a small bright clink now and then.
+  const clinks = Math.max(2, Math.floor(seconds * 0.3));
+  for (let c = 0; c < clinks; c++) {
+    const at = Math.floor(Math.random() * n);
+    const base = 2100 + Math.random() * 2400;
+    const near = Math.random() < 0.5 ? ch === 0 : ch === 1;
+    const amp = (0.02 + Math.random() ** 2 * 0.07) * (near ? 1 : 0.5);
+    const len = Math.floor(sr * 0.35);
+    const hits = Math.random() < 0.4 ? 2 : 1;
+    for (let h = 0; h < hits; h++) {
+      const start = at + h * Math.floor(sr * (0.08 + Math.random() * 0.1));
+      addEvent(out, start, len, (i) => {
+        const t = i / sr;
+        return (
+          (Math.sin(2 * Math.PI * base * t) * Math.exp(-t * 14) +
+            0.6 * Math.sin(2 * Math.PI * base * 2.71 * t) * Math.exp(-t * 24) +
+            0.3 * Math.sin(2 * Math.PI * base * 5.12 * t) * Math.exp(-t * 40)) *
+          amp *
+          (h ? 0.6 : 1)
+        );
+      });
+    }
+  }
+};
+
+export const fillTrain: Fill = (out, ch, sr) => {
+  const n = out.length;
+  // The carriage: a deep rumble that sways a little, and air rushing past.
+  fillBrown(out);
+  onePoleLowpass(out, 150, sr);
+  const air = new Float32Array(n);
+  fillPink(air);
+  onePoleHighpass(air, 900, sr);
+  onePoleLowpass(air, 4500, sr);
+  const p1 = Math.random() * Math.PI * 2;
+  const p2 = Math.random() * Math.PI * 2;
+  for (let i = 0; i < n; i++) {
+    const t = i / n;
+    // Whole cycles across the loop keep it seamless.
+    const sway = 1 + 0.1 * Math.sin(2 * Math.PI * 3 * t + p1) + 0.05 * Math.sin(2 * Math.PI * 11 * t + p2);
+    const hum = 0.05 * Math.sin((2 * Math.PI * 96 * i) / sr) + 0.02 * Math.sin((2 * Math.PI * 192 * i) / sr + ch);
+    out[i] = out[i] * 1.1 * sway + air[i] * 0.09 + hum * sway;
+  }
+
+  // Rail joints, once a second: "ta-tak" from the wheels below, fainter from
+  // the far end of the carriage. The loop holds a whole number of them.
+  const clack = (at: number, amp: number) => {
+    const len = Math.floor(sr * 0.12);
+    const low = smoother(420, sr);
+    const ring = 300 + Math.random() * 40;
+    addEvent(out, at, len, (i) => {
+      const t = i / sr;
+      const thump = low(white()) * 3.2 * Math.exp(-t * 38);
+      const metal = (Math.sin(2 * Math.PI * ring * t) + 0.5 * Math.sin(2 * Math.PI * ring * 3.3 * t)) * 0.12 * Math.exp(-t * 55);
+      return (thump + metal) * amp;
+    });
+  };
+  const period = 1;
+  const offset = Math.random() * 0.5;
+  for (let t = offset; t * sr < n; t += period) {
+    const a = 0.85 + Math.random() * 0.3;
+    const near = ch === 0 ? 1 : 0.8;
+    clack(Math.floor(t * sr), 0.55 * a * near);
+    clack(Math.floor((t + 0.11) * sr), 0.47 * a * near);
+    clack(Math.floor((t + 0.64) * sr), 0.2 * a * (1.8 - near));
+    clack(Math.floor((t + 0.75) * sr), 0.17 * a * (1.8 - near));
+  }
+};
+
+export const fillLibrary: Fill = (out, ch, sr) => {
+  const n = out.length;
+  const seconds = n / sr;
+  // Air handling: a soft, even hush.
+  fillPink(out);
+  onePoleLowpass(out, 520, sr);
+  onePoleHighpass(out, 70, sr);
+  for (let i = 0; i < n; i++) out[i] *= 0.45;
+
+  const side = () => (Math.random() < 0.5 ? ch === 0 : ch === 1) ? 1 : 0.45;
+
+  // Pages turning: a quick papery swish, lifted then laid down.
+  const turns = Math.max(3, Math.floor(seconds * 0.14));
+  for (let p = 0; p < turns; p++) {
+    const at = Math.floor(Math.random() * n);
+    const len = Math.floor(sr * (0.35 + Math.random() * 0.3));
+    const hp = smoother(1600, sr);
+    const lp = smoother(6500, sr);
+    const amp = (0.08 + Math.random() * 0.08) * side();
+    addEvent(out, at, len, (i) => {
+      const t = i / len;
+      const x = white();
+      const band = lp(x - hp(x));
+      const env = Math.sin(Math.PI * t) ** 2 * (0.6 + 0.4 * Math.sin(2 * Math.PI * 2.5 * t));
+      return band * env * amp;
+    });
+  }
+
+  // Someone walking past: soft steps, coming closer, then fading.
+  const walks = Math.max(1, Math.floor(seconds / 25));
+  for (let w = 0; w < walks; w++) {
+    const steps = 7 + Math.floor(Math.random() * 6);
+    let at = Math.floor(Math.random() * n);
+    const leftToRight = Math.random() < 0.5;
+    for (let s = 0; s < steps; s++) {
+      const pos = s / (steps - 1);
+      const near = Math.sin(Math.PI * pos);
+      const pan = leftToRight ? pos : 1 - pos;
+      const amp = 0.22 * near * (ch === 0 ? 1 - pan * 0.6 : 0.4 + pan * 0.6);
+      const low = smoother(260, sr);
+      const len = Math.floor(sr * 0.09);
+      addEvent(out, at, len, (i) => low(white()) * 3 * Math.exp(-i / (sr * 0.018)) * amp);
+      at += Math.floor(sr * (0.52 + Math.random() * 0.06));
+    }
+  }
+
+  // A pencil writing: scratchy strokes, a few seconds at a time.
+  const notes = Math.max(1, Math.floor(seconds / 15));
+  for (let k = 0; k < notes; k++) {
+    const at = Math.floor(Math.random() * n);
+    const len = Math.floor(sr * (1.2 + Math.random() * 1.8));
+    const hp = smoother(2600, sr);
+    const rate = 6 + Math.random() * 4;
+    const amp = 0.035 * side();
+    addEvent(out, at, len, (i) => {
+      const t = i / sr;
+      const x = white();
+      const scratch = x - hp(x);
+      const stroke = Math.max(0, Math.sin(2 * Math.PI * rate * t + Math.sin(t * 7) * 2)) ** 3;
+      const edge = Math.min(1, t * 8, (len / sr - t) * 8);
+      return scratch * stroke * edge * amp;
+    });
+  }
+
+  // Now and then, a book set down on a table.
+  const books = Math.max(1, Math.floor(seconds / 20));
+  for (let b = 0; b < books; b++) {
+    const at = Math.floor(Math.random() * n);
+    const low = smoother(200, sr);
+    const amp = 0.25 * side();
+    addEvent(out, at, Math.floor(sr * 0.25), (i) => low(white()) * 3 * Math.exp(-i / (sr * 0.04)) * amp);
+  }
+};

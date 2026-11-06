@@ -734,6 +734,7 @@
 
 .input-wrap > svg {
   position: absolute;
+  z-index: 1;
   left: 18px;
   top: 50%;
   transform: translateY(-50%);
@@ -1407,6 +1408,15 @@
 }
 .art-flow {
   background: linear-gradient(160deg, #e3d7ff 0%, #a58bff 45%, #5b3fd6 100%);
+}
+.art-corner-cafe {
+  background: linear-gradient(160deg, #f0d2b0 0%, #c08a5c 45%, #6f4322 100%);
+}
+.art-night-train {
+  background: linear-gradient(160deg, #c9c4f2 0%, #6f68b8 45%, #2c2766 100%);
+}
+.art-library {
+  background: linear-gradient(160deg, #efe3bb 0%, #bfa463 45%, #6b5521 100%);
 }
 .art-custom {
   background: linear-gradient(160deg, #dfe8ff 0%, #a7bfff 50%, #6d94ff 100%);

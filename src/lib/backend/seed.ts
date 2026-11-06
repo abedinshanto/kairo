@@ -3,6 +3,8 @@
 import type { FocusSession, Productivity, Task } from "../types";
 
 export interface SeedSpan {
+  /** Given by the preview backend, so edits can find a span again. */
+  id?: number;
   start: number;
   end: number;
   appId: string;
@@ -86,11 +88,11 @@ const INTENTIONS = [
 ];
 
 export const SEED_TASKS: Omit<Task, "pomodoros" | "focusMs">[] = [
-  { id: 1, title: "Ship onboarding redesign", estimate: 6, done: false, createdAt: 0, completedAt: null },
-  { id: 2, title: "Write Q4 planning doc", estimate: 5, done: false, createdAt: 0, completedAt: null },
-  { id: 3, title: "Review pull requests", estimate: 6, done: false, createdAt: 0, completedAt: null },
-  { id: 4, title: "Refactor sync engine", estimate: 8, done: false, createdAt: 0, completedAt: null },
-  { id: 5, title: "Prepare investor update", estimate: 2, done: true, createdAt: 0, completedAt: 0 },
+  { id: 1, title: "Ship onboarding redesign", estimate: 6, done: false, createdAt: 0, completedAt: null, dueDay: null, notes: "Hand-off to engineering on Friday", sound: "deep-work" },
+  { id: 2, title: "Write Q4 planning doc", estimate: 5, done: false, createdAt: 0, completedAt: null, dueDay: null, notes: null, sound: null },
+  { id: 3, title: "Review pull requests", estimate: 6, done: false, createdAt: 0, completedAt: null, dueDay: null, notes: null, sound: null },
+  { id: 4, title: "Refactor sync engine", estimate: 8, done: false, createdAt: 0, completedAt: null, dueDay: null, notes: null, sound: null },
+  { id: 5, title: "Prepare investor update", estimate: 2, done: true, createdAt: 0, completedAt: 0, dueDay: null, notes: null, sound: null },
 ];
 
 function rng(seed: number) {

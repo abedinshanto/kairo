@@ -1,5 +1,6 @@
 //! Kairo core: focus timer, on-device activity tracking and local analytics.
 
+mod backups;
 mod categories;
 mod commands;
 mod daily;
@@ -7,6 +8,9 @@ mod db;
 #[cfg(desktop)]
 mod icons;
 mod models;
+mod net;
+#[cfg(desktop)]
+mod panel;
 #[cfg(desktop)]
 mod playback;
 #[cfg(desktop)]
@@ -16,6 +20,7 @@ mod timer;
 mod tracker;
 #[cfg(desktop)]
 mod tray;
+mod update;
 #[cfg(desktop)]
 mod voice;
 #[cfg(mobile)]
@@ -108,6 +113,7 @@ fn setup<R: Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::error::
     let dir = app.path().app_data_dir()?;
     std::fs::create_dir_all(&dir)?;
     let db_path = dir.join("kairo.db");
+    backups::apply_pending_restore(&db_path);
     let db = Db::open(&db_path)?;
     let settings = db.load_settings();
     if settings.retention_days > 0 {
@@ -123,6 +129,7 @@ fn setup<R: Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::error::
         db_path,
     });
     app.manage(voice::Voice::default());
+    app.manage(update::Updates::default());
 
     #[cfg(desktop)]
     {
@@ -131,6 +138,9 @@ fn setup<R: Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::error::
         tray::update_timer(handle, &timer::snapshot(handle));
         tracker::spawn(handle.clone());
         rebind_shortcut(handle, "", &settings.global_shortcut);
+        if settings.capture_shortcut != settings.global_shortcut {
+            rebind_shortcut(handle, "", &settings.capture_shortcut);
+        }
 
         #[cfg(target_os = "macos")]
         if settings.hide_dock_icon {
@@ -143,6 +153,16 @@ fn setup<R: Runtime>(app: &mut tauri::App<R>) -> Result<(), Box<dyn std::error::
                 let _ = w.hide();
             }
         }
+    }
+
+    // Desktop checks the weekly backup from its once-a-minute ticker; phones once per launch.
+    #[cfg(mobile)]
+    {
+        let handle = app.handle().clone();
+        thread::spawn(move || {
+            thread::sleep(Duration::from_secs(30));
+            backups::run_if_due(&handle);
+        });
     }
 
     // Taps on our notifications open Kairo (and the summary, for the summary).
@@ -187,8 +207,18 @@ pub fn run() {
         ))
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, _shortcut, event| {
-                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                .with_handler(|app, shortcut, event| {
+                    if event.state != tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        return;
+                    }
+                    // Two shortcuts: quick capture, and start/pause.
+                    let capture = app.state::<AppState>().settings.read().capture_shortcut.clone();
+                    let is_capture = capture
+                        .parse::<tauri_plugin_global_shortcut::Shortcut>()
+                        .is_ok_and(|c| c == *shortcut);
+                    if is_capture {
+                        panel::capture(app);
+                    } else {
                         timer::perform(app, timer::Action::Toggle);
                     }
                 })
@@ -241,6 +271,20 @@ pub fn run() {
             commands::task_delete,
             commands::tasks_reorder,
             commands::delete_history,
+            commands::span_add,
+            commands::span_update,
+            commands::span_delete,
+            commands::session_update,
+            commands::session_delete,
+            commands::import_data,
+            commands::backups_list,
+            commands::backup_now,
+            commands::backup_restore,
+            commands::update_status,
+            commands::update_check,
+            commands::update_open,
+            commands::window_hide,
+            commands::window_open_main,
             commands::rules_list,
             commands::rule_set,
             commands::rule_delete,

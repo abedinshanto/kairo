@@ -1,36 +1,38 @@
 import {
   AudioWaveform,
   Bird,
-  Brain,
   Check,
   CloudLightning,
-  CloudMoonRain,
   CloudRain,
+  Coffee,
   Droplets,
   Flame,
   Headphones,
+  Library,
   Moon,
   Orbit,
   Pause,
   Play,
   Radio,
-  Sparkles,
   Sunrise,
-  Trees,
+  Timer,
+  TrainFront,
   Volume1,
   Volume2,
   Waves,
   Wind,
 } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
+import { PRESET_ICONS } from "../components/soundIcons";
 import { Buddy } from "../components/Buddy";
 import { PageTitle, PillTabs, Slider, Switch, TopBar, cx } from "../components/ui";
 import { PRESETS, SOUNDS, soundEngine, type Preset, type SoundId, type SoundMeta } from "../lib/audio/engine";
 import { useApp } from "../lib/store";
+import { fmtTime } from "../lib/time";
 import "../styles/views/sounds.css";
 
 type Group = SoundMeta["group"];
-const GROUPS: Group[] = ["Nature", "Noise", "Tones"];
+const GROUPS: Group[] = ["Nature", "Places", "Noise", "Tones"];
 
 const ICONS: Record<SoundId, ReactNode> = {
   rain: <CloudRain />,
@@ -41,6 +43,9 @@ const ICONS: Record<SoundId, ReactNode> = {
   stream: <Droplets />,
   forest: <Bird />,
   night: <Moon />,
+  cafe: <Coffee />,
+  train: <TrainFront />,
+  library: <Library />,
   white: <Radio />,
   pink: <AudioWaveform />,
   brown: <AudioWaveform />,
@@ -48,19 +53,14 @@ const ICONS: Record<SoundId, ReactNode> = {
   drone: <Orbit />,
 };
 
-const PRESET_ICONS: Record<string, ReactNode> = {
-  "deep-work": <Brain />,
-  "rainy-night": <CloudMoonRain />,
-  "ocean-calm": <Waves />,
-  forest: <Trees />,
-  campfire: <Flame />,
-  flow: <Sparkles />,
-};
-
 export function SoundsView() {
   const sound = useApp((s) => s.settings.sound!);
   const playing = useApp((s) => s.soundPlaying);
   const updateSound = useApp((s) => s.updateSound);
+  const soundStop = useApp((s) => s.soundStop);
+  const setSoundStop = useApp((s) => s.setSoundStop);
+  const timer = useApp((s) => s.timer);
+  const inBlock = timer?.phase === "focus" && timer.startedAt !== null;
   const levels = sound.levels as Partial<Record<SoundId, number>>;
   const active = SOUNDS.filter((s) => (levels[s.id] ?? 0) > 0);
   const preset = PRESETS.find((p) => {
@@ -119,6 +119,27 @@ export function SoundsView() {
           <div className="sky-text">
             <h2 className="sky-title">{preset?.name ?? (active.length ? "Your own mix" : "Pick a sound")}</h2>
             <p className="sky-sub">{active.map((s) => s.label).join(" · ") || "Choose a preset or blend your own below."}</p>
+            {playing && (
+              <label className="sky-stop" title="Stop the sound by itself">
+                <Timer aria-hidden />
+                <select
+                  aria-label="Stop playing"
+                  value={soundStop === null ? "" : soundStop === "block" ? "block" : "set"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "set") return;
+                    setSoundStop(v === "" ? null : v === "block" ? "block" : Number(v));
+                  }}
+                >
+                  <option value="">Keep playing</option>
+                  {typeof soundStop === "number" && <option value="set">Stops at {fmtTime(soundStop)}</option>}
+                  <option value="15">Stop in 15 min</option>
+                  <option value="30">Stop in 30 min</option>
+                  <option value="60">Stop in 1 hour</option>
+                  {(inBlock || soundStop === "block") && <option value="block">Stop when this block ends</option>}
+                </select>
+              </label>
+            )}
           </div>
 
           <div className="sky-controls">
