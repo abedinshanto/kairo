@@ -2,10 +2,13 @@ Kairo is a calm focus timer that shows where your time goes, privately and on yo
 
 ## What's new
 
-- **A steadier timer card.** A focus that wraps onto two lines no longer makes the card, and everything next to it, taller. Before a block starts, the hint and **Add as task** sit beside the play button, where there's room.
-- **New Focused today and Goal streak cards.** A ring fills up toward your daily goal, and a seven-day ring lights up each day you reached it. Both cards now match the rest of Home in light mode.
-- **Delete history without excluding.** In an app's or site's details (tap it in Stats or Apps & sites), **Delete history** removes its recorded time once. Kairo keeps tracking it, and it shows up again next time you use it. **Exclude & delete** still stops tracking it for good.
-- **A nicer menu bar menu**, with icons, a coloured dot for the timer's state, and the length of each break.
+- **A stream that sounds like a stream.** Forest Morning's brook used to swell and fade like someone breathing into a microphone. It's now a steady rush of water full of small bubbling plinks, and the birdsong sits a little in front of it.
+- **Focus time on Stats is a proper card** in light mode, like the Distracting card next to it, instead of fading into the background. Other tinted cards (Settings' privacy card, Home tips) stand out from the page too.
+- **Your sound comes back after a break.** With "Fade out during breaks" on, a soundscape you were playing now returns when the next focus block starts, even if "Play when a focus block starts" is off.
+- **Type a task's name as your focus** and Kairo links that task, so the block counts toward it.
+- **Kairo counts as planning** in your stats (Planning & tools) instead of "Other".
+- **Smoother settings.** Dragging a slider (volume, mixer) no longer jumps back for a moment while earlier changes save.
+- **Lighter on your disk.** Looking for site icons now copies a browser's icon database only when the browser has changed it.
 - **Android:** if Android won't install this over your current version, export your data from **Settings** (Export on the privacy card) if you want a copy, uninstall the old app, then install this one.
 
 ## Downloads

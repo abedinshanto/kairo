@@ -60,7 +60,7 @@ export const PRESETS: Preset[] = [
 
 /** Per-sound loudness trim so presets sit at similar volumes. */
 const TRIM: Record<SoundId, number> = {
-  rain: 0.9, thunder: 1.1, ocean: 0.9, wind: 0.9, fire: 1.0, stream: 0.7, forest: 1.1, night: 1.0,
+  rain: 0.9, thunder: 1.1, ocean: 0.9, wind: 0.9, fire: 1.0, stream: 0.6, forest: 1.1, night: 1.0,
   white: 0.35, pink: 0.7, brown: 0.8, binaural: 0.22, drone: 0.5,
 };
 

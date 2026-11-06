@@ -76,7 +76,8 @@ const APP_RULES: &[(&str, &[&str])] = &[
     (
         "productivity",
         &[
-            "notion", "obsidian", "evernote", "onenote", "=things", "=things 3", "todoist",
+            // Planning in Kairo itself is planning.
+            "=kairo", "notion", "obsidian", "evernote", "onenote", "=things", "=things 3", "todoist",
             "omnifocus", "ticktick", "reminders", "=notes", "=calendar", "fantastical",
             "microsoft excel", "=excel", "=numbers", "keynote", "powerpoint", "powerpnt",
             "airtable", "=craft", "logseq", "=linear", "=jira", "asana", "trello", "clickup",
@@ -363,6 +364,8 @@ mod tests {
         assert_eq!(classify_app("com.instagram.android", "Instagram"), "social");
         assert_eq!(classify_app("google chrome", "Google Chrome"), "browsing");
         assert_eq!(classify_app("3ds max", "3ds Max"), "other");
+        assert_eq!(classify_app("kairo", "Kairo"), "productivity");
+        assert_eq!(classify_app("kairos-tool", "Kairos Tool"), "other", "exact name only");
         assert!(is_browser("msedge", "Microsoft Edge"));
         assert!(!is_browser("figma", "Figma"));
     }

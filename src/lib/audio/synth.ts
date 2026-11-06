@@ -142,39 +142,48 @@ export const fillFire: Fill = (out, _ch, sr) => {
 };
 
 export const fillStream: Fill = (out, _ch, sr) => {
-  // White noise through a jittering resonant band-pass: bubbling water.
-  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-  let b0 = 0, b2 = 0, a0 = 1, a1 = 0, a2 = 0;
-  let target = 1200;
-  let freq = 1200;
-  let amp = 0.5;
-  let ampTarget = 0.5;
+  // A brook is a steady rush of water with countless small bubbles popping in it.
+  // The rush: pink noise with its rumble and hiss rolled off, its level only
+  // flickering quickly (slow swells sound like breath on a microphone).
+  fillPink(out);
+  onePoleLowpass(out, 2400, sr);
+  onePoleHighpass(out, 160, sr);
+  let level = 1;
+  let target = 1;
+  const step = Math.floor(sr * 0.04);
   for (let i = 0; i < out.length; i++) {
-    if (i % 64 === 0) {
-      if (Math.random() < 0.03) target = 500 + Math.random() * 2200;
-      if (Math.random() < 0.02) ampTarget = 0.25 + Math.random() * 0.75;
-      freq += (target - freq) * 0.08;
-      amp += (ampTarget - amp) * 0.02;
-      const w0 = (2 * Math.PI * freq) / sr;
-      const alpha = Math.sin(w0) / (2 * 2.2);
-      b0 = alpha;
-      b2 = -alpha;
-      a0 = 1 + alpha;
-      a1 = -2 * Math.cos(w0);
-      a2 = 1 - alpha;
-    }
-    const x = white();
-    const y = (b0 * x + b2 * x2 - a1 * y1 - a2 * y2) / a0;
-    x2 = x1;
-    x1 = x;
-    y2 = y1;
-    y1 = y;
-    out[i] = y * amp * 1.4;
+    if (i % step === 0) target = 0.88 + Math.random() * 0.24;
+    level += (target - level) * 0.004;
+    out[i] *= 0.95 * level;
   }
-  const bed = new Float32Array(out.length);
-  fillPink(bed);
-  onePoleLowpass(bed, 1500, sr);
-  for (let i = 0; i < out.length; i++) out[i] += bed[i] * 0.25;
+
+  // The babble: each bubble rings like a little bell whose pitch rises as it
+  // reaches the surface (Minnaert resonance; damping after van den Doel, 2005).
+  // They come singly and in short bursts, mostly quiet, some brighter.
+  const bubble = (at: number, f0: number, amp: number) => {
+    const damping = (0.13 * f0 + 0.0072 * f0 ** 1.5) * 0.55;
+    const rise = (0.25 + Math.random() * 0.45) * damping;
+    const len = Math.min(Math.floor((sr * 5) / damping), Math.floor(sr * 0.15));
+    const attack = sr * 0.0006;
+    let phase = 0;
+    addEvent(out, at, len, (i) => {
+      const t = i / sr;
+      phase += (2 * Math.PI * f0 * (1 + rise * t)) / sr;
+      return Math.sin(phase) * Math.exp(-damping * t) * (1 - Math.exp(-i / attack)) * amp;
+    });
+  };
+  const seconds = out.length / sr;
+  const bursts = Math.floor(seconds * 20);
+  for (let b = 0; b < bursts; b++) {
+    const at = Math.floor(Math.random() * out.length);
+    const n = Math.random() < 0.6 ? 1 : 2 + Math.floor(Math.random() * 5);
+    for (let k = 0; k < n; k++) {
+      // Log-uniform 380–2600 Hz: small bubbles are high and quieter.
+      const f0 = 380 * 10 ** (Math.random() * 0.84);
+      const amp = (0.065 + 0.28 * Math.random() ** 3) * Math.sqrt(700 / f0);
+      bubble(at + Math.floor(sr * Math.random() * 0.09), f0, amp);
+    }
+  }
 };
 
 export const fillForest: Fill = (out, ch, sr) => {

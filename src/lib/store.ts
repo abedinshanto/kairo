@@ -51,6 +51,13 @@ interface State {
 }
 
 let persistTimer: number | undefined;
+/**
+ * Local changes the core hasn't confirmed yet. While there are any, the core's
+ * echoes of earlier saves are stale and ignored (they'd snap a slider being
+ * dragged back to where it was a moment ago).
+ */
+let unsavedChanges = false;
+let saveSeq = 0;
 let toastId = 1;
 
 const viewFromHash = (): View | null => {
@@ -114,7 +121,7 @@ export const useApp = create<State>((set, get) => ({
           set({ tracker: e.status });
           break;
         case "settings":
-          set({ settings: withDefaults(e.settings) });
+          if (!unsavedChanges) set({ settings: withDefaults(e.settings) });
           break;
         case "data":
           get().bumpData();
@@ -167,9 +174,24 @@ export const useApp = create<State>((set, get) => ({
   updateSettings(patch) {
     const next = withDefaults({ ...get().settings, ...patch });
     set({ settings: next });
+    unsavedChanges = true;
     window.clearTimeout(persistTimer);
     persistTimer = window.setTimeout(() => {
-      backend.updateSettings(next).catch((err) => get().toast({ title: "Couldn't save settings", body: String(err), tone: "warning" }));
+      persistTimer = undefined;
+      const mine = ++saveSeq;
+      backend
+        .updateSettings(next)
+        .then((saved) => {
+          // The latest save, with nothing newer waiting: take the core's version (it may clamp values).
+          if (mine === saveSeq && persistTimer === undefined) {
+            unsavedChanges = false;
+            set({ settings: withDefaults(saved) });
+          }
+        })
+        .catch((err) => {
+          if (mine === saveSeq && persistTimer === undefined) unsavedChanges = false;
+          get().toast({ title: "Couldn't save settings", body: String(err), tone: "warning" });
+        });
     }, 350);
   },
 
@@ -222,13 +244,22 @@ export const useApp = create<State>((set, get) => ({
 }));
 
 /** Couple the soundscape to the timer: auto-play on focus, fade out on breaks. */
+/** The mix was faded out for a break, so it comes back when focus resumes. */
+let pausedForBreak = false;
+
 function onTimer(prev: TimerSnapshot | null, next: TimerSnapshot) {
   const sound = useApp.getState().settings.sound;
   if (!sound) return;
   const startedFocus = next.phase === "focus" && next.status === "running" && !(prev?.phase === "focus" && prev.status === "running");
   const enteredBreak = next.phase !== "focus" && prev?.phase === "focus";
-  if (startedFocus && sound.autoPlay && soundEngine.hasMix && !soundEngine.playing) void soundEngine.play();
-  if (enteredBreak && sound.pauseOnBreak && soundEngine.playing) soundEngine.pause();
+  if (startedFocus) {
+    if ((sound.autoPlay || pausedForBreak) && soundEngine.hasMix && !soundEngine.playing) void soundEngine.play();
+    pausedForBreak = false;
+  }
+  if (enteredBreak && sound.pauseOnBreak && soundEngine.playing) {
+    soundEngine.pause();
+    pausedForBreak = true;
+  }
 }
 
 /**

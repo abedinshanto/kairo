@@ -1,7 +1,7 @@
 {
   "name": "kairo",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "description": "Kairo — private, on-device focus timer and time intelligence for every platform.",
   "scripts": {

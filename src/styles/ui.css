@@ -65,7 +65,14 @@
   box-shadow: none;
 }
 
+/* A card with a soft brand wash. In light mode the tint alone is nearly the
+   canvas colour, so it starts from white and keeps a card's shadow. */
 .card.tint {
+  background: linear-gradient(150deg, var(--surface) 35%, var(--brand-tint-2) 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="dark"] .card.tint {
   background: var(--brand-tint-2);
   box-shadow: none;
 }

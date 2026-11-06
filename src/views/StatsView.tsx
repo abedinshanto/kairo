@@ -581,7 +581,6 @@ function Tiles({
   return (
     <div className="stats-tiles">
       <Tile
-        tint
         icon={<Timer />}
         iconClass="brand-solid"
         value={<TileDur ms={focusAvg} />}
@@ -620,7 +619,6 @@ function Tile({
   meter,
   meterClass,
   foot,
-  tint,
   badge,
   onClick,
 }: {
@@ -631,7 +629,6 @@ function Tile({
   meter?: number;
   meterClass?: string;
   foot: string;
-  tint?: boolean;
   badge?: ReactNode;
   onClick?: () => void;
 }) {
@@ -657,11 +654,11 @@ function Tile({
     </>
   );
   return onClick ? (
-    <button type="button" className={cx("card tile tile-button", tint && "tint")} onClick={onClick} aria-haspopup="dialog">
+    <button type="button" className="card tile tile-button" onClick={onClick} aria-haspopup="dialog">
       {body}
     </button>
   ) : (
-    <div className={cx("card tile", tint && "tint")}>{body}</div>
+    <div className="card tile">{body}</div>
   );
 }
 

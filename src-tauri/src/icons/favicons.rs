@@ -82,6 +82,20 @@ fn databases() -> Vec<PathBuf> {
 pub struct Favicons {
     copies: Vec<PathBuf>,
     made: Option<Instant>,
+    /// What the browsers' files looked like when copied (path, size, modified).
+    sources: Vec<(PathBuf, u64, Option<std::time::SystemTime>)>,
+}
+
+/// Each browser database's identity: if none changed, the copies are current.
+fn fingerprint(dbs: &[PathBuf]) -> Vec<(PathBuf, u64, Option<std::time::SystemTime>)> {
+    dbs.iter()
+        .map(|db| {
+            // The write-ahead log changes first; fall back to the main file.
+            let meta = std::fs::metadata(sidecar(db, "-wal")).or_else(|_| std::fs::metadata(db));
+            let (len, modified) = meta.map(|m| (m.len(), m.modified().ok())).unwrap_or((0, None));
+            (db.clone(), len, modified)
+        })
+        .collect()
 }
 
 impl Favicons {
@@ -89,9 +103,17 @@ impl Favicons {
         if self.made.is_some_and(|t| t.elapsed() < max_age) {
             return;
         }
+        // Favicon databases can be tens of megabytes: copy only when a browser changed them.
+        let dbs = databases();
+        let now = fingerprint(&dbs);
+        if self.made.is_some() && now == self.sources {
+            self.made = Some(Instant::now());
+            return;
+        }
+        self.sources = now;
         self.remove_copies();
         let dir = std::env::temp_dir();
-        for (i, db) in databases().into_iter().enumerate() {
+        for (i, db) in dbs.into_iter().enumerate() {
             let copy = dir.join(format!("kairo-favicons-{}-{i}.db", std::process::id()));
             if std::fs::copy(&db, &copy).is_err() {
                 continue;

@@ -419,7 +419,10 @@ function Intention({
   const linked = tasks.find((t) => t.id === timer.taskId);
   const top = tasks.slice(0, 4);
   const commit = () => {
-    if (value !== timer.intention) void setIntention(value, timer.taskId);
+    if (value === timer.intention) return;
+    // Typing a task's name links that task (so the block counts toward it).
+    const named = tasks.find((t) => t.title.trim().toLowerCase() === value.trim().toLowerCase());
+    void setIntention(value, named?.id ?? timer.taskId);
   };
   const text = value.trim();
   // Focus on something that isn't a task yet? One tap makes it one.
