@@ -1,88 +1,123 @@
-# Kairo design system — "soft premium"
+# Kairo design system — "sage"
 
-The UI was rebuilt to feel calm, clean and premium, following the owner's reference shots
-(`/tmp/claude-0/-home-user-cloud-ssh/9b331f54-4135-5ec7-afc2-93a3164a8092/images/1.webp` … `5.png`).
-**Open and study them before designing.** What we take from each:
-
-| Ref | Take |
-| --- | --- |
-| 1.webp (task app) | Two-tone greeting ("HI ZJ, **nice to see you!**" ink + gray). Pill tabs with dim counts, active one solid royal blue. ONE huge royal-blue hero card per screen with 40px corners, 2 lighter cards peeking behind it. White circle icon buttons with a hairline. White "priority" tag on blue. "Drag to mark done" slider + white circle action button. Floating pill bottom nav (active = blue pill with label, others = soft circles). |
-| 2.webp | Sky gradient hero with a cute character, centred friendly copy, glass pills. Character-led warmth = premium. |
-| 3.webp (Fluentify) | Periwinkle canvas with blurred blue glows. Stat tiles: one tinted blue, one white, big number + small unit ("1.5 Hours"). Circle icon buttons. Soft striped/tinted cards. Floating glass nav. |
-| 4.png (Sema) | Lots of air. Calm blurred blue blobs. Simple, short copy. Dark pill CTA. Mascots with heavy-lidded eyes. |
-| 5.png | Light blue canvas, white cards, rounded blue hero, circle icon buttons, "swipe to pay" slider. Very few elements per screen. |
+Calm, minimal and premium. The references are soft, character-led wellness apps: a pale
+sage canvas with mint light, white cards, a cute 3D-looking mascot, a big title with one quiet
+line under it, glass chips, and a single dark pill for the action that matters. Premium apps
+show very little text; Kairo follows suit. Every word on screen has to earn its place.
 
 ## Principles
 
-1. **One hero per screen.** A single saturated blue (or phase-coloured) card carries the headline. Everything else is white, soft or tinted.
-2. **Fewer, bigger things.** Max ~5 blocks per screen. Prefer one big number to six small ones. Progressive disclosure (sheets, "See all") over density.
-3. **Air over lines.** No borders between cards; use spacing (16px gaps, 28px between sections) and `--shadow-sm`. Hairline dividers only inside lists.
-4. **Round and soft.** Cards 32px radius (hero 40px), pills/buttons fully round, icons inside circles.
-5. **Two-tone headings.** Every screen opens with `<PageTitle strong="…" dim="…" />`.
-6. **Friendly.** Kai the buddy (`<Buddy />`) appears where it adds warmth (hero cards, empty states, onboarding). Copy is short, human, encouraging.
-   Kai is a plump clay bean with bear-cub ears and stubby feet: solid navy eyes with crisp catchlights, soft blush, light from the top-left (base gradient, a core shadow at the bottom, a faint rim light, one small highlight) and no halos. The face carries the mood and the ears add body language. It must read at 40px, so keep details bold. The app icon (`branding/logo.svg`) is the white Kai on brand blue.
-7. **Light-first.** Design in light; dark must also look right (tokens handle it — never hard-code `#fff` backgrounds for surfaces; white text on hero cards is fine).
+1. **Say less.** A title and at most one quiet line per page. Captions appear only when they
+   carry news (listening…, the linked task, "Add as task"). No explanatory paragraphs; settings
+   rows get a description only where behaviour needs it.
+2. **Title first.** Every screen opens with `<TopBar title sub right left />`: the page's name
+   (44px), one line under it, circle buttons on the right, an optional back button on the left.
+   Don't add a second header.
+3. **One hero per screen.** A light wash card (`.card.hero`) holds the moment that matters: the
+   timer on Home, the current task on Tasks, the headline on Stats and Summary, the player on
+   Sounds. Everything else is a white card.
+4. **One dark action.** The primary action is a deep ink pill or circle (`--cta`): play, "Get
+   started", the active tab, the active nav item. Leaf green (`--brand`) is for progress, state
+   and accents (rings, switches, meters, the add button), never for text-bearing buttons.
+5. **Air over lines.** No borders between cards; 20px gaps, soft green-tinted shadows. Hairlines
+   only inside lists.
+6. **Round and soft.** Cards 30px (hero 38px), pills and buttons fully round, icons in circles.
+7. **Alive, gently.** Kai breathes and blinks; the canvas light drifts very slowly; tabs, tips
+   and chips ease in. Respect `prefers-reduced-motion` everywhere.
+8. **Light-first, dark twin.** Design in light; dark is a stepped forest twin from the tokens.
+   Never hard-code white text or white surfaces; use `--hero-ink`, `--surface`, etc.
 
-## Tokens (src/styles/tokens.css — do not edit)
+## Tokens (`src/styles/tokens.css`)
 
-- Canvas `--canvas`; surfaces `--surface` (white cards), `--surface-soft`, `--surface-sunk`, `--surface-tint`, `--brand-tint`, `--brand-tint-2`.
-- Ink `--ink`, `--ink-2` (secondary; **all small text**, ≥4.5:1 on canvas and cards), `--ink-3` (icons and the dim half of large titles only), `--ink-4` (disabled/outline).
-- Brand `--brand` (#2058F5), `--brand-hi`, `--brand-deep`, `--brand-ink` (text on tint), hero fill `--hero` + `--hero-shadow`.
-- Phase fills `--phase-short`, `--phase-long` (+ `-solid`, `-hi` for peeking cards, `-shadow`). Every stop of every hero fill keeps white text at ≥4.5:1.
-- Glass on hero cards: `--hero-glass` / `--hero-glass-hover` (navy, so white labels keep their contrast). Never put white-on-white glass on a coloured card.
-- Data: `--productive` (blue), `--neutral` (gray), `--distracting` (coral, `--distracting-tint`). Validated for colour-blind separation in both themes.
-- Status: `--good`/`--good-tint`, `--warn`, `--danger`/`--danger-tint`; text on those tints uses `--good-ink`, `--warn-ink`, `--danger-ink`.
-- Radii `--r-sm 12 · --r-md 18 · --r-lg 24 · --r-xl 32 · --r-2xl 40 · --r-pill`.
+- Canvas `--canvas` + `--canvas-glow-1/2/3`; surfaces `--surface`, `--surface-soft`,
+  `--surface-sunk`, `--surface-tint`, `--glass`, `--nav-glass`; `--track` for the empty part of
+  rings, meters and bars.
+- Ink `--ink`, `--ink-2` (all small text, ≥ 4.5:1), `--ink-3` (icons, large text), `--ink-4`.
+- Brand `--brand` (#2F9A5C), `--brand-hi`, `--brand-deep`, `--brand-tint`, `--brand-tint-2`,
+  `--brand-ink` (text on white/tint). `--on-brand` only for icons on a brand fill (white on
+  `--brand` is 3.6:1, too low for small text).
+- Action `--cta`, `--cta-hover`, `--on-cta`, `--cta-shadow`.
+- Hero washes `--hero` (mint), `--phase-short` (sky), `--phase-long` (lilac), each with a
+  `-shadow`; on them use `--hero-ink`, `--hero-ink-2`, `--hero-track`, `--hero-fill`, and white
+  glass `--hero-glass` / `--hero-glass-hover` / `--hero-glass-line`.
+- Data `--productive` (dark green), `--neutral` (grey), `--distracting` (light coral): separated
+  by lightness as well as hue, so they survive colour-blindness. Status `--good`, `--warn`,
+  `--danger` with `-tint` and `-ink`.
+- Radii `--r-sm 12 · --r-md 18 · --r-lg 24 · --r-xl 30 · --r-2xl 38 · --r-pill`.
 - Shadows `--shadow-sm` (cards), `--shadow-md`, `--shadow-lg` (sheets), `--shadow-nav`.
-- Font: Plus Jakarta Sans (already loaded). Weights 500/600/650/700.
+- Font: Plus Jakarta Sans (variable). Weights 500/600/650/700. Titles −0.04em tracking.
+
+## Kai (`src/components/Buddy.tsx`, `src/styles/kai.css`)
+
+`<Buddy mood tone size still label />`. A soft mochi with a two-leaf sprout, lit from the top
+left (radial body gradient, core shadow, bloom, a faint rim, one specular highlight).
+
+- Moods: `idle` (open eyes, looks around), `focus` (eyes lowered onto the work, slower breath,
+  ignores the pointer), `break` (sunglasses, gentle sway), `paused` (glancing aside), `happy`
+  (^ ^ and a grin, little hops), `sleep` (closed eyes, drooping sprout, floating z's), `listen`
+  (wide eyes, perked sprout, quicker breath), `think` (eyes up, wavy mouth).
+- Tones: `leaf` (default), `cloud` (white), `sky` (short break), `lilac` (long break).
+- Motion is layered on nested groups (`.kai-hop > .kai-sway > .kai-breathe`), so breathing,
+  swaying, a pop on mood change and a squish on tap combine. Blinks and glances come from JS at
+  uneven intervals; eyes follow the pointer through one shared listener (sizes ≥ 40px).
+- It must read at 24px: keep the face bold. The app icon (`branding/logo.svg`) is the cloud-tone
+  Kai with lime leaves on a leaf-green squircle.
 
 ## Building blocks
 
-React (`src/components/ui/index.tsx`): `PageTitle`, `TopBar`, `PillTabs`, `Segmented`, `Switch`, `Slider` (`onBrand` for hero cards), `Stepper`, `Sheet` (bottom sheet on phones, dialog on desktop), `Avatar` (brand mark for known sites and apps, else the real app icon or saved favicon, else a category glyph or initials; tinted by productivity), `Delta` (pill), `SlideToConfirm`, `Toasts`, `cx`.
-`<Buddy mood="idle|focus|break|paused|happy|sleep" tone="blue|mint|violet|cloud" size={…} />` in `src/components/Buddy.tsx` (use `tone="cloud"` on blue cards).
+React (`src/components/ui/index.tsx`): `TopBar`, `PageTitle`, `PillTabs`, `Segmented`,
+`Switch`, `Slider` (`onBrand` on heroes), `Stepper`, `Sheet`, `Avatar`, `Delta`,
+`SlideToConfirm`, `Equalizer`, `Toasts`, `cx`.
 
-CSS classes (`src/styles/ui.css`, `src/styles/shell.css`):
+CSS (`src/styles/ui.css`, `shell.css`):
 
-- Type: `.display` (40px two-tone, `.dim` span), `.title` (22px), `.label` (13px gray), `.big-number` (+ `<small>` unit), `.muted`, `.faint`.
-- Cards: `.card` (white, 32px), `.card.soft`, `.card.tint` (pale blue), `.card.hero` (royal blue gradient, white text, sheen), `.card.flush`, `.card-head`, `.card-title`, `.card-sub`. Hero cards stand alone: no peeking cards behind them.
-- **Soundscape art is the one place colour families mix.** Preset tiles and the mix thumbnail use soft pastels (`.art-*`, `.sounds .preset.art-*`), like album art. Nowhere else.
-- **Say it once.** A number, state or action appears once per viewport: no hero legend repeating the headline, no second play button for the same thing, no badge restating a progress bar.
-- **Columns line up.** Every screen is: top bar, then the title (and its tabs) spanning the page, then a two-column grid (`1.25fr / 1fr`, 24px gap, `align-items: stretch`) whose rows start and end on the same lines. When a column holds several cards, the last one (or the tiles) stretches to take up the slack, so both columns end together.
-- **One coloured hero per app, not per screen.** The blue hero belongs to the moment that matters (the timer on Home, the current task on Tasks, Stats' headline number). Secondary screens (Apps, Settings) use white or tint cards.
-- Header links ("See all", "All tasks", "Show more"): `.btn.btn-ghost.btn-sm.card-link`.
-- Buttons: `.btn` + `.btn-primary | .btn-dark | .btn-soft | .btn-ghost | .btn-danger | .btn-on-brand | .btn-glass`, `.btn-sm`, `.btn-block`.
-- Circles: `.circle-btn` (+ `.sm | .lg | .xl`, `.brand | .on-brand | .glass | .soft`). Add `className="fill"` on Play/Pause icons.
-- `.pills` / `.pill` (+ `.active`, `.pill-count`, `.pills.sm`, `.pills.fade-end`), `.segmented`, `.chip` (+ `.active | .on-brand`), `.badge` (+ `.brand | .good | .warn | .white`).
-- `.icon-tile` (44px rounded square, + `.good | .warn | .gray | .round`).
-- Inputs: `.input` (+ `.pill`), `.input-wrap` (leading icon), `.select`, `.switch`, `.slider`, `.stepper`.
+- Type: `.display` (+ `.page-sub` line), `.title`, `.label`, `.big-number` (+ `<small>` unit).
+- Cards: `.card`, `.card.soft`, `.card.tint`, `.card.hero`, `.card-head`, `.card-title`,
+  `.card-sub`.
+- Buttons: `.btn` + `.btn-primary` / `.btn-dark` / `.btn-on-brand` (all the ink pill),
+  `.btn-brand`, `.btn-soft`, `.btn-ghost`, `.btn-danger`, `.btn-glass` (on heroes), `.btn-sm`,
+  `.btn-block`. Header links: `.btn.btn-ghost.btn-sm.card-link`.
+- Circles: `.circle-btn` (+ `.sm | .lg | .xl`, `.ink` / `.on-brand` (ink), `.brand`, `.glass`,
+  `.soft`, `.ghost`). Add `className="fill"` on Play/Pause icons.
+- `.pills` / `.pill` (+ `.active` = ink), `.segmented`, `.chip` (+ `.on-brand` on heroes),
+  `.badge` (+ `.brand | .good | .warn | .white`), `.icon-tile`, `.live-dot`, `.eq`.
+- Inputs: `.input` (+ `.pill`), `.input-wrap`, `.select`, `.switch`, `.slider`, `.stepper`.
 - Lists: `.list`, `.list-row`, `.list-main`, `.list-title`, `.list-sub`, `.list-trail`.
-- `.meter` (+ `.distracting | .done`), `.legend`, `.legend-item`, `.swatch`, `.delta`, `.empty`.
-- Layout: `.stack-lg` (28px rhythm), `.stack`, `.stack-sm`, `.section-title` (+ `.link`), `.grid-2`, `.grid-3`, `.topbar` via `<TopBar/>`.
-- Sound artwork: `.art .art-deep-work | -rainy-night | -ocean-calm | -forest | -campfire | -flow | -custom`.
+- `.meter`, `.legend`, `.swatch`, `.delta`, `.empty`.
+- Sound artwork: `.art .art-<preset>` — the one place several colour families meet, as soft
+  pastels like album art.
 
-**Exemplar:** `src/views/HomeView.tsx` + `src/styles/views/home.css`. Match its spacing, density and tone.
+**Exemplar:** `src/views/HomeView.tsx` + `src/styles/views/home.css`.
+
+## Layout
+
+Content sits in `.page` (max 1120px, 32px gutters, 18px on phones). Desktop screens are a
+two-column grid (`1.3fr / 1fr`, 20px gap, `align-items: stretch`) whose rows start and end on the
+same lines; the last card in a column stretches to take up the slack. ≤ 1024px stacks; ≤ 760px is
+phone layout. The floating glass nav sits at the bottom; the page pads for it.
 
 ## Data visualisation
 
-Charts follow the bundled dataviz method: thin bars (≤ 24px, 4px rounded data end, square at the baseline), 2px surface gap between stacked segments, solid hairline grids (never dashed) kept to 2–3 lines, a legend whenever there are ≥ 2 series, tooltips on hover/focus, an `sr-only` table twin, text in ink colours (never in series colours). Productive = `--productive`, neutral = `--neutral`, distracting = `--distracting`, in that stacking order (bottom → top). Sequential heat = one blue hue light→dark.
+Thin bars (≤ 24px, rounded data end), 2px gaps between stacked segments, 2–3 solid hairline grid
+lines, a legend for ≥ 2 series, tooltips on hover/focus, an `sr-only` table twin, text in ink
+(never in series colours). Stack productive → neutral → distracting from the baseline. On a hero
+wash, charts keep the data colours and use `--hero-track` for empty and neutral parts.
 
-## Rules for screen builders
+## Sound (`src/lib/audio/`)
 
-- Each view file imports its own stylesheet: `import "../styles/views/<name>.css";`. Scope selectors under the view's root class.
-- **Only edit the files you own.** Do not edit `tokens.css`, `ui.css`, `shell.css`, `ui/index.tsx`, `Buddy.tsx`, `App.tsx`, `store.ts`, `types.ts`, backends or other views. Need a new primitive? Build it inside your view/CSS. Report anything shared you'd change.
-- Keep **every existing feature** of the screen (read the current/legacy implementation first — legacy screens live in `.legacy/`).
-- Desktop (≥1024px) may use two columns; ≤760px is a single column; content sits in `.page` (max 1120px). Leave room for the floating nav (the page already pads the bottom).
-- Accessibility: real buttons, `aria-label` on icon-only buttons, visible focus, 44px touch targets, text contrast ≥ 4.5:1.
-- Verify: `npx tsc --noEmit` (fix errors in your files), then screenshot with the snap tool and **look at the images**; iterate until it looks as premium as the references.
+`synth.ts` makes every loop *circular* (filters warmed up over the loop, events wrapping, whole
+cycles of slow modulation), so loops repeat without a crossfade, and renders each to −20 LUFS
+(ITU-R BS.1770 K-weighting, peaks under 0.92). It runs in `synth.worker.ts`; `engine.ts` mixes,
+caches rendered loops (64 MB, least-recently-used out first), unlocks audio on the first gesture
+and keeps the context awake until a chime has rung out. Live sounds (wind, binaural, pad) have
+trims measured to the same loudness.
 
-### Screenshot tool
+## Accessibility
 
-A Vite dev server runs at http://localhost:1420 (hot reload). Capture with:
+Real buttons, `aria-label` on icon-only buttons, visible focus rings (ink on heroes), 44px touch
+targets, text ≥ 4.5:1 in both themes, reduced motion respected.
 
-```bash
-S=/tmp/claude-0/-home-user-cloud-ssh/9b331f54-4135-5ec7-afc2-93a3164a8092/scratchpad
-node $S/tools/snap.mjs <outDir> <view[,view]> <light|dark> <desktop|mobile> [--full]
-# views: home stats sounds tasks settings apps onboarding deep
-```
+## Verify
 
-Then `Read` the PNG. If you see an error overlay caused by another file, wait ~20s and retry — other screens are being rebuilt in parallel.
+`npm run typecheck`, then look at every screen in light and dark, desktop and phone width
+(`npm run dev`, http://localhost:1420; `#panel` and `#capture` open the small windows).

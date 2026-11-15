@@ -2,13 +2,8 @@ import {
   CalendarDays,
   Check,
   Download,
-  Globe,
-  Power,
-  ScrollText,
-  ChevronDown,
-  Clock,
-  Flag,
   Flame,
+  Globe,
   Headphones,
   ListChecks,
   LoaderCircle,
@@ -18,32 +13,34 @@ import {
   Pause,
   Play,
   Plus,
+  Power,
   RotateCcw,
+  ScrollText,
   SkipForward,
   Square,
-  Timer,
+  X,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
-import { PRESET_ICONS } from "../components/soundIcons";
 import { Buddy, type BuddyMood, type BuddyTone } from "../components/Buddy";
 import { ProportionBar } from "../components/charts/Bars";
-import { Avatar, PageTitle, PillTabs, TopBar, cx } from "../components/ui";
-import { PRESETS, SOUNDS, soundEngine, type SoundId } from "../lib/audio/engine";
+import { PRESET_ICONS } from "../components/soundIcons";
+import { Avatar, Equalizer, PillTabs, TopBar, cx } from "../components/ui";
+import { PRESETS, presetFor, SOUNDS, soundEngine, type SoundId } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
 import { entityName } from "../lib/categories";
 import { confirmDialog } from "../lib/dialogs";
 import { useMediaQuery, useNow, useQuery } from "../lib/hooks";
 import { isMac, isMobileOS } from "../lib/platform";
-import { finishOrSkip, remainingNow, useApp } from "../lib/store";
 import { matchTask, parseSpokenTask, spokenTaskNumber } from "../lib/spoken";
+import { finishOrSkip, remainingNow, useApp } from "../lib/store";
 import { addDays, DAY, dueInfo, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
 import type { Phase, Task, TimerSnapshot } from "../lib/types";
 import { useDictation } from "../lib/voice";
 import "../styles/views/home.css";
 
 const PHASE_LABEL: Record<Phase, string> = { focus: "Focus", short_break: "Short break", long_break: "Long break" };
-const TONE: Record<Phase, BuddyTone> = { focus: "cloud", short_break: "cloud", long_break: "cloud" };
+const TONE: Record<Phase, BuddyTone> = { focus: "leaf", short_break: "sky", long_break: "lilac" };
 
 /** A phase duration for the pill tabs: "25m" on screen, "25 minutes" to screen readers. */
 function minutes(n: number) {
@@ -61,55 +58,30 @@ function moodFor(t: TimerSnapshot): BuddyMood {
   return t.status === "running" ? "focus" : "idle";
 }
 
+function timeOfDay(now = new Date()): string {
+  const h = now.getHours();
+  return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** The page title and its one line: who, and what the timer is up to. */
 function greeting(t: TimerSnapshot, name: string): [string, string] {
-  const who = name.trim() ? `Hi ${name.trim()},` : "Hi there,";
-  // Every state fits one line at phone width, so the hero doesn't jump when the timer starts or pauses.
-  if (t.status === "paused") return ["Paused,", "take your time."];
-  if (t.phase !== "focus") return t.status === "running" ? ["On a break,", "breathe out."] : ["Nice work,", "take a break."];
-  if (t.status === "running") return ["In the zone,", "keep going."];
-  return [who, "ready to focus?"];
+  const who = name.trim() ? `${timeOfDay()}, ${name.trim()}` : timeOfDay();
+  if (t.status === "paused") return [who, "Paused. Take your time."];
+  if (t.phase !== "focus") return [who, t.status === "running" ? "On a break. Breathe out." : "Nice work. Time for a break."];
+  if (t.status === "running") return [who, "In the zone."];
+  return [who, "Ready when you are."];
 }
 
 export function HomeView() {
   const timer = useApp((s) => s.timer)!;
-  const skew = useApp((s) => s.clockSkew);
   const deep = useApp((s) => s.deepFocus);
   const settings = useApp((s) => s.settings);
-  const tracker = useApp((s) => s.tracker);
   // Phones get short mode labels so all three pills fit without scrolling.
-  const narrow = useMediaQuery("(max-width: 420px)");
-  const { setPhase, setDeepFocus, setView } = useApp.getState();
-  const running = timer.status === "running";
-  useNow(250, running);
-  const remaining = remainingNow(timer, skew);
+  const narrow = useMediaQuery("(max-width: 520px)");
+  const { setPhase, setDeepFocus } = useApp.getState();
 
-  useEffect(() => {
-    document.title = timer.status === "idle" ? "Kairo" : `${fmtClock(remaining)} · ${PHASE_LABEL[timer.phase]}`;
-  }, [remaining, timer.status, timer.phase]);
+  const [title, sub] = greeting(timer, settings.name ?? "");
 
-  const [strong, dim] = greeting(timer, settings.name ?? "");
-  const current = tracker?.current;
-  const currentName = current ? entityName(current.domain ? "site" : "app", current.domain ?? current.appId, current.appName) : "";
-  const offTrack = !!current && current.productivity < 0 && timer.phase === "focus" && running;
-  const status: ReactNode = !tracker?.supported ? (
-    "Focus timer"
-  ) : !settings.trackingEnabled ? (
-    "Tracking off"
-  ) : tracker.needsPermission ? (
-    <button className="who-link" onClick={() => setView("settings")}>
-      Allow usage access
-    </button>
-  ) : tracker.pausedUntil ? (
-    <span title={`Tracking is paused until ${fmtTime(tracker.pausedUntil)}`}>Private until {fmtTime(tracker.pausedUntil)}</span>
-  ) : current ? (
-    `${offTrack ? "Off track" : "Now"} · ${currentName}`
-  ) : isNative ? (
-    "Tracking privately"
-  ) : (
-    "Preview"
-  );
-
-  // Switching phase mid-block ends the block, so a stray tap on a pill must not lose it silently.
   // Switching mode mid-block ends the block, so ask first; a focus block that's
   // under way is finished (its time logged), never thrown away.
   const pickPhase = async (p: Phase) => {
@@ -133,8 +105,8 @@ export function HomeView() {
 
   if (deep) {
     return (
-      <div className="home-deep">
-        <button className="circle-btn glass-dark deep-exit" aria-label="Exit deep focus" title="Exit (Esc)" onClick={() => setDeepFocus(false)}>
+      <div className={cx("home-deep", `phase-${timer.phase}`)}>
+        <button className="circle-btn glass deep-exit" aria-label="Exit deep focus" title="Exit (Esc)" onClick={() => setDeepFocus(false)}>
           <Minimize2 />
         </button>
         <TimerCard deep />
@@ -145,41 +117,30 @@ export function HomeView() {
   return (
     <div className={cx("home", `phase-${timer.phase}`)}>
       <TopBar
-        left={
-          <>
-            <span className="buddy-avatar">
-              <Buddy mood={moodFor(timer)} size={46} />
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <div className="who-name">{settings.name?.trim() || "Kairo"}</div>
-              <div className={cx("who-sub", offTrack && "off-track")} title={offTrack ? "This is a distracting app. Your focus block is still running." : undefined}>
-                {status}
-              </div>
-            </div>
-          </>
-        }
+        title={title}
+        sub={sub}
         right={
-          <button className="circle-btn" aria-label="Deep focus mode" title="Deep focus (F)" onClick={() => setDeepFocus(true)}>
-            <Maximize2 />
-          </button>
+          <>
+            <NowChip />
+            <button className="circle-btn" aria-label="Deep focus mode" title="Deep focus (F)" onClick={() => setDeepFocus(true)}>
+              <Maximize2 />
+            </button>
+          </>
         }
       />
 
-      <header className="home-head">
-        <PageTitle strong={strong} dim={dim} />
-        <div className="home-tabs">
-          <PillTabs<Phase>
-            label="Timer mode"
-            value={timer.phase}
-            onChange={(p) => void pickPhase(p)}
-            options={[
-              { value: "focus", label: "Focus", count: minutes(settings.focusMinutes) },
-              { value: "short_break", label: narrow ? "Short" : "Short break", count: minutes(settings.shortBreakMinutes) },
-              { value: "long_break", label: narrow ? "Long" : "Long break", count: minutes(settings.longBreakMinutes) },
-            ]}
-          />
-        </div>
-      </header>
+      <div className="home-tabs">
+        <PillTabs<Phase>
+          label="Timer mode"
+          value={timer.phase}
+          onChange={(p) => void pickPhase(p)}
+          options={[
+            { value: "focus", label: "Focus", count: minutes(settings.focusMinutes) },
+            { value: "short_break", label: narrow ? "Short" : "Short break", count: minutes(settings.shortBreakMinutes) },
+            { value: "long_break", label: narrow ? "Long" : "Long break", count: minutes(settings.longBreakMinutes) },
+          ]}
+        />
+      </div>
 
       <SetupTip />
 
@@ -187,7 +148,7 @@ export function HomeView() {
       <div className="home-grid">
         <TimerCard />
         <div className="home-side">
-          <TodayTiles />
+          <TodayCard />
           <SoundCard />
         </div>
         <UpNext />
@@ -197,11 +158,46 @@ export function HomeView() {
   );
 }
 
+/** What's in front right now, as a small chip (or a nudge when tracking needs attention). */
+function NowChip() {
+  const tracker = useApp((s) => s.tracker);
+  const trackingEnabled = useApp((s) => s.settings.trackingEnabled);
+  const timer = useApp((s) => s.timer)!;
+  const setView = useApp((s) => s.setView);
+  useNow(30_000);
+  if (!tracker?.supported || !trackingEnabled) return null;
+  if (tracker.needsPermission) {
+    return (
+      <button className="now-chip attention" onClick={() => setView("settings")}>
+        Allow usage access
+      </button>
+    );
+  }
+  if (tracker.pausedUntil) {
+    return (
+      <span className="now-chip" title={`Tracking is paused until ${fmtTime(tracker.pausedUntil)}`}>
+        <span className="now-dot paused" aria-hidden />
+        Paused until {fmtTime(tracker.pausedUntil)}
+      </span>
+    );
+  }
+  const current = tracker.current;
+  if (!current) return null;
+  const name = entityName(current.domain ? "site" : "app", current.domain ?? current.appId, current.appName);
+  const offTrack = current.productivity < 0 && timer.phase === "focus" && timer.status === "running";
+  return (
+    <span className={cx("now-chip", offTrack && "off-track")} title={offTrack ? "A distracting app, mid-block" : `Now: ${name}`}>
+      <Avatar name={name} productivity={current.productivity} size={24} iconKey={current.domain ? undefined : current.appId} siteKey={current.domain ?? undefined} />
+      <span className="now-name">{name}</span>
+    </span>
+  );
+}
+
 function SessionDots({ timer }: { timer: TimerSnapshot }) {
   const total = Math.max(1, timer.cycleLength);
   const done = Math.min(timer.cycle, total);
   const current = timer.phase === "focus" ? Math.min(timer.cycle, total - 1) : -1;
-  const label = timer.phase === "focus" ? `Session ${current + 1} of ${total}` : `${done} of ${total} sessions done`;
+  const label = timer.phase === "focus" ? `Block ${current + 1} of ${total}` : `${done} of ${total} blocks done`;
   return (
     <div className="session-dots" role="img" aria-label={label} title={label}>
       {Array.from({ length: total }, (_, i) => (
@@ -222,6 +218,13 @@ type Notice = "missed" | null;
 function TimerCard({ deep = false }: { deep?: boolean }) {
   const timer = useApp((s) => s.timer)!;
   const skew = useApp((s) => s.clockSkew);
+  // Only the timer ticks: the rest of Home doesn't re-render every 250 ms.
+  useNow(250, timer.status === "running");
+  const remainingForTitle = remainingNow(timer, skew);
+  useEffect(() => {
+    document.title = timer.status === "idle" ? "Kairo" : `${fmtClock(remainingForTitle)} · ${PHASE_LABEL[timer.phase]}`;
+  }, [remainingForTitle, timer.status, timer.phase]);
+  useEffect(() => () => void (document.title = "Kairo"), []);
   const { timerAction, extend, setIntention } = useApp.getState();
   const tasks = useOpenTasks();
   const dictation = useDictation();
@@ -280,24 +283,20 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
   const running = timer.status === "running";
   const detours = timer.phase === "focus" ? timer.interruptions : 0;
   const elapsed = Math.max(0, timer.durationMs - remaining);
+  const mood: BuddyMood = dictation.state === "listening" ? "listen" : dictation.state === "thinking" ? "think" : moodFor(timer);
+  const kaiSize = deep ? 184 : 150;
 
   return (
-    <div className={cx("card hero timer-card", `phase-${timer.phase}`, deep && "is-deep")}>
+    <div className={cx("card hero timer-card", `phase-${timer.phase}`, `is-${timer.status}`, deep && "is-deep")}>
       <div className="timer-top">
         <SessionDots timer={timer} />
         <div className="timer-top-end">
           {detours > 0 && (
-            <span className="badge white warn" title="Times you switched to a distracting app during this block">
-              <Flag />
+            <span className="chip on-brand detours" title="Times you switched to a distracting app during this block">
               {detours} detour{detours > 1 ? "s" : ""}
             </span>
           )}
-          {timer.status !== "idle" && (
-            <span className="chip on-brand">
-              <Clock />
-              {running ? `Ends ${fmtTime(Date.now() + remaining)}` : "Paused"}
-            </span>
-          )}
+          {timer.status !== "idle" && <span className="chip on-brand">{running ? `Ends ${fmtTime(Date.now() + remaining)}` : "Paused"}</span>}
         </div>
       </div>
 
@@ -323,13 +322,13 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
             >
               <span className="voice-ring" aria-hidden />
               <span className="voice-ring two" aria-hidden />
-              <Buddy mood={dictation.state === "listening" ? "listen" : dictation.state === "thinking" ? "think" : moodFor(timer)} tone={TONE[timer.phase]} size={deep ? 150 : 118} />
+              <Buddy mood={mood} tone={TONE[timer.phase]} size={kaiSize} />
               <span className="voice-badge" aria-hidden>
                 {dictation.state === "listening" ? <Square className="fill" /> : dictation.state === "thinking" ? <LoaderCircle className="spin" /> : <Mic />}
               </span>
             </button>
           ) : (
-            <Buddy mood={moodFor(timer)} tone={TONE[timer.phase]} size={deep ? 150 : 118} />
+            <Buddy mood={mood} tone={TONE[timer.phase]} size={kaiSize} />
           )}
         </div>
       </div>
@@ -337,18 +336,18 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
       {timer.phase === "focus" ? (
         <Intention tasks={tasks} onPick={pick} voice={voiceOn ? dictation.state : null} notice={notice} captionSlot={idleFocus ? captionSlot : null} />
       ) : (
-        <p className="timer-rest">Stand up, stretch, and look at something far away. Your next block will be sharper for it.</p>
+        <p className="timer-rest">Stretch, sip some water, look at something far away.</p>
       )}
 
       <div className="timer-controls">
         {idleFocus && <div className="timer-caption" ref={setCaptionSlot} aria-live="polite" />}
-        {/* Reset, +5 and skip only matter once a block is under way; idle shows just time, intention and play. */}
+        {/* Reset, +5 and finish only matter once a block is under way. */}
         {timer.startedAt !== null && (
           <div className="timer-secondary">
             <button className="circle-btn glass" aria-label="Start over" title="Start over" onClick={() => void timerAction("stop")}>
               <RotateCcw />
             </button>
-            <button className="btn btn-glass" onClick={() => void extend(5)}>
+            <button className="btn btn-glass" title="Add 5 minutes" onClick={() => void extend(5)}>
               <Plus /> 5 min
             </button>
             {timer.phase === "focus" ? (
@@ -362,7 +361,7 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
             )}
           </div>
         )}
-        <button className="circle-btn on-brand xl play" aria-label={running ? "Pause" : "Start"} title="Start / pause (Space)" onClick={() => void timerAction("toggle")}>
+        <button className={cx("circle-btn on-brand xl play", running && "is-running")} aria-label={running ? "Pause" : "Start"} title="Start / pause (Space)" onClick={() => void timerAction("toggle")}>
           {running ? <Pause className="fill" /> : <Play className="fill" />}
         </button>
       </div>
@@ -411,7 +410,9 @@ function Intention({
     if (value === timer.intention) return;
     // Typing a task's name links that task (so the block counts toward it).
     const named = tasks.find((t) => t.title.trim().toLowerCase() === value.trim().toLowerCase());
-    void setIntention(value, named?.id ?? timer.taskId);
+    // A different focus than the linked task's: it no longer counts toward that task.
+    const keep = linked && value.trim() === "" ? null : timer.taskId;
+    void setIntention(value, named?.id ?? keep);
   };
   const text = value.trim();
   // Focus on something that isn't a task yet? One tap makes it one.
@@ -428,7 +429,7 @@ function Intention({
       useApp.getState().bumpData();
       const info = spoken.dueDay !== undefined ? dueInfo(spoken.dueDay) : null;
       const due = !info ? "" : info.tone === "today" || info.tone === "soon" ? `, due ${info.label.toLowerCase()}` : `, due ${info.label}`;
-      useApp.getState().toast({ title: "Added to your tasks", body: `“${title}” is task 1${due}.`, tone: "success" });
+      useApp.getState().toast({ title: "Added to your tasks", body: `“${title}”${due}.`, tone: "success" });
     } catch (err) {
       useApp.getState().toast({ title: "Couldn't add the task", body: String(err), tone: "warning" });
     } finally {
@@ -436,16 +437,16 @@ function Intention({
     }
   };
 
-  // One line under the intention, most relevant first.
+  // One short line under the intention, only when there's something to say.
   let caption: ReactNode = null;
   if (voice === "listening")
     caption = (
       <span className="intention-caption live">
-        <span className="live-dot" aria-hidden /> Listening… pause when you're done
+        <span className="live-dot" aria-hidden /> Listening…
       </span>
     );
   else if (voice === "thinking") caption = <span className="intention-caption">Writing it down…</span>;
-  else if (notice === "missed") caption = <span className="intention-caption">Didn't catch that. Tap Kai to try again.</span>;
+  else if (notice === "missed") caption = <span className="intention-caption">Didn't catch that. Try again?</span>;
   else if (linked && text !== linked.title)
     caption = (
       <span className="intention-caption">
@@ -459,7 +460,6 @@ function Intention({
         <Plus aria-hidden /> Add as task
       </button>
     );
-  else if (voice === "idle" && !text) caption = <span className="intention-caption hint">Tap Kai and say what you're working on</span>;
 
   return (
     <div className="intention">
@@ -477,6 +477,9 @@ function Intention({
             if (e.key === "Enter") {
               e.preventDefault();
               (e.currentTarget as HTMLTextAreaElement).blur();
+            } else if (e.key === "Escape") {
+              setValue(timer.intention);
+              requestAnimationFrame(() => input.current?.blur());
             }
           }}
           aria-label="Focus intention"
@@ -530,97 +533,59 @@ function useFocusToday() {
   }, [data, today, goalMin]);
 }
 
-const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: "short" });
+const WEEKDAY_LETTER = new Intl.DateTimeFormat(undefined, { weekday: "narrow" });
+const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: "long" });
 
-/**
- * A ring around a number. `value` (0–1) draws progress from the top; `segments`
- * draws one arc per day instead (lit when that day's goal was met, today last).
- */
-function TodayRing({ value, segments, label, children }: { value?: number; segments?: boolean[]; label: string; children: ReactNode }) {
-  const r = 50;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className="today-ring" role="img" aria-label={label}>
-      <svg viewBox="0 0 120 120" aria-hidden>
-        <g transform="rotate(-90 60 60)">
-          {segments ? (
-            segments.map((hit, i) => {
-              const slot = c / segments.length;
-              // Round caps reach into the gap, so leave room for them.
-              const arc = slot - 16;
-              return (
-                <circle
-                  key={i}
-                  className={cx("arc", hit ? "hit" : "miss", i === segments.length - 1 && "today")}
-                  cx="60"
-                  cy="60"
-                  r={r}
-                  strokeDasharray={`${arc} ${c - arc}`}
-                  strokeDashoffset={-(i * slot + 8)}
-                />
-              );
-            })
-          ) : (
-            <>
-              <circle className="arc track" cx="60" cy="60" r={r} />
-              {(value ?? 0) > 0 && (
-                <circle className="arc fill" cx="60" cy="60" r={r} strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, value ?? 0))} />
-              )}
-            </>
-          )}
-        </g>
-      </svg>
-      <div className="today-ring-center">{children}</div>
-    </div>
-  );
-}
-
-function TodayTiles() {
+/** Today's focus against the goal (a ring), and the last seven days as dots. */
+function TodayCard() {
   const goalMin = useApp((s) => s.settings.dailyFocusGoalMinutes);
+  const setView = useApp((s) => s.setView);
   const { ms, blocks, streak, week } = useFocusToday();
   const goal = goalMin * 60_000;
   const share = goal ? Math.min(1, ms / goal) : 0;
-  const hours = ms / 3_600_000;
-  const met = week.filter(Boolean).length;
+  const r = 52;
+  const c = 2 * Math.PI * r;
   const today = startOfDay(Date.now());
-  const days = week.map((hit, i) => `${WEEKDAY.format(addDays(today, i - 6))} ${hit ? "met" : "missed"}`).join(", ");
+  const met = ms >= goal && goal > 0;
   return (
-    <div className="grid-2 today-tiles">
-      <section className="card today-tile" aria-labelledby="today-focus">
-        <header className="today-head">
-          <span className="icon-tile round brand-solid">
-            <Timer />
+    <section className="card today-card" aria-labelledby="today-title">
+      <button type="button" className="today-ring" onClick={() => setView("stats")} aria-label={`${fmtDuration(ms)} focused of your ${fmtDuration(goal)} goal. Open stats`}>
+        <svg viewBox="0 0 120 120" aria-hidden>
+          <circle className="track" cx="60" cy="60" r={r} />
+          <circle className={cx("fill", met && "met")} cx="60" cy="60" r={r} strokeDasharray={c} strokeDashoffset={c * (1 - share)} transform="rotate(-90 60 60)" />
+        </svg>
+        <span className="today-ring-center">
+          <span className="today-num tabular">{ms >= 3_600_000 ? (ms / 3_600_000).toFixed(1) : Math.round(ms / 60_000)}</span>
+          <span className="today-unit">{ms >= 3_600_000 ? "hours" : "min"}</span>
+        </span>
+      </button>
+      <div className="today-text">
+        <h2 className="card-title" id="today-title">
+          {met ? "Goal reached" : "Today"}
+        </h2>
+        <p className="today-sub">
+          {blocks} block{blocks === 1 ? "" : "s"} · goal {fmtDuration(goal)}
+        </p>
+        <div className="today-week" role="img" aria-label={`Goal met on ${week.filter(Boolean).length} of the last 7 days`}>
+          {week.map((hit, i) => {
+            const day = addDays(today, i - 6);
+            return (
+              <span key={i} className={cx("today-day", hit && "hit", i === 6 && "now")} title={`${WEEKDAY.format(day)}: ${hit ? "goal met" : "not yet"}`}>
+                <span className="today-dot" />
+                <span className="today-letter" aria-hidden>
+                  {WEEKDAY_LETTER.format(day)}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+        {streak > 1 && (
+          <span className="badge warn today-streak">
+            <Flame /> {streak} days
           </span>
-          <span id="today-focus">Focused today</span>
-        </header>
-        <TodayRing value={share} label={`${fmtDuration(ms)} of your ${fmtDuration(goal)} goal`}>
-          <span className="today-num tabular">
-            {hours >= 1 ? hours.toFixed(1) : Math.round(ms / 60_000)}
-            <small>{hours >= 1 ? "h" : "min"}</small>
-          </span>
-          <span className="today-of">of {fmtDuration(goal)}</span>
-        </TodayRing>
-        <footer className="today-foot">
-          {ms >= goal ? "Goal reached. Lovely." : `${blocks} block${blocks === 1 ? "" : "s"} · ${Math.round(share * 100)}% done`}
-        </footer>
-      </section>
-      <section className="card today-tile streak" aria-labelledby="today-streak">
-        <header className="today-head">
-          <span className="icon-tile round warn">
-            <Flame />
-          </span>
-          <span id="today-streak">Goal streak</span>
-        </header>
-        <TodayRing segments={week} label={`Goal met on ${met} of the last 7 days: ${days}`}>
-          <span className="today-num tabular">
-            {streak}
-            <small>{streak === 1 ? "day" : "days"}</small>
-          </span>
-          <span className="today-of">{met} of 7 days</span>
-        </TodayRing>
-        <footer className="today-foot">{streak ? "Keep the chain going" : `Hit ${fmtDuration(goal)} to start one`}</footer>
-      </section>
-    </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -630,21 +595,16 @@ function SoundCard() {
   const updateSound = useApp((s) => s.updateSound);
   const setView = useApp((s) => s.setView);
   const active = SOUNDS.filter((s) => (sound.levels[s.id] ?? 0) > 0);
-  const preset = PRESETS.find((p) => {
-    const keys = Object.keys(p.levels);
-    return keys.length === active.length && keys.every((k) => (sound.levels[k] ?? 0) > 0);
-  });
-  const name = preset?.name ?? (active.length ? "Custom mix" : "Pick a sound");
-  const sounds = active.length ? active.map((s) => s.label).join(" · ") : "Nothing selected";
+  const preset = presetFor(sound.levels);
+  const name = preset?.name ?? (active.length ? "Your mix" : "Pick a sound");
   return (
-    <div className="card sound-card">
-      <button className={cx("art sound-art", `art-${preset?.id ?? "custom"}`)} aria-label="Open soundscapes" title="Open soundscapes" onClick={() => setView("sounds")}>
-        {preset ? PRESET_ICONS[preset.id] : <Headphones />}
+    <div className={cx("card sound-card", playing && "is-playing")}>
+      <button className={cx("art sound-art", `art-${preset?.id ?? "custom"}`)} aria-label="Open soundscapes" title="Soundscapes" onClick={() => setView("sounds")}>
+        {playing ? <Equalizer /> : preset ? PRESET_ICONS[preset.id] : <Headphones />}
       </button>
       <div className="sound-meta">
         <label className="sound-pick" title="Change soundscape">
           <span className="card-title">{name}</span>
-          <ChevronDown aria-hidden />
           <select
             aria-label={`Soundscape: ${name}`}
             value={preset?.id ?? ""}
@@ -669,9 +629,9 @@ function SoundCard() {
             <option value="mixer">Mix your own…</option>
           </select>
         </label>
-        <span className="sound-sub">{playing ? `Playing · ${sounds}` : sounds}</span>
+        <span className="sound-sub">{active.length ? active.map((s) => s.label).join(" · ") : "Nothing selected"}</span>
       </div>
-      <button className={cx("circle-btn", playing ? "brand" : "soft")} aria-label={playing ? "Pause soundscape" : "Play soundscape"} disabled={!active.length} onClick={() => void soundEngine.toggle()}>
+      <button className={cx("circle-btn", playing ? "ink" : "soft")} aria-label={playing ? "Pause soundscape" : "Play soundscape"} disabled={!active.length} onClick={() => void soundEngine.toggle()}>
         {playing ? <Pause className="fill" /> : <Play className="fill" />}
       </button>
     </div>
@@ -682,15 +642,14 @@ interface Tip {
   id: string;
   icon: ReactNode;
   title: string;
-  body: string;
   action: string;
   run: () => unknown;
 }
 
 /**
- * One suggestion at a time for installs that predate them: open at login (so the
- * whole day is tracked, not just while the window is open) and, on macOS, reading
- * which website the browser shows.
+ * One suggestion at a time: a new version, the day's (or week's) summary in
+ * the evening, opening at login (so the whole day is tracked) and, on macOS,
+ * reading which website the browser shows.
  */
 function SetupTip() {
   const settings = useApp((s) => s.settings);
@@ -711,76 +670,47 @@ function SetupTip() {
   const newer = useApp((s) => s.update);
   let tip: Tip | null = null;
   if (newer && !dismissed.includes(`update-${newer.version}`)) {
-    tip = {
-      id: `update-${newer.version}`,
-      icon: <Download />,
-      title: `Kairo ${newer.version} is out`,
-      body: "See what's new and download it from the releases page. Your data stays where it is.",
-      action: "Get it",
-      run: () => backend.updateOpen(),
-    };
+    tip = { id: `update-${newer.version}`, icon: <Download />, title: `Kairo ${newer.version} is out`, action: "Get it", run: () => backend.updateOpen() };
   } else if (weekDue) {
-    tip = {
-      id: "summary",
-      icon: <CalendarDays />,
-      title: "Your week, wrapped",
-      body: "How the focus went, your best day, what pulled you away, and a moment to plan the next week.",
-      action: "See the week",
-      run: () => openSummary(undefined, true),
-    };
+    tip = { id: "summary", icon: <CalendarDays />, title: "Your week, wrapped", action: "Open", run: () => openSummary(undefined, true) };
   } else if (summaryDue) {
-    tip = {
-      id: "summary",
-      icon: <ScrollText />,
-      title: "Your day, wrapped",
-      body: "See what you got done today, where the time went and what pulled you away.",
-      action: "See summary",
-      run: () => openSummary(),
-    };
+    tip = { id: "summary", icon: <ScrollText />, title: "Your day, wrapped", action: "Open", run: () => openSummary() };
   } else if (desktop && atLogin === false && !dismissed.includes("login")) {
     tip = {
       id: "login",
       icon: <Power />,
-      title: "Track your whole day",
-      body: `Kairo only sees what you do while it's running. Open it at login and it starts quietly in the ${isMac ? "menu bar" : "tray"}.`,
-      action: "Open at login",
+      title: `Open at login to track your whole day`,
+      action: "Turn on",
       run: async () => {
         await backend.setAutostart(true);
         setAtLogin(await backend.autostartEnabled());
       },
     };
   } else if (desktop && isMac && settings.trackingEnabled && !settings.trackBrowserUrls && !dismissed.includes("sites")) {
-    tip = {
-      id: "sites",
-      icon: <Globe />,
-      title: "See websites, not just browsers",
-      body: "Kairo can read the current tab in Safari, Chrome, Arc and others. macOS asks once per browser; only the site's domain is kept.",
-      action: "Turn on",
-      run: () => update({ trackBrowserUrls: true }),
-    };
+    tip = { id: "sites", icon: <Globe />, title: "See websites, not just browsers", action: "Turn on", run: () => update({ trackBrowserUrls: true }) };
   }
   if (!tip) return null;
-  const { id, icon, title, body, action, run } = tip;
+  const { id, icon, title, action, run } = tip;
   return (
-    <div className="card tint home-tip" role="note">
-      <span className="icon-tile round">{icon}</span>
-      <div className="home-tip-text">
-        <div className="home-tip-title">{title}</div>
-        <div className="home-tip-body">{body}</div>
-      </div>
-      <div className="home-tip-actions">
-        <button className="btn btn-ghost btn-sm" onClick={() => update(id === "summary" ? { summarySeenDay: today } : { tipsDismissed: [...dismissed, id] })}>
-          Not now
-        </button>
-        <button className="btn btn-primary btn-sm" onClick={() => void run()}>
-          {action}
-        </button>
-      </div>
+    <div className="home-tip" role="note">
+      <span className="home-tip-icon">{icon}</span>
+      <span className="home-tip-title">{title}</span>
+      <button className="btn btn-primary btn-sm" onClick={() => void run()}>
+        {action}
+      </button>
+      <button
+        className="circle-btn sm ghost home-tip-close"
+        aria-label="Not now"
+        title="Not now"
+        onClick={() => update(id === "summary" ? { summarySeenDay: today } : { tipsDismissed: [...dismissed, id] })}
+      >
+        <X />
+      </button>
     </div>
   );
 }
 
-/** Today's screen time at a glance: how much was tracked, how it split, and where most of it went. */
+/** Today's screen time at a glance: how much, how it split, and where most of it went. */
 function ScreenTimeCard() {
   const setView = useApp((s) => s.setView);
   const tracking = useApp((s) => s.settings.trackingEnabled);
@@ -794,18 +724,20 @@ function ScreenTimeCard() {
   const active = t ? t.productiveMs + t.neutralMs + t.distractingMs : 0;
   const share = active ? Math.round(((t?.productiveMs ?? 0) / active) * 100) : 0;
   return (
-    <div className="card screen-card">
+    <section className="card screen-card" aria-labelledby="screen-title">
       <div className="card-head">
-        <div>
-          <div className="card-title">Screen time today</div>
-          <div className="card-sub">{active ? `${share}% productive` : tracking ? "Nothing tracked yet" : "Tracking is off"}</div>
-        </div>
+        <h2 className="card-title" id="screen-title">
+          Screen time
+        </h2>
         <button className="btn btn-ghost btn-sm card-link" onClick={() => setView("stats")}>
           Details
         </button>
       </div>
-      <div className="screen-total big-number">
-        <Dur ms={active} />
+      <div className="screen-figure">
+        <span className="big-number">
+          <Dur ms={active} />
+        </span>
+        {active >= 60_000 && <span className="badge brand">{share}% productive</span>}
       </div>
       <ProportionBar p={t?.productiveMs ?? 0} n={t?.neutralMs ?? 0} d={t?.distractingMs ?? 0} height={8} />
       {data?.top.length ? (
@@ -814,7 +746,7 @@ function ScreenTimeCard() {
             const name = entityName(e.kind, e.key, e.name);
             return (
               <li key={`${e.kind}:${e.key}`} className="list-row">
-                <Avatar name={name} productivity={e.productivity} size={36} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />
+                <Avatar name={name} productivity={e.productivity} size={34} iconKey={e.kind === "app" ? e.key : undefined} siteKey={e.kind === "site" ? e.key : undefined} />
                 <span className="list-main">
                   <span className="list-title">{name}</span>
                 </span>
@@ -824,9 +756,9 @@ function ScreenTimeCard() {
           })}
         </ul>
       ) : (
-        <p className="screen-empty">{tracking ? "Apps and sites you use today show up here." : "Turn tracking on in Settings to see where your day goes."}</p>
+        <p className="screen-empty">{tracking ? "Your apps and sites show up here." : "Tracking is off."}</p>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -842,49 +774,68 @@ function Dur({ ms }: { ms: number }) {
     </>
   ) : (
     <>
-      {m}
+      {ms > 0 && m === 0 ? "<1" : m}
       <small>min</small>
     </>
   );
 }
 
 function UpNext() {
-  const { data } = useQuery(() => backend.tasksList(), []);
+  const tasks = useOpenTasks().slice(0, 4);
   const timer = useApp((s) => s.timer)!;
   const setIntention = useApp((s) => s.setIntention);
   const setView = useApp((s) => s.setView);
-  const tasks = (data ?? []).filter((t) => !t.done).slice(0, 4);
+  const focusing = timer.phase === "focus";
   return (
-    <div className="card">
-      <div className="card-head" style={{ marginBottom: 6 }}>
-        <div className="card-title">Up next</div>
+    <section className="card upnext-card" aria-labelledby="upnext-title">
+      <div className="card-head">
+        <h2 className="card-title" id="upnext-title">
+          Up next
+        </h2>
         <button className="btn btn-ghost btn-sm card-link" onClick={() => setView("tasks")}>
           All tasks
         </button>
       </div>
       {tasks.length ? (
         <ul className="list">
-          {tasks.map((t, i) => (
-            <li key={t.id} className={cx("list-row upnext", timer.taskId === t.id && "current")}>
-              <button className="upnext-btn" onClick={() => void setIntention(t.title, t.id)} title={`Focus on this (${i + 1})`}>
-                <span className="upnext-num" aria-hidden>
-                  {i + 1}
-                </span>
-                <span className="list-main">
-                  <span className="list-title">{t.title}</span>
-                  <span className="list-sub">{t.pomodoros <= t.estimate ? `${t.pomodoros} of ${t.estimate} blocks` : `${t.pomodoros} blocks done`}</span>
-                </span>
-                {timer.taskId === t.id ? <span className="badge brand">In focus</span> : <Play className="upnext-play" />}
-              </button>
-            </li>
-          ))}
+          {tasks.map((t, i) => {
+            const current = timer.taskId === t.id;
+            const share = t.estimate ? Math.min(1, t.pomodoros / t.estimate) : 0;
+            return (
+              <li key={t.id} className={cx("upnext", current && "current")}>
+                <button
+                  className="upnext-btn"
+                  disabled={!focusing}
+                  onClick={() => void setIntention(t.title, t.id)}
+                  title={focusing ? `Focus on this (${i + 1})` : "Pick a task when the break is over"}
+                >
+                  <span className="upnext-num" aria-hidden>
+                    {i + 1}
+                  </span>
+                  <span className="list-main">
+                    <span className="list-title">{t.title}</span>
+                  </span>
+                  <span className="upnext-progress" title={`${t.pomodoros} of ${t.estimate} blocks`}>
+                    <span className="upnext-bar" aria-hidden>
+                      <span style={{ width: `${share * 100}%` }} />
+                    </span>
+                    <span className="upnext-count tabular">
+                      {t.pomodoros}/{t.estimate}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : (
-        <div className="empty">
-          <strong>Nothing planned</strong>
-          Add a task and link your focus blocks to it.
+        <div className="upnext-empty">
+          <Buddy mood="idle" size={64} />
+          <button className="btn btn-soft btn-sm" onClick={() => setView("tasks")}>
+            <Plus /> Plan a task
+          </button>
         </div>
       )}
-    </div>
+    </section>
   );
 }

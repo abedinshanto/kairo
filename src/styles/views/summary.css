@@ -30,7 +30,7 @@
 .summary-hero-label {
   font-size: 15px;
   font-weight: 650;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
 }
 
 .summary-hero-top .buddy {
@@ -48,7 +48,7 @@
 .summary-hero-sub {
   font-size: 15px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
 }
 
 .summary-hero-split {
@@ -88,15 +88,15 @@
 }
 
 .day-shape-col .p {
-  background: #fff;
+  background: var(--productive);
 }
 
 .day-shape-col .n {
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--hero-track);
 }
 
 .day-shape-col .d {
-  background: #ffae9b;
+  background: var(--distracting);
 }
 
 .day-shape-axis {
@@ -105,7 +105,7 @@
   margin-top: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
 }
 
 .summary-legend {
@@ -118,7 +118,7 @@
 .summary-legend dt {
   font-size: 13px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
 }
 
 .summary-legend dd {
@@ -321,22 +321,22 @@
   display: block;
   width: 100%;
   border-radius: 8px 8px 4px 4px;
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--hero-track);
 }
 
 .week-col.hit .week-bar {
-  background: #fff;
+  background: var(--productive);
 }
 
 .week-col.best .week-bar {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 2px var(--hero-glass-hover);
 }
 
 .week-goal {
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1.5px dashed rgba(255, 255, 255, 0.55);
+  border-top: 1.5px dashed var(--hero-ink-2);
   pointer-events: none;
 }
 
@@ -346,7 +346,7 @@
   margin-top: 8px;
   font-size: 12px;
   font-weight: 650;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
 }
 
 .week-axis span {

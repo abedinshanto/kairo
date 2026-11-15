@@ -25,7 +25,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - **Finish early:** done in 12 minutes? Finish the block and those 12 minutes are logged as a finished block, credited to its task, and your break starts.
 - Set an intention for each block and link it to a task, so blocks count toward the work they were for. The buttons **1–4** on the timer (or the keys <kbd>1</kbd>–<kbd>4</kbd>) pick your top four tasks; an intention that isn't a task yet becomes one with **Add as task**.
 - **Voice dictation, on your device.** Tap Kai (or press <kbd>V</kbd>) and say what you're working on; Kai listens until you pause, and the words fill in your focus. Say a task's name or "task two" to link it. In Tasks, the microphone in *Add a task* takes things like "landing page redesign, three blocks". Speech becomes text through [Whisper](https://github.com/openai/whisper) (OpenAI's open speech model, tiny English, 32 MB, via [whisper.cpp](https://github.com/ggml-org/whisper.cpp)) shipped with the app: no audio is stored or sent anywhere. Desktop only; phones have dictation on their keyboard.
-- **Kai**, a small focus buddy, keeps you company. Its face and ears follow the timer: curious when idle, calm while you focus, blissful on breaks, all ears while you dictate and asleep when nothing's playing.
+- **Kai**, a little sprout, keeps you company. It breathes, blinks, looks around and follows your pointer with its eyes; it settles in while you focus, puts its sunglasses on for a break, is all ears while you dictate and dozes off when nothing's playing.
 - **Tasks** are planned in focus blocks and kept in priority order: drag them by their handle (or use the arrow keys on it). Give a task a day (Today, Tomorrow, This week, Next week or any date, also by saying "…tomorrow" or "by Friday"), a one-line note, and a sound that plays when you focus on it. The **Today** tab shows what's due. The current task sits on its own card with a progress bar per block, and you slide to mark it done.
 - The countdown lives in the **menu bar / system tray** and keeps running with the window closed. Click the icon (macOS, Windows) for a small panel with the timer, your top four tasks, today's focus and the app in front; the full menu is on right-click (and on Linux, where trays only show menus).
 - **Quick capture** (default <kbd>⌘/Ctrl</kbd> <kbd>⌥/Alt</kbd> <kbd>K</kbd>): a box over whatever you're doing. Type or say a task ("call the gym tomorrow, one block") and press Enter to add it, or <kbd>⇧</kbd> Enter to focus on it now. Press the shortcut again to talk.
@@ -53,7 +53,7 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - **Smart nudges:** *Focus guard* nudges you if you drift to a distracting app during a block. Kairo also suggests a block after a long distraction and a break after a long stretch, and lets you know once when the day's distraction budget is used up.
 
 **Sound**
-- 16 soundscapes synthesised on the device in real time: rain, thunder, ocean, wind, fireplace, stream, forest, night, a café, a train, a library, white / pink / brown noise, binaural beats and an ambient pad. There are no audio files and nothing is streamed.
+- 16 soundscapes synthesised on the device: rain, thunder, ocean, wind, fireplace, stream, forest, night, a café, a train, a library, white / pink / brown noise, binaural beats and an ambient pad. There are no audio files and nothing is streamed. Loops are made in a background worker (play never stalls the interface), repeat seamlessly and are all mastered to the same loudness (−20 LUFS), so every sound sits at the same level in a mix.
 - Mix any combination or start from a preset (Deep Work, Rainy Night, Ocean Calm, Forest Morning, Campfire, Flow State, Corner Café, Night Train, Reading Room).
 - A stop timer (15, 30 or 60 minutes, or the end of the block). Optionally starts with a focus block and fades out on breaks. Choose a bell, soft or digital chime.
 
@@ -175,7 +175,7 @@ src/                      React 19 + TypeScript UI (Vite)
     demo.ts, seed.ts        browser preview with sample data + TS timer twin
   lib/insights.ts         rule-based insight + persona engine (pure, on-device)
   lib/analytics.ts        day stats, productivity score, rhythm matrix
-  lib/audio/              procedural soundscape synthesis + mixer + chimes
+  lib/audio/              procedural soundscape synthesis (in a worker) + mixer + chimes
   components/charts/      SVG charts: timeline, stacked columns, heatmap, timer ring
   views/                  Focus, Today, Insights, Apps & Sites, Tasks, Sounds, Settings
 src-tauri/                Rust core (Tauri 2)
@@ -202,7 +202,7 @@ The timer runs in Rust, not in the webview, so the countdown, tray title and not
 
 ## Customising
 
-- **Name & identity:** set `productName` and `identifier` in `src-tauri/tauri.conf.json`, then regenerate icons with `npx tauri icon branding/icon-1024.png`.
+- **Name & identity:** set `productName` and `identifier` in `src-tauri/tauri.conf.json`, then regenerate icons with `npx tauri icon branding/icon-1024.png` (rendered from `branding/logo.svg`). The Android adaptive icon's foreground is Kai alone on a green background colour, so replace `icons/android/*/ic_launcher_foreground.png` and keep `values/ic_launcher_background.xml` green after running it.
 - **Default categories:** `src-tauri/src/categories.rs`. Users can override any app or site from the Apps & Sites screen.
 - **Design:** the design system is described in [`docs/DESIGN.md`](docs/DESIGN.md). Tokens for the light and dark themes are in `src/styles/tokens.css`.
 

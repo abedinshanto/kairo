@@ -40,7 +40,7 @@
 .onb-blob {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(closest-side, var(--onb-glow, rgba(96, 136, 255, 0.3)), transparent);
+  background: radial-gradient(closest-side, var(--onb-glow, rgba(150, 214, 160, 0.42)), transparent);
   animation: onb-drift 18s ease-in-out infinite alternate;
 }
 
@@ -52,7 +52,7 @@
 }
 
 .onb-blob.b {
-  --onb-glow: rgba(150, 170, 255, 0.34);
+  --onb-glow: rgba(206, 236, 190, 0.6);
   width: 820px;
   height: 820px;
   right: -320px;
@@ -62,7 +62,7 @@
 }
 
 .onb-blob.c {
-  --onb-glow: rgba(186, 204, 255, 0.45);
+  --onb-glow: rgba(190, 228, 226, 0.5);
   width: 520px;
   height: 520px;
   right: 8%;
@@ -71,15 +71,15 @@
 }
 
 :root[data-theme="dark"] .onb-blob {
-  --onb-glow: rgba(76, 125, 255, 0.16);
+  --onb-glow: rgba(70, 160, 100, 0.16);
 }
 
 :root[data-theme="dark"] .onb-blob.b {
-  --onb-glow: rgba(124, 92, 246, 0.12);
+  --onb-glow: rgba(50, 110, 80, 0.14);
 }
 
 :root[data-theme="dark"] .onb-blob.c {
-  --onb-glow: rgba(76, 125, 255, 0.09);
+  --onb-glow: rgba(40, 100, 110, 0.1);
 }
 
 @keyframes onb-drift {
@@ -229,10 +229,50 @@
   animation: onb-pop 0.6s var(--spring) 0.25s both;
 }
 
-.onb-float.s1 {
+/* The welcome: a big Kai with three glass chips floating around it (ref: Recenter) */
+.onb-kai.hero {
+  width: 100%;
+  height: 300px;
+}
+
+.onb-kai.hero .onb-halo {
+  height: 120%;
+}
+
+.onb-float.f1 {
+  top: 40px;
+  left: calc(50% + 92px);
+  animation:
+    onb-pop 0.6s var(--spring) 0.25s both,
+    onb-drift 6s ease-in-out 1s infinite;
+}
+
+.onb-float.f2 {
+  top: 150px;
   left: auto;
-  right: calc(50% + 60px);
-  top: 120px;
+  right: calc(50% + 104px);
+  animation:
+    onb-pop 0.6s var(--spring) 0.4s both,
+    onb-drift 7s ease-in-out 1.4s infinite reverse;
+}
+
+.onb-float.f3 {
+  top: 220px;
+  left: calc(50% + 78px);
+  animation:
+    onb-pop 0.6s var(--spring) 0.55s both,
+    onb-drift 6.5s ease-in-out 2s infinite;
+}
+
+@keyframes onb-drift {
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+.onb-brand {
+  font-size: 64px !important;
+  letter-spacing: -0.05em;
 }
 
 .onb-float svg {
@@ -267,9 +307,9 @@
 }
 
 .onb-lead {
-  max-width: 400px;
-  margin-top: 14px;
-  font-size: 16px;
+  max-width: 340px;
+  margin-top: 12px;
+  font-size: 17px;
   line-height: 1.55;
   color: var(--ink-2);
   text-wrap: pretty;
@@ -469,7 +509,7 @@
   height: 62px;
   padding: 0 66px;
   font-size: 16px;
-  box-shadow: 0 18px 34px -18px rgba(15, 20, 36, 0.55);
+  box-shadow: var(--cta-shadow);
   transition: transform 0.12s var(--ease), background 0.25s;
 }
 
@@ -493,7 +533,7 @@
 
 @media (hover: hover) {
   .onb-cta:hover {
-    background: color-mix(in srgb, var(--ink) 86%, var(--brand));
+    background: var(--cta-hover);
   }
 
   .onb-cta:hover .onb-cta-arrow {
@@ -565,10 +605,32 @@
     font-size: 12.5px;
   }
 
-  .onb-float.s1 {
-    left: auto;
-    right: calc(50% + 48px);
-    top: 98px;
+  .onb-kai.hero {
+    height: 230px;
+  }
+
+  .onb-kai.hero .onb-hop svg {
+    width: 170px;
+    height: 170px;
+  }
+
+  .onb-float.f1 {
+    top: 24px;
+    left: calc(50% + 62px);
+  }
+
+  .onb-float.f2 {
+    top: 116px;
+    right: calc(50% + 78px);
+  }
+
+  .onb-float.f3 {
+    top: 176px;
+    left: calc(50% + 50px);
+  }
+
+  .onb-brand {
+    font-size: 48px !important;
   }
 
   .onb-title {

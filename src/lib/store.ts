@@ -104,6 +104,19 @@ export const useApp = create<State>((set, get) => ({
     soundEngine.setMaster(s.sound!.master);
     set({ settings: s, timer, clockSkew: Date.now() - timer.now, tracker, ready: true });
 
+    // Audio may only start from a click or key press. The first one unlocks it
+    // (and renders the mix ahead of time), so a chime at the end of a block
+    // rings even if the soundscape was never played.
+    if (isMainWindow) {
+      const unlock = () => {
+        soundEngine.unlock();
+        window.removeEventListener("pointerdown", unlock, true);
+        window.removeEventListener("keydown", unlock, true);
+      };
+      window.addEventListener("pointerdown", unlock, true);
+      window.addEventListener("keydown", unlock, true);
+    }
+
     soundEngine.subscribe(() => {
       set({ soundPlaying: soundEngine.playing });
       // Played or stopped by hand: that wins over what a break would bring back.

@@ -8,31 +8,38 @@ export function cx(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
 }
 
-// ------------------------------------------------------------------ Page title (two-tone, like the references)
+// ------------------------------------------------------------------ Page title
 
-/** `"Hi Sam,"` in ink and `"ready to focus?"` dimmed — the references' signature heading. */
-export function PageTitle({ strong, dim, size = "display" }: { strong: ReactNode; dim?: ReactNode; size?: "display" | "title" }) {
+/** A page's name, big, with at most one quiet line under it. */
+export function PageTitle({ strong, dim }: { strong: ReactNode; dim?: ReactNode }) {
   return (
-    <h1 className={size}>
-      {strong}
-      {dim && (
-        <>
-          {" "}
-          <span className="dim">{dim}</span>
-        </>
-      )}
-    </h1>
+    <div className="page-heading">
+      <h1 className="display">{strong}</h1>
+      {dim && <p className="page-sub">{dim}</p>}
+    </div>
   );
 }
 
 // ------------------------------------------------------------------ Top bar
 
-export function TopBar({ left, right }: { left?: ReactNode; right?: ReactNode }) {
+/**
+ * The page header: an optional lead (a back button, Kai), the title and its
+ * line, and the page's circle buttons on the right.
+ */
+export function TopBar({ left, right, title, sub }: { left?: ReactNode; right?: ReactNode; title?: ReactNode; sub?: ReactNode }) {
   return (
     // "deep": drag the window from anywhere in the bar; its buttons still click.
     <header className="topbar" data-tauri-drag-region="deep">
-      <div className="topbar-left">{left}</div>
-      <div className="topbar-right">{right}</div>
+      <div className="topbar-left">
+        {left}
+        {title !== undefined && (
+          <div className="topbar-titles">
+            <h1 className="display">{title}</h1>
+            {sub && <p className="page-sub">{sub}</p>}
+          </div>
+        )}
+      </div>
+      {right && <div className="topbar-right">{right}</div>}
     </header>
   );
 }
@@ -376,6 +383,19 @@ export function SlideToConfirm({ label, onConfirm, light, icon }: { label: strin
         {icon ?? <Check />}
       </div>
     </div>
+  );
+}
+
+// ------------------------------------------------------------------ Equalizer
+
+/** Three little bars that dance while a soundscape plays. */
+export function Equalizer() {
+  return (
+    <span className="eq" aria-hidden>
+      <i />
+      <i />
+      <i />
+    </span>
   );
 }
 

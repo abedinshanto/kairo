@@ -22,11 +22,11 @@ import {
   Waves,
   Wind,
 } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { PRESET_ICONS } from "../components/soundIcons";
 import { Buddy } from "../components/Buddy";
-import { PageTitle, PillTabs, Slider, Switch, TopBar, cx } from "../components/ui";
-import { PRESETS, SOUNDS, soundEngine, type Preset, type SoundId, type SoundMeta } from "../lib/audio/engine";
+import { Equalizer, PillTabs, Slider, Switch, TopBar, cx } from "../components/ui";
+import { PRESETS, presetFor, SOUNDS, soundEngine, type Preset, type SoundId, type SoundMeta } from "../lib/audio/engine";
 import { useApp } from "../lib/store";
 import { fmtTime } from "../lib/time";
 import "../styles/views/sounds.css";
@@ -63,11 +63,14 @@ export function SoundsView() {
   const inBlock = timer?.phase === "focus" && timer.startedAt !== null;
   const levels = sound.levels as Partial<Record<SoundId, number>>;
   const active = SOUNDS.filter((s) => (levels[s.id] ?? 0) > 0);
-  const preset = PRESETS.find((p) => {
-    const keys = Object.keys(p.levels);
-    return keys.length === active.length && keys.every((k) => (levels[k as SoundId] ?? 0) > 0);
-  });
+  const preset = presetFor(levels);
   const [group, setGroup] = useState<Group>(() => active[0]?.group ?? "Nature");
+  // Render the presets' loops in the background while you look, so a tap plays at once.
+  useEffect(() => {
+    const t = window.setTimeout(() => soundEngine.prewarm(active.map((s) => s.id)), 300);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setLevel = (id: SoundId, v: number) => {
     const next = { ...sound.levels, [id]: v };
@@ -84,22 +87,9 @@ export function SoundsView() {
   return (
     <div className="sounds">
       <TopBar
-        left={
-          <>
-            <span className={cx("art sounds-thumb", `art-${preset?.id ?? "custom"}`)} aria-hidden>
-              {playing ? <Equalizer /> : ((preset && PRESET_ICONS[preset.id]) ?? <Headphones />)}
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <div className="who-name">{preset?.name ?? (active.length ? "Your own mix" : "Nothing playing")}</div>
-              <div className="who-sub">
-                {playing ? "Playing" : active.length ? "Paused" : "Pick a sound to begin"}
-                {active.length > 0 && ` · ${active.length} sound${active.length === 1 ? "" : "s"}`}
-              </div>
-            </div>
-          </>
-        }
+        title="Sounds"
+        sub={playing ? `Playing ${preset?.name ?? "your mix"}` : active.length ? `${preset?.name ?? "Your mix"} · paused` : "Pick a sound to begin."}
       />
-      <PageTitle strong="Soundscapes," dim="tune out the noise." />
 
       <div className="sounds-grid">
         {/* ------------------------------------------------ Hero player */}
@@ -112,13 +102,13 @@ export function SoundsView() {
           <div className="sky-kai">
             <span className="sky-ring" aria-hidden />
             <span className="sky-ring two" aria-hidden />
-            <Buddy tone="cloud" mood={playing ? "happy" : "sleep"} size={132} />
+            <Buddy tone="cloud" mood={playing ? "happy" : "sleep"} size={140} />
             <Cloud className="sky-seat" />
           </div>
 
           <div className="sky-text">
             <h2 className="sky-title">{preset?.name ?? (active.length ? "Your own mix" : "Pick a sound")}</h2>
-            <p className="sky-sub">{active.map((s) => s.label).join(" · ") || "Choose a preset or blend your own below."}</p>
+            <p className="sky-sub">{active.map((s) => s.label).join(" · ") || "Choose a preset or blend your own."}</p>
             {playing && (
               <label className="sky-stop" title="Stop the sound by itself">
                 <Timer aria-hidden />
@@ -166,8 +156,7 @@ export function SoundsView() {
               <Sunrise />
             </span>
             <span className="opt-text">
-              <span className="opt-title">Play when a focus block starts</span>
-              <span className="opt-sub">Your mix fades in with the timer.</span>
+              <span className="opt-title">Play when focus starts</span>
             </span>
             <Switch label="Play when a focus block starts" checked={sound.autoPlay} onChange={(v) => updateSound({ autoPlay: v })} />
           </label>
@@ -176,8 +165,7 @@ export function SoundsView() {
               <Moon />
             </span>
             <span className="opt-text">
-              <span className="opt-title">Fade out during breaks</span>
-              <span className="opt-sub">A little silence while you rest.</span>
+              <span className="opt-title">Fade out on breaks</span>
             </span>
             <Switch label="Fade out during breaks" checked={sound.pauseOnBreak} onChange={(v) => updateSound({ pauseOnBreak: v })} />
           </label>
@@ -189,7 +177,13 @@ export function SoundsView() {
             {PRESETS.map((p) => {
               const on = preset?.id === p.id;
               return (
-                <button key={p.id} className={cx("preset art", `art-${p.id}`, on && "active")} aria-pressed={on} onClick={() => applyPreset(p)}>
+                <button
+                  key={p.id}
+                  className={cx("preset art", `art-${p.id}`, on && "active")}
+                  aria-pressed={on}
+                  onPointerEnter={() => soundEngine.prewarm(Object.keys(p.levels) as SoundId[])}
+                  onClick={() => applyPreset(p)}
+                >
                   <span className="preset-top">
                     <span className="preset-icon" aria-hidden>
                       {PRESET_ICONS[p.id] ?? <Headphones />}
@@ -221,7 +215,7 @@ export function SoundsView() {
               <h2 className="section-title" id="mixer-title">
                 Mix your own
               </h2>
-              <p className="mixer-sub">Slide to blend. Every sound is made right on your device.</p>
+
             </div>
             <PillTabs<Group>
               label="Sound group"
@@ -263,17 +257,6 @@ export function SoundsView() {
   );
 }
 
-/** Three little bars that dance while a mix plays. */
-function Equalizer() {
-  return (
-    <span className="eq" aria-hidden>
-      <i />
-      <i />
-      <i />
-    </span>
-  );
-}
-
 /** A soft, fluffy cloud (Kai's seat and the hero's scenery). */
 function Cloud({ className }: { className?: string }) {
   const id = useId().replace(/:/g, "");
@@ -282,8 +265,8 @@ function Cloud({ className }: { className?: string }) {
       <defs>
         <linearGradient id={`c${id}`} x1="0" y1="8" x2="0" y2="92" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.6" stopColor="#f6f4ff" />
-          <stop offset="1" stopColor="#e4e6ff" />
+          <stop offset="0.6" stopColor="#f7faf6" />
+          <stop offset="1" stopColor="#e6efe7" />
         </linearGradient>
       </defs>
       <g fill={`url(#c${id})`}>

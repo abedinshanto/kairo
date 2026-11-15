@@ -120,8 +120,8 @@
 }
 
 .apps-level.productive[aria-pressed="true"] {
-  background: var(--productive);
-  color: #fff;
+  background: var(--brand-deep);
+  color: var(--on-brand);
   box-shadow: 0 12px 24px -12px var(--productive);
 }
 

@@ -11,17 +11,24 @@
   isolation: isolate;
 }
 
-/* Soft blue light blooms behind everything (references: blurred glows on a cool canvas) */
+/* Soft mint light blooming behind everything, drifting very slowly */
 .canvas-glow {
   position: fixed;
-  inset: 0;
+  inset: -10%;
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(42% 38% at 12% 0%, var(--canvas-glow-1), transparent 70%),
-    radial-gradient(38% 42% at 92% 8%, var(--canvas-glow-2), transparent 70%),
-    radial-gradient(36% 30% at 4% 62%, var(--canvas-glow-1), transparent 70%),
-    radial-gradient(50% 40% at 50% 110%, var(--canvas-glow-2), transparent 70%);
+    radial-gradient(40% 36% at 14% 4%, var(--canvas-glow-1), transparent 70%),
+    radial-gradient(36% 40% at 90% 10%, var(--canvas-glow-2), transparent 70%),
+    radial-gradient(34% 30% at 6% 70%, var(--canvas-glow-3), transparent 70%),
+    radial-gradient(48% 38% at 60% 108%, var(--canvas-glow-1), transparent 70%);
+  animation: canvas-drift 40s ease-in-out infinite alternate;
+}
+
+@keyframes canvas-drift {
+  to {
+    transform: translate3d(2.5%, 2%, 0) scale(1.04);
+  }
 }
 
 /* Window drag area under the hidden macOS title bar (traffic lights sit on top of it) */
@@ -49,14 +56,14 @@ html.is-mac.is-native .drag-strip {
 .page {
   max-width: var(--page-max);
   margin: 0 auto;
-  padding: calc(var(--titlebar) + 26px + env(safe-area-inset-top)) var(--gutter) calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));
-  animation: page-in 0.45s var(--ease);
+  padding: calc(var(--titlebar) + 34px + env(safe-area-inset-top)) var(--gutter) calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));
+  animation: page-in 0.5s var(--ease);
 }
 
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
 }
 
@@ -78,7 +85,7 @@ html.is-mac.is-native .drag-strip {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 14px;
@@ -106,10 +113,10 @@ html.is-mac.is-native .drag-strip {
 
 .topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  min-height: 56px;
+  min-height: 52px;
   margin-bottom: 26px;
 }
 
@@ -120,11 +127,21 @@ html.is-mac.is-native .drag-strip {
   min-width: 0;
 }
 
+/* Title-first headers: the page's name (and one quiet line) where a toolbar would be */
+.topbar-titles {
+  min-width: 0;
+}
+
+.topbar-titles .display {
+  overflow-wrap: anywhere;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
   gap: 10px;
   flex: none;
+  margin-top: 4px;
 }
 
 .who-name {
@@ -139,7 +156,7 @@ html.is-mac.is-native .drag-strip {
 .who-sub {
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--brand-ink);
+  color: var(--ink-2);
 }
 
 .buddy-avatar {
@@ -153,77 +170,82 @@ html.is-mac.is-native .drag-strip {
   flex: none;
 }
 
-/* ================================================================ Bottom navigation (floating pill) */
+/* ================================================================ Bottom navigation (floating glass pill) */
 
 .nav {
   position: fixed;
   z-index: 40;
   left: 50%;
-  bottom: calc(20px + env(safe-area-inset-bottom));
+  bottom: calc(22px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
+  gap: 4px;
+  padding: 6px;
   border-radius: var(--r-pill);
   background: var(--nav-glass);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: var(--shadow-nav);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  box-shadow: var(--shadow-nav), inset 0 0 0 1px var(--hero-glass-line);
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 56px;
-  min-width: 56px;
-  padding: 0 16px;
+  height: 52px;
+  min-width: 52px;
+  padding: 0 15px;
   border-radius: var(--r-pill);
-  background: var(--surface-soft);
-  color: var(--ink);
-  font-size: 15px;
+  color: var(--ink-2);
+  font-size: 14.5px;
   font-weight: 650;
-  transition: background 0.3s var(--ease), color 0.3s, padding 0.3s var(--ease);
+  transition: background 0.35s var(--ease), color 0.25s, padding 0.35s var(--ease), min-width 0.35s var(--ease);
 }
 
 .nav-item svg {
   width: 22px;
   height: 22px;
   flex: none;
+  stroke-width: 1.9;
 }
 
 .nav-item .nav-label {
   display: none;
 }
 
-.nav-item:hover:not(.active) {
-  background: var(--surface-sunk);
+@media (hover: hover) {
+  .nav-item:hover:not(.active) {
+    color: var(--ink);
+    background: var(--surface-soft);
+  }
+}
+
+.nav-item:active:not(.active) {
+  transform: scale(0.94);
 }
 
 .nav-item.active {
   /* fixed minimum so the nav keeps one width on every tab */
-  min-width: 134px;
-  padding: 0 24px 0 20px;
-  background: var(--brand);
-  color: var(--on-brand);
-  box-shadow: 0 10px 22px -10px var(--brand);
-}
-
-/* During breaks the active tab takes the phase colour, like the timer card */
-.app[data-phase="short_break"] .nav-item.active {
-  background: var(--phase-short-solid);
-  box-shadow: 0 10px 22px -10px var(--phase-short-solid);
-}
-
-.app[data-phase="long_break"] .nav-item.active {
-  background: var(--phase-long-solid);
-  box-shadow: 0 10px 22px -10px var(--phase-long-solid);
+  min-width: 124px;
+  padding: 0 22px 0 18px;
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
 }
 
 .nav-item.active .nav-label {
   display: inline;
+  animation: nav-label-in 0.4s var(--ease);
+}
+
+@keyframes nav-label-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
 }
 
 .preview-chip {
@@ -250,7 +272,7 @@ html.is-mac.is-native .drag-strip {
 .preview-chip svg {
   width: 13px;
   height: 13px;
-  color: var(--brand);
+  color: var(--brand-ink);
 }
 
 /* ================================================================ Responsive */
@@ -270,7 +292,12 @@ html.is-mac.is-native .drag-strip {
 
 @media (max-width: 760px) {
   .display {
-    font-size: 32px;
+    font-size: 34px;
+  }
+
+  .page-sub {
+    font-size: 15px;
+    margin-top: 6px;
   }
 
   .topbar {
@@ -278,20 +305,20 @@ html.is-mac.is-native .drag-strip {
   }
 
   .nav {
-    gap: 6px;
-    padding: 7px;
+    gap: 2px;
+    padding: 6px;
     bottom: calc(14px + env(safe-area-inset-bottom));
   }
 
   .nav-item {
-    height: 50px;
-    min-width: 50px;
-    padding: 0 13px;
+    height: 48px;
+    min-width: 48px;
+    padding: 0 12px;
   }
 
   .nav-item.active {
-    min-width: 122px;
-    padding: 0 18px 0 15px;
+    min-width: 112px;
+    padding: 0 16px 0 14px;
   }
 
   .nav-item svg {
@@ -316,11 +343,11 @@ html.is-mac.is-native .drag-strip {
 
   .card {
     padding: 20px;
-    border-radius: 28px;
+    border-radius: 26px;
   }
 
   .card.hero {
-    border-radius: 34px;
+    border-radius: 32px;
   }
 }
 
@@ -331,14 +358,14 @@ html.is-mac.is-native .drag-strip {
   }
 
   .nav-item {
-    min-width: 46px;
-    height: 48px;
-    padding: 0 12px;
+    min-width: 44px;
+    height: 46px;
+    padding: 0 11px;
   }
 
   .nav-item.active {
-    min-width: 110px;
-    padding: 0 15px 0 13px;
+    min-width: 104px;
+    padding: 0 14px 0 12px;
   }
 }
 

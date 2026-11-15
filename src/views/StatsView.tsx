@@ -10,7 +10,7 @@ import { Heatmap } from "../components/charts/Heatmap";
 import { ScoreRing } from "../components/charts/ScoreRing";
 import { StackedColumns } from "../components/charts/StackedColumns";
 import { InsightList } from "../components/InsightList";
-import { Avatar, Delta, PageTitle, PillTabs, Segmented, Sheet, TopBar, cx } from "../components/ui";
+import { Avatar, Delta, PillTabs, Segmented, Sheet, TopBar, cx } from "../components/ui";
 import { buildDayStats, categoryTotals, goalStreak, pctChange, rhythmMatrix, sumDays, type DayStat, type RhythmCell } from "../lib/analytics";
 import { backend } from "../lib/backend";
 import { categoryLabel, entityName, PRODUCTIVITY_LABEL } from "../lib/categories";
@@ -297,16 +297,15 @@ export function StatsView() {
   };
 
   const dayMode = range === "day";
-  const dim = dayMode
+  const title = dayMode
     ? isToday
-      ? "today."
+      ? "Today"
       : day === addDays(today, -1)
-        ? "yesterday."
-        : `on ${longWeekday.format(day)}.`
+        ? "Yesterday"
+        : longWeekday.format(day)
     : range === 7
-      ? "this week."
-      : "this month.";
-
+      ? "This week"
+      : "Last 30 days";
   const whenName = dayMode ? shortDate.format(day) : `${fmtShortDay(addDays(today, -(range - 1)))} – ${fmtShortDay(today)}`;
   const shownDayMode = !data || data.range === "day";
   const focusSessions = (data?.sessions ?? []).filter((s) => s.kind === "focus");
@@ -314,17 +313,16 @@ export function StatsView() {
   return (
     <div className={cx("stats", stale && "refreshing")}>
       <TopBar
-        left={
-          <div className="stats-when">
-            <div className="who-name">{whenName}</div>
-            {dayMode && !isToday ? (
-              <button className="who-sub stats-back" onClick={() => go(today)}>
+        title={title}
+        sub={
+          <>
+            {whenName}
+            {dayMode && !isToday && (
+              <button className="stats-back" onClick={() => go(today)}>
                 Back to today
               </button>
-            ) : (
-              <div className="who-sub">{dayMode ? "Tracked privately" : `vs the ${range} days before`}</div>
             )}
-          </div>
+          </>
         }
         right={
           <>
@@ -356,7 +354,6 @@ export function StatsView() {
 
       {/* Desktop: two columns. Below 1024px the columns dissolve and the o-* classes set the order. */}
       <header className="stats-intro">
-        <PageTitle strong="Your progress," dim={dim} />
         <div className="stats-tabs">
           <PillTabs<Range>
             label="Period"
@@ -451,9 +448,9 @@ function Hero({ model, onScore }: { model: Model | undefined; onScore: () => voi
   // Ranges headline a daily average, so the split under it is per day too.
   const per = (ms: number) => (dayMode ? ms : perDay(ms, now?.activeDays ?? 0));
   const split = [
-    { name: "Productive", color: "#fff", ms: per(now?.productiveMs ?? 0) },
-    { name: "Neutral", color: "rgba(255,255,255,.42)", ms: per(now?.neutralMs ?? 0) },
-    { name: "Distracting", color: "#ffae9b", ms: per(now?.distractingMs ?? 0) },
+    { name: "Productive", color: "var(--productive)", ms: per(now?.productiveMs ?? 0) },
+    { name: "Neutral", color: "var(--neutral)", ms: per(now?.neutralMs ?? 0) },
+    { name: "Distracting", color: "var(--distracting)", ms: per(now?.distractingMs ?? 0) },
   ];
   const compact = useMediaQuery("(max-width: 760px)");
   const score = now?.score ?? null;
@@ -1076,7 +1073,7 @@ function PersonaCard({ persona, range, activeHours }: { persona: Persona | null;
   return (
     <section className="card persona-card" aria-labelledby="persona-title">
       <div className="persona-head">
-        <Buddy mood={persona ? "happy" : "sleep"} tone="violet" size={80} />
+        <Buddy mood={persona ? "happy" : "sleep"} tone="lilac" size={80} />
         <div className="persona-id">
           <div className="label">Your focus persona</div>
           <h2 className="persona-name" id="persona-title">

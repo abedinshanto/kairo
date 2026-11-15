@@ -1,33 +1,15 @@
-import { ArrowLeft, ArrowRight, BarChart3, Lock, ShieldCheck, Smartphone, Sparkles, Target, Timer, WifiOff } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowLeft, ArrowRight, BarChart3, Lock, Smartphone, Timer } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Buddy, type BuddyMood } from "../components/Buddy";
-import { PageTitle, Stepper, Switch, cx } from "../components/ui";
+import { Stepper, Switch, cx } from "../components/ui";
 import { backend, isNative } from "../lib/backend";
 import { isMac, isMobileOS, os } from "../lib/platform";
 import { useApp } from "../lib/store";
 import { fmtDuration } from "../lib/time";
 import "../styles/views/onboarding.css";
 
-const STEPS = 3;
-const MOOD: BuddyMood[] = ["happy", "idle", "happy"];
-
-interface Benefit {
-  icon: ReactNode;
-  title: string;
-  sub: string;
-}
-
-const MEET: Benefit[] = [
-  { icon: <Timer />, title: "Calm focus blocks", sub: "Timed sessions with breaks, intentions and tasks." },
-  { icon: <BarChart3 />, title: "Effortless tracking", sub: "See where your time goes across apps and sites." },
-  { icon: <Sparkles />, title: "Gentle insights", sub: "Find your peak hours and biggest distractions." },
-];
-
-const PRIVATE: Benefit[] = [
-  { icon: <WifiOff />, title: "Works fully offline", sub: "No account, no cloud. Your data never leaves this device." },
-  { icon: <Lock />, title: "Only names, no titles", sub: "Window titles are off; app and site names are kept." },
-  { icon: <ShieldCheck />, title: "You're in control", sub: "Pause, exclude apps or delete everything any time." },
-];
+const STEPS = 2;
+const MOOD: BuddyMood[] = ["happy", "idle"];
 
 export function Onboarding() {
   const [step, setStep] = useState(0);
@@ -84,7 +66,6 @@ export function Onboarding() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const goal = fmtDuration(settings.dailyFocusGoalMinutes * 60_000);
   // Platform notes from the native shells (none show in the web preview).
   const needsUsage = isNative && os === "android" && !!tracker?.needsPermission;
   const iosNote = isNative && os === "ios";
@@ -119,57 +100,38 @@ export function Onboarding() {
         </p>
 
         <div className="onb-body">
-          <div className={cx("onb-kai", compact && "compact")}>
+          <div className={cx("onb-kai", compact && "compact", step === 0 && "hero")}>
             <span className="onb-halo" aria-hidden />
             <span className="onb-hop" key={step}>
-              <Buddy mood={MOOD[step]} size={184} />
+              <Buddy mood={MOOD[step]} size={step === 0 ? 220 : 160} />
             </span>
-            <span className={cx("onb-float", `s${step}`)} key={`f${step}`} aria-hidden>
-              {step === 0 && (
-                <>
-                  <Timer /> {settings.focusMinutes}:00
-                </>
-              )}
-              {step === 1 && (
-                <>
-                  <Lock /> On device
-                </>
-              )}
-              {step === 2 && (
-                <>
-                  <Target /> {goal} a day
-                </>
-              )}
-            </span>
+            {step === 0 && (
+              <>
+                <span className="onb-float f1" aria-hidden>
+                  <Timer /> Focus
+                </span>
+                <span className="onb-float f2" aria-hidden>
+                  <BarChart3 /> Insights
+                </span>
+                <span className="onb-float f3" aria-hidden>
+                  <Lock /> Private
+                </span>
+              </>
+            )}
           </div>
 
           <div className="onb-step" key={step} style={{ ["--dir" as string]: dir }}>
             <div id="onb-title" className="onb-title">
-              {step === 0 && <PageTitle strong="Meet Kai," dim="your focus buddy." />}
-              {step === 1 && <PageTitle strong="Private," dim="by design." />}
-              {step === 2 && <PageTitle strong="Let's set you up," dim="it takes a second." />}
+              {step === 0 ? <h1 className="display onb-brand">Kairo</h1> : <h1 className="display">Make it yours</h1>}
             </div>
 
-            {step === 0 && (
-              <>
-                <p className="onb-lead">Kairo is a calm focus timer that also shows where your time really goes.</p>
-                <BenefitList items={MEET} />
-              </>
-            )}
+            {step === 0 && <p className="onb-lead">Focus calmly. See where your time goes. All on your device.</p>}
 
             {step === 1 && (
               <>
-                <p className="onb-lead">Everything Kairo records stays on this device. No account, no server, nowhere to leak.</p>
-                <BenefitList items={PRIVATE} />
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <p className="onb-lead">You can change both any time in Settings.</p>
                 <div className="card onb-setup">
                   <label className="onb-field">
-                    <span className="onb-field-label">What should Kai call you?</span>
+                    <span className="onb-field-label">Your name</span>
                     <input
                       className="input pill onb-name"
                       type="text"
@@ -184,7 +146,6 @@ export function Onboarding() {
                   <div className="onb-goal">
                     <div className="onb-goal-text">
                       <span className="onb-field-label">Daily focus goal</span>
-                      <span className="onb-field-sub">Most people start with 2–4 hours.</span>
                     </div>
                     <Stepper
                       label="daily focus goal"
@@ -200,7 +161,7 @@ export function Onboarding() {
                     <div className="onb-goal">
                       <div className="onb-goal-text">
                         <span className="onb-field-label">Open at login</span>
-                        <span className="onb-field-sub">Starts quietly in the {isMac ? "menu bar" : "tray"}, so your whole day is tracked.</span>
+                        <span className="onb-field-sub">Track your whole day from the {isMac ? "menu bar" : "tray"}.</span>
                       </div>
                       <Switch label="Open at login" checked={atLogin} onChange={setAtLogin} />
                     </div>
@@ -208,8 +169,8 @@ export function Onboarding() {
                   {sitesNote && (
                     <div className="onb-goal">
                       <div className="onb-goal-text">
-                        <span className="onb-field-label">See websites, not just browsers</span>
-                        <span className="onb-field-sub">Reads the current tab in Safari, Chrome, Arc and others. macOS asks once per browser; only the site's domain is kept.</span>
+                        <span className="onb-field-label">See websites</span>
+                        <span className="onb-field-sub">Only the domain is kept. macOS asks once per browser.</span>
                       </div>
                       <Switch label="See websites" checked={readSites} onChange={setReadSites} />
                     </div>
@@ -221,7 +182,7 @@ export function Onboarding() {
                       </span>
                       <div className="onb-permission-text">
                         <span className="onb-field-label">Allow usage access</span>
-                        <span className="onb-field-sub">Android needs your OK before Kairo can see which apps you use. It all stays on your phone.</span>
+                        <span className="onb-field-sub">Android asks before Kairo can see which apps you use.</span>
                         <button className="btn btn-soft btn-sm" onClick={() => void backend.usagePermissionRequest()}>
                           Open settings
                         </button>
@@ -233,7 +194,7 @@ export function Onboarding() {
                 {iosNote && (
                   <p className="onb-note">
                     <Smartphone />
-                    <span>On iPhone and iPad, Apple doesn't let apps read other apps' usage. Kairo tracks your focus blocks here; app tracking runs on your Mac, PC or Android.</span>
+                    <span>On iPhone and iPad, Kairo tracks your focus blocks. App tracking runs on your Mac, PC or Android.</span>
                   </p>
                 )}
               </>
@@ -243,7 +204,7 @@ export function Onboarding() {
 
         <footer className="onb-foot">
           <button className="btn btn-dark btn-block onb-cta" onClick={last ? start : () => go(step + 1)}>
-            {last ? "Start focusing" : step === 0 ? "Get started" : "Continue"}
+            {last ? "Start focusing" : "Get started"}
             <span className="onb-cta-arrow" aria-hidden>
               <ArrowRight />
             </span>
@@ -251,21 +212,5 @@ export function Onboarding() {
         </footer>
       </div>
     </div>
-  );
-}
-
-function BenefitList({ items }: { items: Benefit[] }) {
-  return (
-    <ul className="card onb-list">
-      {items.map((b) => (
-        <li key={b.title} className="onb-row">
-          <span className="icon-tile">{b.icon}</span>
-          <span className="onb-row-text">
-            <span className="onb-row-title">{b.title}</span>
-            <span className="onb-row-sub">{b.sub}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }

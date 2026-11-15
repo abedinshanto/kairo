@@ -2,17 +2,17 @@ Kairo is a calm focus timer that shows where your time goes, privately and on yo
 
 ## What's new
 
-- **A panel in the menu bar.** Click Kairo's icon (macOS, Windows) for the timer with start/pause/finish, your top four tasks (click one to start on it), today's focus and the app in front. The full menu moved to right-click. On Linux the icon still opens the menu.
-- **Quick capture from any app.** Press **⌘/Ctrl + Alt + K**, type or say "call the gym tomorrow, one block", and press Enter. Shift+Enter makes it your focus right now instead. Press the shortcut again to talk. Change or turn off the shortcut in Settings.
-- **Tasks 2.0.** Due dates (Today, Tomorrow, This week, Next week, any day, or said or typed: "…by Friday"), a **Today** tab, a one-line note, a sound per task that plays when you focus on it, and drag-and-drop ordering (or the arrow keys on the handle).
-- **Edit your history.** In Stats › Your day › Timeline, click an entry to change its times or delete it, or a focus block to link it to the right task. The **+** button adds time Kairo couldn't see, like a meeting or a phone call. Added time replaces whatever was recorded then, so nothing counts twice.
-- **Weekly review.** Sunday evening (or the day you pick): focus this week against the last, your best day, goal days, what pulled you away, and a quick way to put next week's tasks on Monday. It's also in Stats › 7 days.
-- **Limits per category**, like "Social media, 30 minutes a day", in Settings › Goals. You get a heads-up as you get close, and Stats › Categories shows how much of each limit you've used.
-- **New sounds:** Café, Train and Library, plus the presets Corner Café, Night Train and Reading Room. A **stop timer** on the Sounds player ends the sound after 15, 30 or 60 minutes, or when the block ends.
-- **Your data:** **Import** a JSON export (moving to a new computer; anything already there is skipped), **weekly backups** on your computer with one-click restore (the last four are kept), and a **search box** in Settings.
-- **Update check, off by default.** Turn on "Check for updates" in Settings and Kairo asks GitHub once a day whether there's a newer version. Nothing about you is sent, and nothing is downloaded or installed by itself.
-- **Fixes:** the first dictation on a Mac now waits for you to answer the microphone permission prompt. A microphone you plug in later is picked up without restarting. A sound you stop yourself during a break no longer comes back with the next block. Links to a different view of the screen you're on (like Stats › 7 days) now open it.
-- **Android:** if Android won't install this over your current version, export your data from **Settings** (Export on the privacy card) if you want a copy, uninstall the old app, then install this one.
+- **A new look.** Calm sage and mint, light cards, one dark button for the thing that matters, and far fewer words on every screen. Headers lead with the page's name; captions only appear when they have something to say. Dark mode got the same treatment.
+- **Meet the new Kai.** A soft little sprout that breathes, blinks, looks around and follows your pointer with its eyes. It settles in while you focus, puts its sunglasses on for a break, is all ears while you dictate and dozes off when nothing's going on. Tap it and it squishes. The app icon is the new Kai too.
+- **Home, simplified.** A greeting for the time of day, the timer, one *Today* card (focus against your goal and the last seven days at a glance), your sound, what's next and today's screen time.
+- **A calmer welcome.** Two short steps instead of three.
+- **Sound, fixed and rebalanced:**
+  - Pressing play no longer freezes the window for a moment: sounds are now made in the background.
+  - Every sound plays at the same loudness, so a preset no longer jumps in volume and the crickets in *Campfire* (and birds in *Forest Morning*) can actually be heard.
+  - Loops repeat seamlessly; noise no longer dips in volume every few seconds.
+  - The end-of-block chime rings out in full instead of being cut off when the break fades your sound out, and it now rings even if you never played a sound.
+  - Turning off the last sound in a mix stops playback instead of leaving it stuck on "Playing".
+- **Smoother:** only the countdown updates while the timer runs, not the whole Home screen.
 
 ## Downloads
 

@@ -584,8 +584,12 @@
     font-size: 12px;
   }
 
+  .set-privacy-bar {
+    flex-wrap: wrap;
+  }
+
   .set-export {
-    flex: 1;
+    flex: 1 1 100%;
     padding-left: 16px;
   }
 
@@ -685,13 +689,13 @@
 
 .set-search {
   max-width: 520px;
-  margin: 20px 0 24px;
+  margin: 0 0 24px;
 }
 
 @media (max-width: 760px) {
   .set-search {
     max-width: none;
-    margin: 16px 0 20px;
+    margin: 0 0 20px;
   }
 }
 

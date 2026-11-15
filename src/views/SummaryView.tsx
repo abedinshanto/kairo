@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowRightLeft, CalendarDays, Check, ChevronLeft, ChevronRig
 import { useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
 import { ProportionBar } from "../components/charts/Bars";
-import { Avatar, PageTitle, TopBar, cx } from "../components/ui";
+import { Avatar, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
 import { categoryLabel, entityName } from "../lib/categories";
 import { useQuery } from "../lib/hooks";
@@ -76,16 +76,12 @@ function DaySummary() {
     <div className="summary">
       <TopBar
         left={
-          <>
-            <button className="circle-btn" aria-label="Back to Home" title="Back" onClick={() => setView("home")}>
-              <ArrowLeft />
-            </button>
-            <div style={{ minWidth: 0 }}>
-              <div className="who-name">Daily summary</div>
-              <div className="who-sub">{fmtDay(day)}</div>
-            </div>
-          </>
+          <button className="circle-btn" aria-label="Back to Home" title="Back" onClick={() => setView("home")}>
+            <ArrowLeft />
+          </button>
         }
+        title={isToday ? "Your day" : fmtWeekday(day)}
+        sub={fmtDay(day)}
         right={
           <>
             <button className="circle-btn" aria-label="Previous day" onClick={() => openSummary(addDays(day, -1))}>
@@ -97,15 +93,12 @@ function DaySummary() {
           </>
         }
       />
-      <header className="summary-head">
-        <PageTitle strong={isToday ? "Your day," : `${fmtWeekday(day)},`} dim="wrapped." />
-      </header>
 
       {!data ? null : quiet ? (
         <div className="card summary-empty">
           <Buddy mood="sleep" size={96} />
           <strong>{isToday ? "A quiet day so far" : "Nothing tracked that day"}</strong>
-          <span>Kairo sums up a day once it has seen some of it.</span>
+          <span>Come back once there's a bit of a day to sum up.</span>
         </div>
       ) : (
         <>
@@ -137,7 +130,7 @@ function Hero({ data }: { data: Day }) {
     <section className="card hero summary-hero" aria-label="Screen time">
       <div className="summary-hero-top">
         <span className="summary-hero-label">On screen</span>
-        <Buddy mood={share >= 60 ? "happy" : "idle"} tone="cloud" size={72} />
+        <Buddy mood={share >= 60 ? "happy" : "idle"} size={84} />
       </div>
       <div className="summary-hero-number">{fmtDuration(active)}</div>
       <div className="summary-hero-sub">
@@ -377,18 +370,12 @@ function WeekReview() {
     <div className="summary week">
       <TopBar
         left={
-          <>
-            <button className="circle-btn" aria-label="Back to Home" title="Back" onClick={() => setView("home")}>
-              <ArrowLeft />
-            </button>
-            <div style={{ minWidth: 0 }}>
-              <div className="who-name">Weekly review</div>
-              <div className="who-sub">
-                {fmtShortDay(addDays(last, -6))} – {fmtShortDay(last)}
-              </div>
-            </div>
-          </>
+          <button className="circle-btn" aria-label="Back to Home" title="Back" onClick={() => setView("home")}>
+            <ArrowLeft />
+          </button>
         }
+        title={thisWeek ? "Your week" : "That week"}
+        sub={`${fmtShortDay(addDays(last, -6))} – ${fmtShortDay(last)}`}
         right={
           <>
             <button className="circle-btn" aria-label="Previous week" onClick={() => openSummary(addDays(last, -7), true)}>
@@ -400,9 +387,6 @@ function WeekReview() {
           </>
         }
       />
-      <header className="summary-head">
-        <PageTitle strong={thisWeek ? "Your week," : "That week,"} dim="wrapped." />
-      </header>
 
       {!data ? null : quiet ? (
         <div className="card summary-empty">
@@ -433,7 +417,7 @@ function WeekHero({ data, goal }: { data: Week; goal: number }) {
     <section className="card hero summary-hero" aria-label="Focus this week">
       <div className="summary-hero-top">
         <span className="summary-hero-label">Focused this week</span>
-        <Buddy mood={change !== null && change >= 0 ? "happy" : "idle"} tone="cloud" size={72} />
+        <Buddy mood={change !== null && change >= 0 ? "happy" : "idle"} size={84} />
       </div>
       <div className="summary-hero-number">{fmtDuration(data.focusMs)}</div>
       <div className="summary-hero-sub">

@@ -1,29 +1,32 @@
 /* ================================================================ Sounds */
 
+/* The hero is a soft meadow at dawn (a still night in the dark theme) */
 .sounds {
-  --sky: linear-gradient(180deg, #2f62ec 0%, #4b72ee 30%, #6276ea 52%, #7d7de3 69%, #c193d6 84%, #f2ab9c 100%);
-  --sky-glow: radial-gradient(80% 44% at 50% 106%, rgba(255, 200, 170, 0.95), transparent 72%);
-  --sky-shadow: 0 34px 64px -26px rgba(112, 104, 232, 0.6);
-  --sky-cloud-opacity: 0.55;
-  --sky-star-opacity: 0.55;
-  --sky-seat-tint: #e4e6ff;
-  --sky-ink-shadow: 0 1px 14px rgba(36, 44, 140, 0.32);
-  --sky-scrim: rgba(40, 34, 140, 0.38);
-  --preset-desc: rgba(15, 20, 36, 0.74);
+  --sky: linear-gradient(180deg, #d9efdf 0%, #e6f4e2 38%, #f2f7e5 72%, #fcf2e1 100%);
+  --sky-glow: radial-gradient(70% 42% at 50% 106%, rgba(255, 222, 186, 0.85), transparent 72%);
+  --sky-shadow: 0 30px 60px -30px rgba(47, 122, 76, 0.42), 0 2px 8px rgba(20, 40, 28, 0.04);
+  --sky-cloud-opacity: 0.95;
+  --sky-star-opacity: 0;
+  --sky-seat-tint: #e6efe7;
+  --sky-ink: #15201a;
+  --sky-ink-2: rgba(21, 32, 26, 0.66);
+  --sky-ripple: rgba(47, 122, 76, 0.22);
+  --preset-desc: rgba(21, 32, 26, 0.72);
   --preset-chip: rgba(255, 255, 255, 0.72);
-  --preset-ring: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+  --preset-ring: inset 0 0 0 2px rgba(255, 255, 255, 0.95);
 }
 
 :root[data-theme="dark"] .sounds {
-  --sky: linear-gradient(180deg, #0c1640 0%, #172a72 32%, #29338a 56%, #45398c 74%, #6f4386 90%, #9a5476 100%);
-  --sky-glow: radial-gradient(75% 40% at 50% 104%, rgba(232, 128, 120, 0.45), transparent 72%);
-  --sky-shadow: 0 34px 64px -28px rgba(70, 56, 190, 0.55);
-  --sky-cloud-opacity: 0.13;
+  --sky: linear-gradient(180deg, #0d241b 0%, #123124 38%, #183a2a 70%, #24392a 100%);
+  --sky-glow: radial-gradient(75% 40% at 50% 104%, rgba(150, 210, 150, 0.2), transparent 72%);
+  --sky-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --sky-cloud-opacity: 0.12;
   --sky-star-opacity: 1;
-  --sky-seat-tint: #c3c6ee;
-  --sky-ink-shadow: none;
-  --sky-scrim: transparent;
-  --preset-desc: rgba(242, 244, 248, 0.74);
+  --sky-seat-tint: #c6d6c9;
+  --sky-ink: #f1f8f2;
+  --sky-ink-2: rgba(241, 248, 242, 0.72);
+  --sky-ripple: rgba(255, 255, 255, 0.3);
+  --preset-desc: rgba(237, 243, 238, 0.74);
   --preset-chip: rgba(255, 255, 255, 0.1);
   --preset-ring: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3);
 }
@@ -35,8 +38,7 @@
     "player presets"
     "options presets"
     "mixer mixer";
-  gap: 16px 36px;
-  margin-top: 26px;
+  gap: 20px 28px;
 }
 
 /* ---------------------------------------------------------------- Sky hero player (reference 2) */
@@ -55,7 +57,7 @@
   border-radius: var(--r-2xl);
   background: var(--sky-glow), var(--sky);
   box-shadow: var(--sky-shadow);
-  color: #fff;
+  color: var(--sky-ink);
 }
 
 /* sheen + stars */
@@ -69,7 +71,11 @@
 }
 
 .sky::before {
-  background: radial-gradient(110% 70% at 0% 0%, rgba(255, 255, 255, 0.2), transparent 55%);
+  background: radial-gradient(110% 70% at 0% 0%, rgba(255, 255, 255, 0.45), transparent 55%);
+}
+
+:root[data-theme="dark"] .sky::before {
+  background: radial-gradient(110% 70% at 0% 0%, rgba(255, 255, 255, 0.06), transparent 55%);
 }
 
 .sky::after {
@@ -122,7 +128,7 @@
   margin-top: auto;
 }
 
-.sky-kai .buddy {
+.sky-kai .kai {
   position: relative;
   z-index: 1;
 }
@@ -134,7 +140,7 @@
   bottom: 0;
   width: 206px;
   transform: translateX(-50%);
-  filter: drop-shadow(0 14px 18px rgba(64, 52, 170, 0.28));
+  filter: drop-shadow(0 14px 18px rgba(47, 100, 70, 0.2));
 }
 
 .cloud {
@@ -156,7 +162,7 @@
   height: 130px;
   margin: -65px 0 0 -65px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border: 1.5px solid var(--sky-ripple);
   opacity: 0;
   pointer-events: none;
 }
@@ -188,19 +194,6 @@
   gap: 6px;
   max-width: 440px;
   text-align: center;
-  text-shadow: var(--sky-ink-shadow);
-}
-
-/* a soft dusk shade behind the copy keeps white type readable on the lavender band */
-.sky-text::before {
-  content: "";
-  position: absolute;
-  inset: -4px -24px -16px;
-  z-index: -1;
-  border-radius: var(--r-pill);
-  background: var(--sky-scrim);
-  filter: blur(22px);
-  pointer-events: none;
 }
 
 .sky-title {
@@ -214,7 +207,7 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 1.45;
-  color: #fff;
+  color: var(--sky-ink-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -232,8 +225,8 @@
   padding: 0 12px;
   border-radius: var(--r-pill);
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  color: #fff;
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--sky-ink);
   font-size: 13px;
   font-weight: 650;
 }
@@ -262,7 +255,7 @@
 }
 
 .sky-stop:focus-within {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--sky-ink);
   outline-offset: 2px;
 }
 
@@ -289,7 +282,8 @@
   height: 64px;
   padding: 0 22px;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -371,9 +365,9 @@
 }
 
 .sounds .preset {
-  --p-top: #e3ebff;
-  --p-bot: #8fb0ff;
-  --p-ink: #2650d9;
+  --p-top: #e2f3e0;
+  --p-bot: #9fd3ab;
+  --p-ink: #23744a;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -431,9 +425,9 @@
 }
 
 :root[data-theme="dark"] .sounds .preset {
-  --p-top: #2d4280;
-  --p-bot: #1c2650;
-  --p-ink: #a8c0ff;
+  --p-top: #24493a;
+  --p-bot: #172e26;
+  --p-ink: #98dba9;
 }
 :root[data-theme="dark"] .sounds .preset.art-rainy-night {
   --p-top: #2c3854;
@@ -526,7 +520,7 @@
   height: 34px;
   background: #fff;
   color: var(--on-white);
-  box-shadow: 0 4px 12px -4px rgba(15, 20, 36, 0.25);
+  box-shadow: 0 4px 12px -4px rgba(20, 40, 28, 0.25);
 }
 
 .preset-state svg {
@@ -593,45 +587,6 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-}
-
-/* ---------------------------------------------------------------- Equaliser */
-
-.eq {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 13px;
-}
-
-.eq i {
-  display: block;
-  width: 3px;
-  height: 100%;
-  border-radius: 2px;
-  background: currentColor;
-  transform-origin: bottom;
-  animation: sounds-eq 0.9s ease-in-out infinite;
-}
-
-.eq i:nth-child(2) {
-  animation-delay: -0.3s;
-  animation-duration: 0.75s;
-}
-
-.eq i:nth-child(3) {
-  animation-delay: -0.55s;
-  animation-duration: 1.05s;
-}
-
-@keyframes sounds-eq {
-  0%,
-  100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
   }
 }
 
@@ -703,7 +658,7 @@
 
 .mix-row.on .mix-toggle {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   box-shadow: 0 10px 20px -10px var(--brand);
 }
 
@@ -773,12 +728,12 @@
 }
 
 :root[data-theme="dark"] .mix-row:not(.on) .slider::-webkit-slider-thumb {
-  background: #3a4153;
+  background: #33423a;
   box-shadow: none;
 }
 
 :root[data-theme="dark"] .mix-row:not(.on) .slider::-moz-range-thumb {
-  background: #3a4153;
+  background: #33423a;
   box-shadow: none;
 }
 

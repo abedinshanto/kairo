@@ -77,7 +77,7 @@ export function MenuPanel() {
           <span style={{ width: `${Math.min(100, progress * 100)}%` }} />
         </div>
         <p className="panel-intention" title={timer.intention}>
-          {timer.intention.trim() || (timer.phase === "focus" ? "No focus set. Pick a task below." : "Time to rest your eyes.")}
+          {timer.intention.trim() || (timer.phase === "focus" ? "Pick a task below." : "Time to rest your eyes.")}
         </p>
         <div className="panel-controls">
           <button className="btn btn-on-brand panel-main" onClick={() => void timerAction("toggle")}>

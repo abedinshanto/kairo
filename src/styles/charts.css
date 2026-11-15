@@ -140,11 +140,11 @@
 /* ---------------------------------------------------------------- Day timeline */
 
 .timeline-track {
-  fill: var(--surface-sunk);
+  fill: var(--track);
 }
 
 .timeline-rail {
-  fill: var(--surface-sunk);
+  fill: var(--track);
 }
 
 .timeline-hour {
@@ -188,8 +188,8 @@
 }
 
 .heat-0 {
-  fill: var(--surface-sunk);
-  background: var(--surface-sunk);
+  fill: var(--track);
+  background: var(--track);
 }
 .heat-1 {
   fill: color-mix(in oklab, var(--productive) 16%, var(--surface));
@@ -385,7 +385,7 @@
 }
 
 .propbar.is-empty {
-  background: var(--surface-sunk);
+  background: var(--track);
 }
 
 /* On a blue hero card: white / translucent white / soft coral. */
@@ -393,20 +393,13 @@
   gap: 3px;
 }
 
-.propbar.on-brand .productive {
-  background: #fff;
-}
-
+/* On a hero wash: the data colours, with the neutral part on the hero's own track. */
 .propbar.on-brand .neutral {
-  background: rgba(255, 255, 255, 0.42);
-}
-
-.propbar.on-brand .distracting {
-  background: #ffae9b;
+  background: var(--hero-track);
 }
 
 .propbar.on-brand.is-empty {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--hero-track);
 }
 
 /* ---------------------------------------------------------------- Score ring */
@@ -425,7 +418,7 @@
 
 .score-track {
   fill: none;
-  stroke: var(--surface-sunk);
+  stroke: var(--track);
 }
 
 .score-fill {
@@ -457,15 +450,19 @@
 }
 
 .score-ring.on-brand .score-track {
-  stroke: rgba(255, 255, 255, 0.2);
+  stroke: var(--hero-track);
 }
 
 .score-ring.on-brand .score-fill {
-  stroke: #fff;
+  stroke: var(--productive);
 }
 
 .score-ring.on-brand .score-value {
-  color: #fff;
+  color: var(--hero-ink);
+}
+
+.score-ring.on-brand .score-label {
+  color: var(--hero-ink-2);
 }
 
 .score-ring.on-brand .score-label {
