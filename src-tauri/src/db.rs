@@ -44,7 +44,7 @@ pub struct ImportCounts {
 /// stay index-bound (`start_ts >= from - MAX_SPAN_MS`).
 pub const MAX_SPAN_MS: i64 = 60 * 60 * 1000;
 
-const SCHEMA_VERSION: i32 = 4;
+const SCHEMA_VERSION: i32 = 5;
 
 pub type DbResult<T> = Result<T, String>;
 
@@ -175,6 +175,11 @@ impl Db {
                  ALTER TABLE tasks ADD COLUMN sound TEXT;",
             )
             .map_err(e)?;
+        }
+        if version < 5 {
+            // Check-ins: how each focus block felt (1 scattered, 2 okay, 3 deep).
+            conn.execute_batch("ALTER TABLE sessions ADD COLUMN rating INTEGER;")
+                .map_err(e)?;
         }
         conn.pragma_update(None, "user_version", SCHEMA_VERSION)
             .map_err(e)?;
@@ -649,7 +654,7 @@ impl Db {
         let mut stmt = conn
             .prepare_cached(
                 "SELECT id, kind, start_ts, end_ts, planned_ms, actual_ms, completed, intention,
-                        task_id, interruptions
+                        task_id, interruptions, rating
                  FROM sessions WHERE start_ts < ?2 AND end_ts > ?1 ORDER BY start_ts",
             )
             .map_err(e)?;
@@ -671,6 +676,7 @@ impl Db {
                     intention: r.get(7)?,
                     task_id: r.get(8)?,
                     interruptions: r.get(9)?,
+                    rating: r.get(10)?,
                 })
             })
             .map_err(e)?
@@ -825,6 +831,16 @@ impl Db {
             )
             .map(|_| ())
             .map_err(e)
+    }
+
+    /// Record how a focus block felt (1–3), or clear it.
+    pub fn rate_session(&self, id: i64, rating: Option<u8>) -> DbResult<()> {
+        let rating = rating.filter(|r| (1..=3).contains(r));
+        self.conn
+            .lock()
+            .execute("UPDATE sessions SET rating = ?1 WHERE id = ?2", params![rating, id])
+            .map_err(e)?;
+        Ok(())
     }
 
     pub fn delete_session(&self, id: i64) -> DbResult<()> {
@@ -1041,11 +1057,12 @@ impl Db {
             }
             tx.execute(
                 "INSERT INTO sessions(kind, start_ts, end_ts, planned_ms, actual_ms, completed, intention,
-                                      task_id, interruptions)
-                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                                      task_id, interruptions, rating)
+                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
                 params![
                     s.kind.as_str(), s.start, s.end, s.planned_ms, s.actual_ms, s.completed as i64,
-                    s.intention, s.task_id.and_then(|id| task_ids.get(&id).copied()), s.interruptions
+                    s.intention, s.task_id.and_then(|id| task_ids.get(&id).copied()), s.interruptions,
+                    s.rating.filter(|r| (1..=3).contains(r))
                 ],
             )
             .map_err(e)?;
@@ -1251,6 +1268,49 @@ mod tests {
         let first = &db.tasks().unwrap()[0];
         assert_eq!((first.due_day, first.notes.as_deref()), (None, Some("Ask about the invoice")));
         assert_eq!(order(&db), vec![d, c, b, a], "done tasks go last");
+    }
+
+    #[test]
+    fn focus_blocks_can_be_rated_and_the_rating_travels() {
+        let a = Db::in_memory().unwrap();
+        let id = a.insert_session(Phase::Focus, 0, 1_500_000, 1_500_000, 1_500_000, true, "Docs", None, 0).unwrap();
+        assert_eq!(a.sessions(0, 2_000_000).unwrap()[0].rating, None, "unrated by default");
+        a.rate_session(id, Some(3)).unwrap();
+        assert_eq!(a.sessions(0, 2_000_000).unwrap()[0].rating, Some(3));
+        a.rate_session(id, Some(9)).unwrap();
+        assert_eq!(a.sessions(0, 2_000_000).unwrap()[0].rating, None, "out of range clears it");
+        a.rate_session(id, Some(2)).unwrap();
+
+        let path = std::env::temp_dir().join(format!("kairo-rating-test-{}.json", std::process::id()));
+        a.export_json(&path, &Settings::default(), 5).unwrap();
+        let file: ExportFile = serde_json::from_reader(std::fs::File::open(&path).unwrap()).unwrap();
+        let _ = std::fs::remove_file(&path);
+        let b = Db::in_memory().unwrap();
+        b.import_export(&file).unwrap();
+        assert_eq!(b.sessions(0, 2_000_000).unwrap()[0].rating, Some(2), "exports carry it");
+
+        // Exports from before ratings existed still import.
+        let old = serde_json::json!({
+            "kind": "focus", "id": 1, "start": 0, "end": 60_000, "plannedMs": 60_000, "actualMs": 60_000,
+            "completed": true, "intention": "", "taskId": null, "interruptions": 0
+        });
+        let s: FocusSession = serde_json::from_value(old).unwrap();
+        assert_eq!(s.rating, None);
+    }
+
+    #[test]
+    fn a_version_4_database_gains_ratings() {
+        // A current database, rolled back to how version 4 left it.
+        let db = Db::in_memory().unwrap();
+        db.insert_session(Phase::Focus, 0, 60_000, 60_000, 60_000, true, "", None, 0).unwrap();
+        let conn = db.conn.into_inner();
+        conn.execute_batch("ALTER TABLE sessions DROP COLUMN rating; PRAGMA user_version = 4;").unwrap();
+
+        let db = Db::init(conn).unwrap();
+        let rows = db.sessions(0, 100_000).unwrap();
+        assert_eq!((rows.len(), rows[0].rating), (1, None), "old blocks are kept, unrated");
+        db.rate_session(rows[0].id, Some(1)).unwrap();
+        assert_eq!(db.sessions(0, 100_000).unwrap()[0].rating, Some(1));
     }
 
     #[test]

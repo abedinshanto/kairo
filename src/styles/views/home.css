@@ -249,6 +249,64 @@
   transition: width 0.4s linear;
 }
 
+/* Flow: no end to fill towards, so the line just glows along while you work. */
+.timer-progress.is-flow {
+  position: relative;
+}
+
+.timer-progress.is-flow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--hero-fill), transparent);
+  opacity: 0.35;
+  transform: translateX(-100%);
+}
+
+.timer-progress.is-flow.is-moving::after {
+  animation: flow-glide 3.2s var(--ease) infinite;
+}
+
+@keyframes flow-glide {
+  to {
+    transform: translateX(260%);
+  }
+}
+
+/* Countdown or flow, picked before a block starts */
+.flow-toggle {
+  gap: 5px;
+  transition: background 0.2s, color 0.2s, transform 0.15s var(--spring);
+}
+
+.flow-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.flow-toggle:active {
+  transform: scale(0.95);
+}
+
+@media (hover: hover) {
+  .flow-toggle:hover {
+    background: var(--hero-glass-hover);
+  }
+}
+
+.flow-toggle.on,
+.flow-toggle.on:hover {
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
+}
+
+.timer-top .chip .live-dot {
+  margin-right: 2px;
+}
+
 .timer-buddy {
   flex: none;
   margin: -18px -8px -6px 0;
@@ -512,8 +570,104 @@
   line-height: 1.4;
   letter-spacing: -0.01em;
   color: var(--hero-ink-2);
-  max-width: 360px;
   min-height: 72px;
+}
+
+.timer-rest > p {
+  max-width: 380px;
+}
+
+.breath-start {
+  margin-top: 14px;
+  animation: tip-in 0.4s var(--ease);
+}
+
+/* Breathe with Kai: the words swap with the breath, Kai swells and settles in time. */
+.breath {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.breath-word {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--hero-ink);
+  animation: breath-word 0.9s var(--ease);
+}
+
+@keyframes breath-word {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(4px);
+  }
+}
+
+.breath-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.breath-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 7px;
+  background: var(--hero-track);
+  transition: width 0.4s var(--ease), background 0.3s;
+}
+
+.breath-dots i.done {
+  background: var(--hero-ink-2);
+}
+
+.breath-dots i.now {
+  width: 22px;
+  background: var(--hero-ink);
+}
+
+.timer-buddy {
+  position: relative;
+}
+
+.timer-card.is-breathing .timer-buddy .kai {
+  transition: transform 1.2s ease-in-out;
+}
+
+.timer-card[data-breath="in"] .timer-buddy .kai {
+  transform: scale(1.16);
+  transition-duration: 4s;
+}
+
+.timer-card[data-breath="out"] .timer-buddy .kai {
+  transform: scale(0.92);
+  transition-duration: 6s;
+}
+
+/* A soft halo that breathes with Kai */
+.timer-buddy::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--hero-glass-hover), transparent);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.8s, transform 1.2s ease-in-out;
+  pointer-events: none;
+}
+
+.timer-card[data-breath="in"] .timer-buddy::before {
+  opacity: 1;
+  transform: scale(1.35);
+  transition-duration: 0.8s, 4s;
+}
+
+.timer-card[data-breath="out"] .timer-buddy::before {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition-duration: 0.8s, 6s;
 }
 
 .timer-controls {
@@ -1072,4 +1226,57 @@
     width: 12px;
     height: 12px;
   }
+}
+
+/* ---------------------------------------------------------------- Check-in (after a block) */
+
+.checkin {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: tip-in 0.45s var(--ease);
+}
+
+.checkin-q {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--hero-ink);
+}
+
+.checkin-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkin-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 46px;
+  padding: 0 16px 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
+  font-size: 14px;
+  font-weight: 650;
+  transition: background 0.2s, transform 0.2s var(--spring);
+}
+
+@media (hover: hover) {
+  .checkin-opt:hover {
+    background: var(--hero-glass-hover);
+    transform: translateY(-2px);
+  }
+}
+
+.checkin-opt:active {
+  transform: scale(0.95);
+}
+
+.checkin-skip {
+  width: 38px;
+  height: 38px;
 }

@@ -55,7 +55,10 @@ left (radial body gradient, core shadow, bloom, a faint rim, one specular highli
 - Moods: `idle` (open eyes, looks around), `focus` (eyes lowered onto the work, slower breath,
   ignores the pointer), `break` (sunglasses, gentle sway), `paused` (glancing aside), `happy`
   (^ ^ and a grin, little hops), `sleep` (closed eyes, drooping sprout, floating z's), `listen`
-  (wide eyes, perked sprout, quicker breath), `think` (eyes up, wavy mouth).
+  (wide eyes, perked sprout, quicker breath), `think` (eyes up, wavy mouth), `calm` (eyes softly
+  closed, still: used while breathing; the card scales Kai with the breath).
+- Blossom: once today's focus goal is met (`useApp().bloom`), every Kai wears a flower where the
+  leaves meet. `bloom={false}` opts a Kai out.
 - Tones: `leaf` (default), `cloud` (white), `sky` (short break), `lilac` (long break).
 - Motion is layered on nested groups (`.kai-hop > .kai-sway > .kai-breathe`), so breathing,
   swaying, a pop on mood change and a squish on tap combine. Blinks and glances come from JS at

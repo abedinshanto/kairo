@@ -41,6 +41,10 @@ interface State {
   summaryDay: number | null;
   /** The summary shows the week ending on `summaryDay` instead of the day. */
   summaryWeek: boolean;
+  /** The focus block that just ended, waiting for "how did it go?" (its session id). */
+  checkIn: number | null;
+  /** Today's focus goal is met: Kai blooms for the rest of the day. */
+  bloom: boolean;
 
   init(): Promise<void>;
   openSummary(day?: number, week?: boolean): void;
@@ -59,6 +63,10 @@ interface State {
   bumpData(): void;
   toast(t: Omit<Toast, "id">): void;
   dismissToast(id: number): void;
+  /** Answer (or skip, with null) the check-in for the block that just ended. */
+  rateCheckIn(rating: number | null): Promise<void>;
+  /** Re-check today's focus against the goal (and celebrate when it's newly met). */
+  refreshBloom(celebrate?: boolean): Promise<void>;
 }
 
 let persistTimer: number | undefined;
@@ -70,6 +78,8 @@ let persistTimer: number | undefined;
 let unsavedChanges = false;
 let saveSeq = 0;
 let toastId = 1;
+/** init() runs once per window, however often it's called (React's StrictMode calls effects twice). */
+let initialised = false;
 
 const viewFromHash = (): View | null => {
   const h = window.location.hash.replace(/^#\/?/, "").split("?")[0] as View;
@@ -92,8 +102,12 @@ export const useApp = create<State>((set, get) => ({
   deepFocus: false,
   summaryDay: null,
   summaryWeek: false,
+  checkIn: null,
+  bloom: false,
 
   async init() {
+    if (initialised) return;
+    initialised = true;
     const [settings, timer, tracker] = await Promise.all([
       backend.getSettings(),
       backend.timerGet(),
@@ -117,6 +131,8 @@ export const useApp = create<State>((set, get) => ({
       window.addEventListener("keydown", unlock, true);
     }
 
+    void get().refreshBloom(false);
+
     soundEngine.subscribe(() => {
       set({ soundPlaying: soundEngine.playing });
       // Played or stopped by hand: that wins over what a break would bring back.
@@ -135,6 +151,10 @@ export const useApp = create<State>((set, get) => ({
           if (!isMainWindow) break;
           const sound = get().settings.sound!;
           void soundEngine.chime(sound.chime, sound.chimeVolume, e.completed.next === "focus");
+          // Break screen: Kairo comes forward on Home, so the break gets taken.
+          if (e.completed.phase === "focus" && get().settings.breakScreen && backend.kind === "native") {
+            void backend.windowOpenMain("home").catch(() => {});
+          }
           // Fires before the new timer state, so `timer` still describes the block that ended.
           const ended = get().timer;
           const what = ended?.intention.trim() ? ` on “${ended.intention.trim()}”` : "";
@@ -147,6 +167,18 @@ export const useApp = create<State>((set, get) => ({
                 : { title: "Focus block complete", body: e.completed.autoStarted ? "Your break has started. Step away for a moment." : "Time for a break.", tone: "success" },
           );
           get().bumpData();
+          if (e.completed.phase === "focus") void get().refreshBloom(true);
+          // Ask how a finished focus block went (the core has just recorded it).
+          if (e.completed.phase === "focus") {
+            const now = Date.now();
+            backend
+              .focusSessions(now - 6 * 3_600_000, now + 60_000)
+              .then((list) => {
+                const last = list.filter((s) => s.kind === "focus" && s.completed && s.end >= now - 10 * 60_000).pop();
+                if (last) set({ checkIn: last.id });
+              })
+              .catch(() => {});
+          }
           break;
         }
         case "current":
@@ -160,6 +192,7 @@ export const useApp = create<State>((set, get) => ({
           break;
         case "data":
           get().bumpData();
+          void get().refreshBloom(false);
           break;
         case "icon":
           iconChanged(e.key);
@@ -186,7 +219,11 @@ export const useApp = create<State>((set, get) => ({
       .catch(() => {});
 
     // Live views refresh periodically; mobile pulls OS usage when foregrounded.
-    window.setInterval(() => get().bumpData(), 60_000);
+    // (The bloom check also notices a new day.)
+    window.setInterval(() => {
+      get().bumpData();
+      void get().refreshBloom(false);
+    }, 60_000);
     const syncUsage = () =>
       backend
         .usageSync()
@@ -227,6 +264,7 @@ export const useApp = create<State>((set, get) => ({
   updateSettings(patch) {
     const next = withDefaults({ ...get().settings, ...patch });
     set({ settings: next });
+    if (patch.dailyFocusGoalMinutes !== undefined) void get().refreshBloom(false);
     unsavedChanges = true;
     window.clearTimeout(persistTimer);
     persistTimer = window.setTimeout(() => {
@@ -308,6 +346,35 @@ export const useApp = create<State>((set, get) => ({
   dismissToast(id) {
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
   },
+
+  async refreshBloom(celebrate = false) {
+    const goal = get().settings.dailyFocusGoalMinutes * 60_000;
+    const today = startOfDay(Date.now());
+    let ms = 0;
+    try {
+      const list = await backend.focusSessions(today, Date.now() + 60_000);
+      ms = list.filter((s) => s.kind === "focus" && s.start >= today).reduce((a, s) => a + s.actualMs, 0);
+    } catch {
+      return;
+    }
+    const bloom = goal > 0 && ms >= goal;
+    const was = get().bloom;
+    if (bloom !== was) set({ bloom });
+    if (bloom && !was && celebrate && isMainWindow) {
+      get().toast({ title: "Kai is blooming", body: `${fmtDuration(ms)} of focus today. Your goal is met.`, tone: "success" });
+    }
+  },
+
+  async rateCheckIn(rating) {
+    const id = get().checkIn;
+    set({ checkIn: null });
+    if (id === null || rating === null) return;
+    try {
+      await backend.sessionRate(id, rating);
+    } catch (err) {
+      get().toast({ title: "Couldn't save that", body: String(err), tone: "warning" });
+    }
+  },
 }));
 
 /** The mix was faded out for a break, so it comes back when focus resumes. */
@@ -332,6 +399,8 @@ function onTimer(prev: TimerSnapshot | null, next: TimerSnapshot) {
   const freshBlock = startedFocus && (prev?.phase !== "focus" || prev.startedAt !== next.startedAt);
   const leftFocus = prev?.phase === "focus" && prev.startedAt !== null && (next.phase !== "focus" || next.startedAt === null);
   const enteredBreak = next.phase !== "focus" && prev?.phase === "focus";
+  // A new block makes the last one's check-in moot.
+  if (startedFocus && useApp.getState().checkIn !== null) useApp.setState({ checkIn: null });
   if (startedFocus) {
     const resume = (sound.autoPlay || pausedForBreak) && soundEngine.hasMix && !soundEngine.playing;
     pausedForBreak = false;

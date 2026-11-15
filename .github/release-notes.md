@@ -6,6 +6,10 @@ Kairo is a calm focus timer that shows where your time goes, privately and on yo
 - **Meet the new Kai.** A soft little sprout that breathes, blinks, looks around and follows your pointer with its eyes. It settles in while you focus, puts its sunglasses on for a break, is all ears while you dictate and dozes off when nothing's going on. Tap it and it squishes. The app icon is the new Kai too.
 - **Home, simplified.** A greeting for the time of day, the timer, one *Today* card (focus against your goal and the last seven days at a glance), your sound, what's next and today's screen time.
 - **A calmer welcome.** Two short steps instead of three.
+- **Flow mode.** Turn on **Flow** on the timer (or in Settings) and focus counts up with no set end. Stop when you're done and take the break you earned: a fifth of the time you focused (40 minutes buys an 8-minute break).
+- **Breathe with Kai.** On a break, tap *Breathe with Kai* for a minute of slow breathing, Kai swelling and settling with you. Turn on *Bring Kairo forward on breaks* in Settings and Kairo comes to the front when a block ends.
+- **Check-ins.** After each block, Kai asks how it felt: scattered, okay or deep. One tap (or skip). You can change it later from Stats › Focus blocks, and Stats points out when your deep blocks tend to happen.
+- **Kai blooms.** Reach your daily focus goal and a blossom opens on Kai's sprout, everywhere in the app, for the rest of the day.
 - **Sound, fixed and rebalanced:**
   - Pressing play no longer freezes the window for a moment: sounds are now made in the background.
   - Every sound plays at the same loudness, so a preset no longer jumps in volume and the crickets in *Campfire* (and birds in *Forest Morning*) can actually be heard.

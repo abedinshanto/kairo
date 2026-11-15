@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   longBreakEvery: 4,
   autoStartBreaks: true,
   autoStartFocus: false,
+  flowMode: false,
   dailyFocusGoalMinutes: 240,
   distractionBudgetMinutes: 60,
   categoryLimits: {},

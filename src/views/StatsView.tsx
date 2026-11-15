@@ -1005,6 +1005,9 @@ function Insights({ insights, className, columns }: { insights: Insight[] | null
 
 // ------------------------------------------------------------------ Focus blocks (day) — opened from the Focus tile
 
+/** Check-in answers, as words. */
+const FELT: Record<number, string> = { 1: "scattered", 2: "okay", 3: "deep" };
+
 function FocusBlocksSheet({
   sessions,
   isToday,
@@ -1040,6 +1043,7 @@ function FocusBlocksSheet({
                     <div className="list-title">{s.intention || "Untitled focus block"}</div>
                     <div className="list-sub">
                       {fmtTime(s.start)} · {blockLabel(s)}
+                      {s.rating ? ` · felt ${FELT[s.rating]}` : ""}
                       {s.interruptions ? ` · ${s.interruptions} detour${s.interruptions > 1 ? "s" : ""}` : ""}
                     </div>
                   </div>

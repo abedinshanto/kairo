@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cx } from "./ui";
+import { useApp } from "../lib/store";
 import "../styles/kai.css";
 
-export type BuddyMood = "idle" | "focus" | "break" | "paused" | "happy" | "sleep" | "listen" | "think";
+export type BuddyMood = "idle" | "focus" | "break" | "paused" | "happy" | "sleep" | "listen" | "think" | "calm";
 export type BuddyTone = "leaf" | "cloud" | "sky" | "lilac";
 
 type Palette = {
@@ -99,13 +100,18 @@ export function Buddy({
   size = 96,
   still = false,
   label,
+  bloom,
 }: {
   mood?: BuddyMood;
   tone?: BuddyTone;
   size?: number;
   still?: boolean;
   label?: string;
+  /** A blossom on the sprout (by default: once today's focus goal is met). */
+  bloom?: boolean;
 }) {
+  const goalMet = useApp((s) => s.bloom);
+  const blossom = bloom ?? goalMet;
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const root = useRef<HTMLSpanElement>(null);
   const c = TONES[tone];
@@ -232,6 +238,10 @@ export function Buddy({
             <stop offset="0.6" stopColor={c.blush} stopOpacity="0.35" />
             <stop offset="1" stopColor={c.blush} stopOpacity="0" />
           </radialGradient>
+          <radialGradient id={`petal${id}`} gradientUnits="userSpaceOnUse" cx="60.8" cy="24.4" r="9">
+            <stop offset="0.25" stopColor="#ffe3ea" />
+            <stop offset="1" stopColor="#ff9fba" />
+          </radialGradient>
           <radialGradient id={`ground${id}`}>
             <stop offset="0" stopColor={c.deep} stopOpacity="0.32" />
             <stop offset="1" stopColor={c.deep} stopOpacity="0" />
@@ -268,6 +278,16 @@ export function Buddy({
                   <path d={LEAF_R} fill={u("leafR")} />
                   <path d="M61.6 27.6Q69.6 20 79.6 15.4" stroke="#fff" strokeOpacity="0.4" strokeWidth="0.9" strokeLinecap="round" fill="none" />
                 </g>
+                {blossom && (
+                  // Goal met: a little blossom where the leaves meet.
+                  <g className="kai-blossom">
+                    {[0, 72, 144, 216, 288].map((a) => (
+                      <ellipse key={a} cx="60.8" cy="19.6" rx="3.3" ry="4.6" fill={u("petal")} transform={`rotate(${a} 60.8 24.4)`} />
+                    ))}
+                    <circle cx="60.8" cy="24.4" r="2.6" fill="#ffd56b" />
+                    <circle cx="60.1" cy="23.7" r="0.9" fill="#fff" opacity="0.8" />
+                  </g>
+                )}
               </g>
 
               {/* body: base, core shadow, soft key light, rim, specular */}
@@ -300,7 +320,7 @@ export function Buddy({
                       mood === "happy" ? (
                         <path key={x} d={`M${x - 5.4} ${EYE_Y + 2}Q${x} ${EYE_Y - 5.6} ${x + 5.4} ${EYE_Y + 2}`} />
                       ) : (
-                        // sleep
+                        // sleep, calm: softly closed
                         <path key={x} d={`M${x - 5.2} ${EYE_Y - 0.4}Q${x} ${EYE_Y + 4.6} ${x + 5.2} ${EYE_Y - 0.4}`} />
                       ),
                     )}
@@ -322,6 +342,8 @@ export function Buddy({
                   <path d="M55.6 86.4q2.2-1.8 4.4 0t4.4 0" {...line} strokeWidth="2.3" />
                 ) : mood === "sleep" ? (
                   <path d="M57.2 85.6Q60 87.6 62.8 85.6" {...line} strokeWidth="2.2" />
+                ) : mood === "calm" ? (
+                  <path d="M55.6 84.6Q60 88.4 64.4 84.6" {...line} strokeWidth="2.3" />
                 ) : mood === "focus" ? (
                   <path d="M56.2 85Q60 87.6 63.8 85" {...line} strokeWidth="2.3" />
                 ) : (

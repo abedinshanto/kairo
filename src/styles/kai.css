@@ -100,6 +100,11 @@
   animation-duration: 6s;
 }
 
+.kai.mood-calm .kai-breathe,
+.kai.mood-calm .kai-ground {
+  animation: none;
+}
+
 .kai.mood-sleep .kai-sprout {
   animation: kai-droop 6s ease-in-out infinite;
 }
@@ -316,5 +321,25 @@
   .kai *,
   .kai {
     animation: none !important;
+  }
+}
+
+/* Goal met: the blossom opens with a spring, then turns ever so slowly. */
+.kai-blossom {
+  transform-origin: 60.8px 24.4px;
+  animation:
+    kai-bloom-in 0.9s var(--spring, ease) both,
+    kai-bloom-turn 9s ease-in-out 0.9s infinite;
+}
+
+@keyframes kai-bloom-in {
+  from {
+    transform: scale(0) rotate(-40deg);
+  }
+}
+
+@keyframes kai-bloom-turn {
+  50% {
+    transform: rotate(12deg);
   }
 }

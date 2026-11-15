@@ -1,6 +1,8 @@
 import {
   CalendarDays,
   Check,
+  Coffee,
+  Infinity as InfinityIcon,
   Download,
   Flame,
   Globe,
@@ -18,6 +20,7 @@ import {
   ScrollText,
   SkipForward,
   Square,
+  Wind,
   X,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
@@ -34,6 +37,7 @@ import { useMediaQuery, useNow, useQuery } from "../lib/hooks";
 import { isMac, isMobileOS } from "../lib/platform";
 import { matchTask, parseSpokenTask, spokenTaskNumber } from "../lib/spoken";
 import { finishOrSkip, remainingNow, useApp } from "../lib/store";
+import { earnedBreakMs } from "../lib/backend/timerEngine";
 import { addDays, DAY, dueInfo, fmtClock, fmtDuration, fmtTime, startOfDay } from "../lib/time";
 import type { Phase, Task, TimerSnapshot } from "../lib/types";
 import { useDictation } from "../lib/voice";
@@ -135,7 +139,18 @@ export function HomeView() {
           value={timer.phase}
           onChange={(p) => void pickPhase(p)}
           options={[
-            { value: "focus", label: "Focus", count: minutes(settings.focusMinutes) },
+            {
+              value: "focus",
+              label: "Focus",
+              count: settings.flowMode ? (
+                <>
+                  <span aria-hidden>∞</span>
+                  <span className="sr-only">flow</span>
+                </>
+              ) : (
+                minutes(settings.focusMinutes)
+              ),
+            },
             { value: "short_break", label: narrow ? "Short" : "Short break", count: minutes(settings.shortBreakMinutes) },
             { value: "long_break", label: narrow ? "Long" : "Long break", count: minutes(settings.longBreakMinutes) },
           ]}
@@ -215,17 +230,83 @@ function useOpenTasks(): Task[] {
 
 type Notice = "missed" | null;
 
+/** How a block felt, in Kai's faces. */
+const RATINGS: { value: number; label: string; mood: BuddyMood }[] = [
+  { value: 1, label: "Scattered", mood: "paused" },
+  { value: 2, label: "Okay", mood: "idle" },
+  { value: 3, label: "Deep", mood: "happy" },
+];
+
+/** Right after a block: one tap for how it felt (it shows up in Stats). */
+function CheckIn() {
+  const rate = useApp((s) => s.rateCheckIn);
+  return (
+    <div className="checkin">
+      <p className="checkin-q" id="checkin-q">
+        How did that block feel?
+      </p>
+      <div className="checkin-options" role="group" aria-labelledby="checkin-q">
+        {RATINGS.map((r) => (
+          <button key={r.value} type="button" className="checkin-opt" onClick={() => void rate(r.value)}>
+            <Buddy mood={r.mood} size={40} still />
+            <span>{r.label}</span>
+          </button>
+        ))}
+        <button type="button" className="circle-btn sm glass checkin-skip" aria-label="Skip" title="Skip" onClick={() => void rate(null)}>
+          <X />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Breathe with Kai: 4 seconds in, 6 out (six breaths a minute), for a minute. */
+const BREATH = { in: 4000, out: 6000, cycles: 6 };
+type Breath = { phase: "in" | "out" | "done"; cycle: number } | null;
+
+function useBreathing(active: boolean) {
+  const [breath, setBreath] = useState<Breath>(null);
+  useEffect(() => {
+    if (!breath) return;
+    const next: Breath =
+      breath.phase === "in"
+        ? { phase: "out", cycle: breath.cycle }
+        : breath.phase === "out"
+          ? breath.cycle + 1 < BREATH.cycles
+            ? { phase: "in", cycle: breath.cycle + 1 }
+            : { phase: "done", cycle: breath.cycle }
+          : null;
+    const wait = breath.phase === "in" ? BREATH.in : breath.phase === "out" ? BREATH.out : 2400;
+    const t = window.setTimeout(() => setBreath(next), wait);
+    return () => window.clearTimeout(t);
+  }, [breath]);
+  // The break ended (or was skipped): stop.
+  useEffect(() => {
+    if (!active) setBreath(null);
+  }, [active]);
+  return {
+    breath,
+    start: () => setBreath({ phase: "in", cycle: 0 }),
+    stop: () => setBreath(null),
+  };
+}
+
 function TimerCard({ deep = false }: { deep?: boolean }) {
   const timer = useApp((s) => s.timer)!;
   const skew = useApp((s) => s.clockSkew);
   // Only the timer ticks: the rest of Home doesn't re-render every 250 ms.
   useNow(250, timer.status === "running");
-  const remainingForTitle = remainingNow(timer, skew);
+  const remaining = remainingNow(timer, skew);
+  const elapsed = Math.max(0, timer.durationMs - remaining);
+  // Flow blocks count up; everything else counts down.
+  const flow = timer.flow && timer.phase === "focus";
+  const shown = flow ? elapsed : remaining;
   useEffect(() => {
-    document.title = timer.status === "idle" ? "Kairo" : `${fmtClock(remainingForTitle)} · ${PHASE_LABEL[timer.phase]}`;
-  }, [remainingForTitle, timer.status, timer.phase]);
+    document.title = timer.status === "idle" ? "Kairo" : `${fmtClock(shown)} · ${flow ? "Flow" : PHASE_LABEL[timer.phase]}`;
+  }, [shown, flow, timer.status, timer.phase]);
   useEffect(() => () => void (document.title = "Kairo"), []);
-  const { timerAction, extend, setIntention } = useApp.getState();
+  const { timerAction, extend, setIntention, updateSettings } = useApp.getState();
+  const flowMode = useApp((s) => s.settings.flowMode);
   const tasks = useOpenTasks();
   const dictation = useDictation();
   const [notice, setNotice] = useState<Notice>(null);
@@ -278,16 +359,30 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const remaining = remainingNow(timer, skew);
   const progress = timer.durationMs > 0 ? Math.min(1, Math.max(0, 1 - remaining / timer.durationMs)) : 0;
   const running = timer.status === "running";
   const detours = timer.phase === "focus" ? timer.interruptions : 0;
-  const elapsed = Math.max(0, timer.durationMs - remaining);
-  const mood: BuddyMood = dictation.state === "listening" ? "listen" : dictation.state === "thinking" ? "think" : moodFor(timer);
+  const earned = Math.round(earnedBreakMs(elapsed) / 60_000);
+  const onBreak = timer.phase !== "focus";
+  const checkIn = useApp((s) => s.checkIn);
+  const { breath, start: breathe, stop: stopBreathing } = useBreathing(onBreak);
+  const mood: BuddyMood =
+    dictation.state === "listening"
+      ? "listen"
+      : dictation.state === "thinking"
+        ? "think"
+        : breath
+          ? breath.phase === "done"
+            ? "happy"
+            : "calm"
+          : moodFor(timer);
   const kaiSize = deep ? 184 : 150;
 
   return (
-    <div className={cx("card hero timer-card", `phase-${timer.phase}`, `is-${timer.status}`, deep && "is-deep")}>
+    <div
+      className={cx("card hero timer-card", `phase-${timer.phase}`, `is-${timer.status}`, deep && "is-deep", breath && "is-breathing")}
+      data-breath={breath?.phase}
+    >
       <div className="timer-top">
         <SessionDots timer={timer} />
         <div className="timer-top-end">
@@ -296,18 +391,38 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
               {detours} detour{detours > 1 ? "s" : ""}
             </span>
           )}
-          {timer.status !== "idle" && <span className="chip on-brand">{running ? `Ends ${fmtTime(Date.now() + remaining)}` : "Paused"}</span>}
+          {idleFocus && (
+            <button
+              type="button"
+              className={cx("chip on-brand flow-toggle", flowMode && "on")}
+              aria-pressed={flowMode}
+              title={flowMode ? "Flow: counts up, and you earn your break (a fifth of the time). Tap for a countdown." : "Count up instead, and earn your break"}
+              onClick={() => updateSettings({ flowMode: !flowMode })}
+            >
+              <InfinityIcon /> Flow
+            </button>
+          )}
+          {timer.status !== "idle" &&
+            (flow ? (
+              <span className="chip on-brand">{running ? <span className="live-dot" aria-hidden /> : null}{running ? "Flow" : "Paused"}</span>
+            ) : (
+              <span className="chip on-brand">{running ? `Ends ${fmtTime(Date.now() + remaining)}` : "Paused"}</span>
+            ))}
         </div>
       </div>
 
       <div className="timer-body">
         <div className="timer-text">
           <div className="timer-digits tabular" aria-live="off">
-            {fmtClock(remaining)}
+            {fmtClock(shown)}
           </div>
-          <div className="timer-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-label="Block progress">
-            <span style={{ width: `${progress * 100}%` }} />
-          </div>
+          {flow ? (
+            <div className={cx("timer-progress is-flow", running && "is-moving")} aria-hidden />
+          ) : (
+            <div className="timer-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} aria-label="Block progress">
+              <span style={{ width: `${progress * 100}%` }} />
+            </div>
+          )}
         </div>
         <div className="timer-buddy">
           {voiceOn ? (
@@ -336,7 +451,29 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
       {timer.phase === "focus" ? (
         <Intention tasks={tasks} onPick={pick} voice={voiceOn ? dictation.state : null} notice={notice} captionSlot={idleFocus ? captionSlot : null} />
       ) : (
-        <p className="timer-rest">Stretch, sip some water, look at something far away.</p>
+        <div className="timer-rest" aria-live="polite">
+          {checkIn !== null && !breath ? (
+            <CheckIn />
+          ) : breath ? (
+            <div className="breath">
+              <span className="breath-word" key={`${breath.phase}${breath.cycle}`}>
+                {breath.phase === "in" ? "Breathe in" : breath.phase === "out" ? "Breathe out" : "Nice."}
+              </span>
+              <span className="breath-dots" aria-hidden>
+                {Array.from({ length: BREATH.cycles }, (_, i) => (
+                  <i key={i} className={cx(i < breath.cycle && "done", i === breath.cycle && breath.phase !== "done" && "now")} />
+                ))}
+              </span>
+            </div>
+          ) : (
+            <>
+              <p>Stretch, sip some water, look far away.</p>
+              <button type="button" className="btn btn-glass btn-sm breath-start" onClick={breathe}>
+                <Wind /> Breathe with Kai
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       <div className="timer-controls">
@@ -347,17 +484,30 @@ function TimerCard({ deep = false }: { deep?: boolean }) {
             <button className="circle-btn glass" aria-label="Start over" title="Start over" onClick={() => void timerAction("stop")}>
               <RotateCcw />
             </button>
-            <button className="btn btn-glass" title="Add 5 minutes" onClick={() => void extend(5)}>
-              <Plus /> 5 min
-            </button>
-            {timer.phase === "focus" ? (
+            {!flow && !breath && (
+              <button className="btn btn-glass" title="Add 5 minutes" onClick={() => void extend(5)}>
+                <Plus /> 5 min
+              </button>
+            )}
+            {flow ? (
+              <button className="btn btn-glass" title={`Log ${fmtDuration(elapsed)} and take a ${earned}-minute break (S)`} onClick={() => void finishOrSkip()}>
+                <Coffee /> Break · {earned}m
+              </button>
+            ) : timer.phase === "focus" ? (
               <button className="btn btn-glass" title={`Finish now and log ${fmtDuration(elapsed)} (S)`} onClick={() => void finishOrSkip()}>
                 <Check /> Finish
               </button>
             ) : (
-              <button className="circle-btn glass" aria-label="Skip break" title="Skip break (S)" onClick={() => void timerAction("skip")}>
-                <SkipForward />
-              </button>
+              <>
+                {breath && breath.phase !== "done" && (
+                  <button className="btn btn-glass" onClick={stopBreathing}>
+                    Stop
+                  </button>
+                )}
+                <button className="circle-btn glass" aria-label="Skip break" title="Skip break (S)" onClick={() => void timerAction("skip")}>
+                  <SkipForward />
+                </button>
+              </>
             )}
           </div>
         )}

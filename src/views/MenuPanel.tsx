@@ -54,7 +54,9 @@ export function MenuPanel() {
   const ratio = goal ? Math.min(1, focusMs / goal) : 0;
   const current = tracker?.current ?? null;
   const paused = !!tracker?.pausedUntil && tracker.pausedUntil > Date.now();
-  const progress = timer.durationMs ? 1 - remaining / timer.durationMs : 0;
+  // Flow blocks count up: there's no end to fill the bar towards.
+  const flow = timer.flow && timer.phase === "focus";
+  const progress = timer.durationMs && !flow ? 1 - remaining / timer.durationMs : 0;
   const started = timer.startedAt !== null;
   const r = 15;
   const c = 2 * Math.PI * r;
@@ -65,14 +67,14 @@ export function MenuPanel() {
         <div className="panel-timer-top">
           <span className="panel-phase">
             <span className={cx("panel-dot", running ? "on" : started ? "paused" : "idle")} aria-hidden />
-            {PHASE[timer.phase]}
+            {flow ? "Flow" : PHASE[timer.phase]}
             {timer.status === "paused" && " · paused"}
           </span>
           <button className="circle-btn sm glass" aria-label="Open Kairo" title="Open Kairo" onClick={() => void backend.windowOpenMain()}>
             <Maximize2 />
           </button>
         </div>
-        <div className="panel-clock tabular">{fmtClock(remaining)}</div>
+        <div className="panel-clock tabular">{fmtClock(flow ? timer.durationMs - remaining : remaining)}</div>
         <div className="panel-bar" aria-hidden>
           <span style={{ width: `${Math.min(100, progress * 100)}%` }} />
         </div>

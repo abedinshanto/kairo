@@ -225,6 +225,14 @@ pub fn session_update(app: AppHandle, id: i64, task_id: Option<i64>, intention: 
     Ok(())
 }
 
+/// How a focus block felt: 1 scattered, 2 okay, 3 deep (None clears it).
+#[tauri::command]
+pub fn session_rate(app: AppHandle, id: i64, rating: Option<u8>) -> CmdResult<()> {
+    app.state::<AppState>().db.rate_session(id, rating)?;
+    let _ = app.emit("data://changed", ());
+    Ok(())
+}
+
 #[tauri::command]
 pub fn session_delete(app: AppHandle, id: i64) -> CmdResult<()> {
     app.state::<AppState>().db.delete_session(id)?;
@@ -517,7 +525,11 @@ pub fn window_hide(window: tauri::WebviewWindow) {
 pub fn window_open_main(app: AppHandle, window: tauri::WebviewWindow, view: Option<String>) {
     #[cfg(desktop)]
     {
-        crate::panel::hide(&window);
+        // From the panel or capture box: they step aside. (The main window can
+        // ask too, to come forward for a break; hiding it first would flash.)
+        if window.label() != "main" {
+            crate::panel::hide(&window);
+        }
         crate::show_main_window(&app);
         if let Some(view) = view {
             let _ = app.emit_to("main", "window://view", view);

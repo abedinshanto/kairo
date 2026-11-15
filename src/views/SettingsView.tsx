@@ -230,10 +230,13 @@ export function SettingsView() {
           so headings line up and each pair of cards ends together. */}
       <div className={cx("set-cols", !desktop && "loose")}>
         <Group id="timer" title="Focus timer">
-          <Row label="Focus block">
+          <Row label="Flow mode" desc="Count up instead, and earn your break: a fifth of the time you focused." keywords="stopwatch count up flowtime">
+            <Switch label="Flow mode" checked={s.flowMode} onChange={(v) => update({ flowMode: v })} />
+          </Row>
+          <Row label="Focus block" off={s.flowMode}>
             <Stepper label="focus minutes" value={s.focusMinutes} onChange={(v) => update({ focusMinutes: v })} min={5} max={120} step={5} format={mins} />
           </Row>
-          <Row label="Short break">
+          <Row label="Short break" off={s.flowMode}>
             <Stepper label="short break minutes" value={s.shortBreakMinutes} onChange={(v) => update({ shortBreakMinutes: v })} min={1} max={30} format={mins} />
           </Row>
           <Row label="Long break">
@@ -255,6 +258,11 @@ export function SettingsView() {
           <Row label="Start focus after breaks">
             <Switch label="Start focus automatically after breaks" checked={s.autoStartFocus} onChange={(v) => update({ autoStartFocus: v })} />
           </Row>
+          {desktop && (
+            <Row label="Bring Kairo forward on breaks" desc="So the break actually gets taken. Breathe with Kai while it lasts." keywords="break screen fullscreen breathing">
+              <Switch label="Bring Kairo forward on breaks" checked={!!s.breakScreen} onChange={(v) => update({ breakScreen: v })} />
+            </Row>
+          )}
           <ChimeRows />
         </Group>
 

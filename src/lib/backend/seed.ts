@@ -108,6 +108,8 @@ function rng(seed: number) {
 
 const MIN = 60_000;
 
+const hourOf = (ms: number) => new Date(ms).getHours();
+
 export function generateSeed(days: number, now = Date.now()) {
   const spans: SeedSpan[] = [];
   const sessions: FocusSession[] = [];
@@ -175,6 +177,7 @@ export function generateSeed(days: number, now = Date.now()) {
             if (actual >= 5 * MIN) {
               const completed = actual >= 25 * MIN - 1 && r() > 0.08;
               const intention = pick(INTENTIONS);
+              const interruptions = Math.floor(r() * (completed ? 2 : 4));
               sessions.push({
                 id: sessionId++,
                 kind: "focus",
@@ -185,7 +188,9 @@ export function generateSeed(days: number, now = Date.now()) {
                 completed,
                 intention,
                 taskId: d < 2 ? (INTENTIONS.indexOf(intention) % 4) + 1 : null,
-                interruptions: Math.floor(r() * (completed ? 2 : 4)),
+                interruptions,
+                // Most blocks get a check-in; mornings and calm blocks tend to feel deeper.
+                rating: r() < 0.75 ? Math.max(1, Math.min(3, Math.round(2.4 - interruptions * 0.7 + (hourOf(stretchStart) < 12 ? 0.5 : 0) + (r() - 0.5)))) : null,
               });
               if (completed && t < now) {
                 const breakLen = 5 * MIN;

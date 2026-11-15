@@ -8,7 +8,7 @@ import { useApp } from "../lib/store";
 import { addDays, fmtDuration, fmtTime, MINUTE } from "../lib/time";
 import type { ActivitySpan, EntityTotal, FocusSession } from "../lib/types";
 import "../styles/history-edit.css";
-import { Avatar, Sheet, cx } from "./ui";
+import { Avatar, Segmented, Sheet, cx } from "./ui";
 
 // Fixing the record: log time Kairo couldn't see, move or delete an entry,
 // and point a focus block at the right task. Opened from the Stats timeline.
@@ -303,14 +303,19 @@ export function SessionSheet({ session, onClose }: { session: FocusSession; onCl
   const { data: tasks } = useQuery(() => backend.tasksList(), []);
   const [taskId, setTaskId] = useState<number | null>(session.taskId);
   const [intention, setIntention] = useState(session.intention);
+  const [rating, setRating] = useState<number | null>(session.rating ?? null);
   const [busy, setBusy] = useState(false);
-  const changed = taskId !== session.taskId || intention.trim() !== session.intention.trim();
+  const linkChanged = taskId !== session.taskId || intention.trim() !== session.intention.trim();
+  const changed = linkChanged || rating !== (session.rating ?? null);
   // Done tasks stay pickable: an old block may well belong to one.
   const choices = [...(tasks ?? [])].sort((a, b) => Number(a.done) - Number(b.done));
 
   const save = async () => {
     setBusy(true);
-    const ok = await attempt("change the block", () => backend.sessionUpdate(session.id, taskId, intention.trim()));
+    const ok = await attempt("change the block", async () => {
+      if (linkChanged) await backend.sessionUpdate(session.id, taskId, intention.trim());
+      if (rating !== (session.rating ?? null)) await backend.sessionRate(session.id, rating);
+    });
     setBusy(false);
     if (ok) onClose();
   };
@@ -365,6 +370,19 @@ export function SessionSheet({ session, onClose }: { session: FocusSession; onCl
           <span>Focus</span>
           <input className="input" value={intention} maxLength={200} placeholder="What it was for" onChange={(e) => setIntention(e.target.value)} />
         </label>
+        <div className="hx-field">
+          <span id="hx-felt">How it felt</span>
+          <Segmented<number>
+            label="How it felt"
+            value={rating ?? 0}
+            onChange={(v) => setRating(v === rating ? null : v)}
+            options={[
+              { value: 1, label: "Scattered" },
+              { value: 2, label: "Okay" },
+              { value: 3, label: "Deep" },
+            ]}
+          />
+        </div>
         <Actions>
           <button className="btn btn-soft hx-danger" disabled={busy} onClick={() => void remove()}>
             <Trash2 /> Delete
