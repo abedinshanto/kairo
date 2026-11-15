@@ -1,213 +1,145 @@
 /* ================================================================ Home */
 
-/* Greeting + timer mode span the page; the cards below sit on one grid */
-.home-head {
-  margin-bottom: 28px;
-}
-
-.home-head > .display {
-  max-width: 640px;
-  text-wrap: balance;
-}
-
 .home-tabs {
-  margin: 22px 0 0;
+  margin: 0 0 26px;
 }
 
-/* Two rows on shared columns: the timer card and the side column start and end
-   on the same lines, and so do Up next and Screen time below them. */
+/* Two rows on shared columns: the timer and the side column start and end on
+   the same lines, and so do Up next and Screen time below them. */
 .home-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 20px;
   align-items: stretch;
-}
-
-/* One accent per screen: in a break the active pill follows the hero's colour. */
-.home.phase-short_break .home-tabs .pill.active {
-  background: #08805f;
-  box-shadow: 0 10px 22px -12px #08805f;
-}
-
-.home.phase-long_break .home-tabs .pill.active {
-  background: #6d4ae8;
-  box-shadow: 0 10px 22px -12px #6d4ae8;
-}
-
-/* Top bar status line */
-.home .who-sub {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home .who-sub.off-track {
-  color: var(--distracting);
-  color: color-mix(in srgb, var(--distracting) 70%, var(--ink));
-}
-
-.who-link {
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 3px;
-}
-
-.who-link:focus-visible {
-  outline: none;
-  border-radius: 4px;
-  background: var(--brand-tint);
 }
 
 .home-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   min-width: 0;
 }
 
-/* The tiles take up whatever height the timer card leaves. */
-.home-side > .grid-2 {
-  flex: 1;
-}
+/* ---------------------------------------------------------------- Now chip (top bar) */
 
-/* Focused today / Goal streak: label on top, a ring with the number in the
-   middle of whatever height there is, one line of context at the bottom. */
-.today-tile {
-  display: flex;
-  flex-direction: column;
+.now-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 14px;
-  padding: 20px;
-  min-width: 0;
-}
-
-.today-head {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 650;
+  gap: 8px;
+  height: 46px;
+  max-width: 240px;
+  padding: 0 16px 0 11px;
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--ink);
 }
 
-.today-head .icon-tile {
-  width: 36px;
-  height: 36px;
+.now-chip .avatar {
+  font-size: 9px !important;
 }
 
-.today-head .icon-tile svg {
-  width: 18px;
-  height: 18px;
+.now-chip .avatar-dot {
+  display: none;
 }
 
-.today-head > span:last-child {
+.now-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.today-ring {
-  position: relative;
-  flex: none;
-  width: min(140px, 100%);
-  aspect-ratio: 1;
-  margin: auto 0;
+.now-chip.off-track {
+  background: var(--distracting-tint);
+  color: var(--warn-ink);
 }
 
-.today-ring svg {
-  display: block;
-  width: 100%;
-  height: 100%;
+.now-chip.attention {
+  padding: 0 18px;
+  background: var(--warn-tint);
+  color: var(--warn-ink);
 }
 
-.today-ring .arc {
-  fill: none;
-  stroke-width: 10;
-  stroke-linecap: round;
+.now-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--ink-3);
 }
 
-.today-ring .track,
-.today-ring .miss {
-  stroke: var(--surface-sunk);
-}
+/* ---------------------------------------------------------------- Setup tip */
 
-.today-ring .miss.today {
-  stroke: var(--line-strong);
-}
-
-.today-ring .fill {
-  stroke: var(--brand);
-  transition: stroke-dashoffset 0.8s var(--ease);
-}
-
-.today-ring .hit {
-  stroke: var(--warn);
-}
-
-:root[data-theme="dark"] .today-ring .track,
-:root[data-theme="dark"] .today-ring .miss {
-  stroke: rgba(255, 255, 255, 0.07);
-}
-
-:root[data-theme="dark"] .today-ring .miss.today {
-  stroke: rgba(255, 255, 255, 0.16);
-}
-
-.today-ring-center {
-  position: absolute;
-  inset: 0;
+.home-tip {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
+  gap: 12px;
+  margin: -6px 0 22px;
+  padding: 8px 8px 8px 10px;
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: tip-in 0.5s var(--ease);
 }
 
-.today-num {
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1;
+.home-tip-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--brand-tint);
+  color: var(--brand-ink);
 }
 
-.today-num small {
-  margin-left: 2px;
-  font-size: 13px;
+.home-tip-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.home-tip-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
   font-weight: 650;
-  letter-spacing: 0;
-  color: var(--ink-2);
 }
 
-.today-of {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-2);
+.home-tip .btn-sm {
+  height: 36px;
 }
 
-.today-foot {
-  align-self: stretch;
-  font-size: 12.5px;
-  line-height: 1.35;
-  color: var(--ink-2);
-  text-align: center;
+.home-tip-close {
+  width: 36px;
+  height: 36px;
 }
 
-/* ---------------------------------------------------------------- Timer hero card */
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* ---------------------------------------------------------------- Timer hero */
 
 .timer-card {
-  padding: 28px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
+  min-height: 400px;
+  padding: 26px 28px 28px;
+  background: var(--phase-focus);
+  box-shadow: var(--phase-focus-shadow);
   transition: background 0.6s var(--ease), box-shadow 0.6s var(--ease);
 }
 
-/* Break fills come from the phase tokens (white text keeps >= 4.5:1 at every stop) */
 .timer-card.phase-short_break {
   background: var(--phase-short);
   box-shadow: var(--phase-short-shadow);
@@ -218,69 +150,51 @@
   box-shadow: var(--phase-long-shadow);
 }
 
-.timer-card.phase-short_break .play {
-  color: #08805f;
-}
-
-.timer-card.phase-long_break .play {
-  color: #5537cc;
-}
-
 .timer-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  /* Holds the "Ends" chip's height even while idle, so pressing Start doesn't shift the card. */
-  min-height: 36px;
+  gap: 12px;
+  min-height: 32px;
 }
 
 .timer-top-end {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
 }
 
 .timer-top .chip {
-  height: 36px;
-  padding: 0 14px;
-  font-size: 13px;
-}
-
-.timer-top .badge {
-  height: 30px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 13px;
   font-size: 12.5px;
 }
 
-.timer-top .badge.white.warn {
-  color: #c63a1d;
+.timer-top .chip.detours {
+  color: var(--warn-ink);
 }
 
-/* Session pager: done = white, current = white pill, still to come = faint */
 .session-dots {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-left: 2px;
 }
 
 .session-dots span {
-  width: 8px;
-  height: 8px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.35);
-  transition: width 0.35s var(--ease), background 0.35s;
+  width: 7px;
+  height: 7px;
+  border-radius: 7px;
+  background: var(--hero-track);
+  transition: width 0.4s var(--ease), background 0.3s;
 }
 
 .session-dots span.done {
-  background: #fff;
+  background: var(--hero-ink-2);
 }
 
 .session-dots span.current {
-  width: 22px;
-  background: #fff;
+  width: 24px;
+  background: var(--hero-ink);
 }
 
 .timer-body {
@@ -294,50 +208,118 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
   flex: 1;
 }
 
 .timer-digits {
-  font-size: 92px;
+  font-size: 96px;
   font-weight: 700;
-  letter-spacing: -0.055em;
-  line-height: 1;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
   margin-left: -4px;
+  color: var(--hero-ink);
+}
+
+.timer-card.is-paused .timer-digits {
+  animation: digits-breathe 2.6s ease-in-out infinite;
+}
+
+@keyframes digits-breathe {
+  50% {
+    opacity: 0.55;
+  }
 }
 
 .timer-progress {
   width: 100%;
-  max-width: 340px;
-  height: 8px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.22);
+  max-width: 320px;
+  height: 6px;
+  border-radius: 6px;
+  background: var(--hero-track);
   overflow: hidden;
 }
 
 .timer-progress > span {
   display: block;
   height: 100%;
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 6px;
+  background: var(--hero-fill);
   transition: width 0.4s linear;
+}
+
+/* Flow: no end to fill towards, so the line just glows along while you work. */
+.timer-progress.is-flow {
+  position: relative;
+}
+
+.timer-progress.is-flow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--hero-fill), transparent);
+  opacity: 0.35;
+  transform: translateX(-100%);
+}
+
+.timer-progress.is-flow.is-moving::after {
+  animation: flow-glide 3.2s var(--ease) infinite;
+}
+
+@keyframes flow-glide {
+  to {
+    transform: translateX(260%);
+  }
+}
+
+/* Countdown or flow, picked before a block starts */
+.flow-toggle {
+  gap: 5px;
+  transition: background 0.2s, color 0.2s, transform 0.15s var(--spring);
+}
+
+.flow-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.flow-toggle:active {
+  transform: scale(0.95);
+}
+
+@media (hover: hover) {
+  .flow-toggle:hover {
+    background: var(--hero-glass-hover);
+  }
+}
+
+.flow-toggle.on,
+.flow-toggle.on:hover {
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
+}
+
+.timer-top .chip .live-dot {
+  margin-right: 2px;
 }
 
 .timer-buddy {
   flex: none;
-  margin: -10px -6px 0 0;
+  margin: -18px -8px -6px 0;
 }
 
-/* Intention: the card's big title (reference: "Wiring Dashboard Analytics").
-   It always has room for two lines (or, once a block runs, one line and its
-   caption), so a longer focus fills that space instead of making the card and
-   its whole row taller. Before a block starts the caption sits beside play. */
+/* Intention: the card's big title. It always has room for two lines (or one
+   and its caption), so a longer focus fills that space instead of making the
+   card and its row taller. Before a block starts the caption sits beside play. */
 .intention {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 76px;
+  min-height: 72px;
 }
 
 .intention-row {
@@ -355,34 +337,34 @@
   border: 0;
   outline: none;
   background: transparent;
-  color: #fff;
-  font-size: 28px;
+  color: var(--hero-ink);
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.03em;
-  line-height: 1.18;
+  line-height: 1.2;
   padding: 0;
   field-sizing: content;
-  min-height: 34px;
+  min-height: 32px;
 }
 
 .intention-input::placeholder {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--hero-ink-2);
+  opacity: 0.75;
 }
 
 .intention-input:focus-visible {
   outline: none;
   text-decoration: underline;
-  text-decoration-color: rgba(255, 255, 255, 0.4);
-  text-underline-offset: 6px;
+  text-decoration-color: var(--hero-track);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 7px;
 }
 
-/* Tasks 1–4: small glass numbers at the end of the intention line (keys 1–4 too).
-   The linked one is solid white. */
+/* Tasks 1–4: small glass numbers at the end of the intention line (keys 1–4 too). */
 .intention-tasks {
   flex: none;
   display: flex;
   gap: 6px;
-  /* centre on the first 33px line of the intention */
   margin-top: -1px;
 }
 
@@ -393,41 +375,31 @@
   height: 34px;
   border-radius: 50%;
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 750;
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
+  font-size: 13.5px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  transition: background 0.2s, color 0.2s, transform 0.12s var(--ease);
+  transition: background 0.2s, color 0.2s, transform 0.15s var(--spring);
 }
 
 @media (hover: hover) {
   .task-num:hover {
     background: var(--hero-glass-hover);
   }
-
-  .task-num.on:hover {
-    background: #f3f6ff;
-  }
 }
 
 .task-num:active {
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
 
 .task-num.on {
-  background: #fff;
-  color: var(--on-white);
-  box-shadow: 0 4px 12px rgba(8, 24, 90, 0.25);
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
 }
 
-.task-num:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-}
-
-/* One line under the intention: listening, the linked task, "Add as task" or a hint.
-   Its height is kept so the card doesn't jump between them. */
+/* One line under the intention: listening, the linked task, or "Add as task". */
 .intention-foot {
   display: flex;
   align-items: center;
@@ -441,15 +413,11 @@
 .intention-caption {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.86);
-}
-
-.intention-caption.hint {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--hero-ink-2);
 }
 
 .intention-caption svg {
@@ -468,15 +436,16 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
-  padding: 0 13px 0 10px;
+  height: 32px;
+  padding: 0 14px 0 10px;
   border-radius: var(--r-pill);
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  color: #fff;
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
   font-size: 13px;
   font-weight: 650;
   transition: background 0.2s;
+  animation: tip-in 0.35s var(--ease);
 }
 
 .intention-add svg {
@@ -488,11 +457,6 @@
   .intention-add:hover {
     background: var(--hero-glass-hover);
   }
-}
-
-.intention-add:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
 }
 
 /* Tap Kai to dictate: rings breathe with your voice, a badge shows the mic / stop. */
@@ -507,32 +471,23 @@
   cursor: pointer;
 }
 
-.buddy-voice .buddy {
+.buddy-voice .kai {
   position: relative;
   z-index: 1;
-  transition: transform 0.25s var(--spring);
+  transition: transform 0.3s var(--spring);
 }
 
 @media (hover: hover) {
-  .buddy-voice:hover .buddy {
-    transform: translateY(-2px) scale(1.03);
+  .buddy-voice:hover .kai {
+    transform: translateY(-3px);
   }
-}
-
-.buddy-voice:active .buddy {
-  transform: scale(0.97);
-}
-
-.buddy-voice:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
 }
 
 .voice-ring {
   position: absolute;
-  inset: 4%;
+  inset: 8%;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--hero-glass);
   opacity: 0;
   transform: scale(calc(0.86 + var(--level) * 0.34));
   transition: transform 0.12s linear, opacity 0.3s var(--ease);
@@ -540,8 +495,8 @@
 }
 
 .voice-ring.two {
-  inset: -8%;
-  background: rgba(255, 255, 255, 0.08);
+  inset: -6%;
+  opacity: 0;
   transform: scale(calc(0.9 + var(--level) * 0.5));
 }
 
@@ -549,8 +504,12 @@
   opacity: 1;
 }
 
+.buddy-voice.is-listening .voice-ring.two {
+  opacity: 0.5;
+}
+
 .buddy-voice.is-thinking .voice-ring {
-  opacity: 0.6;
+  opacity: 0.7;
   animation: voice-think 1.4s var(--ease) infinite;
 }
 
@@ -563,17 +522,21 @@
 .voice-badge {
   position: absolute;
   z-index: 2;
-  right: 2%;
-  bottom: 8%;
+  right: 6%;
+  bottom: 12%;
   display: grid;
   place-items: center;
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: #fff;
-  color: var(--on-white);
-  box-shadow: 0 4px 12px rgba(8, 24, 90, 0.3);
-  transition: transform 0.2s var(--spring);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 6px 16px -4px rgba(20, 40, 28, 0.3);
+  transition: transform 0.25s var(--spring), background 0.2s;
+}
+
+.buddy-voice:hover .voice-badge {
+  transform: scale(1.08);
 }
 
 .voice-badge svg {
@@ -588,24 +551,123 @@
 }
 
 .buddy-voice.is-listening .voice-badge {
-  background: #ff5a5f;
+  background: #ef5a50;
   color: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .voice-ring,
-  .buddy-voice.is-thinking .voice-ring {
+  .buddy-voice.is-thinking .voice-ring,
+  .timer-card.is-paused .timer-digits {
     animation: none;
     transition: opacity 0.3s;
   }
 }
 
 .timer-rest {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 600;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.86);
-  max-width: 420px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--hero-ink-2);
+  min-height: 72px;
+}
+
+.timer-rest > p {
+  max-width: 380px;
+}
+
+.breath-start {
+  margin-top: 14px;
+  animation: tip-in 0.4s var(--ease);
+}
+
+/* Breathe with Kai: the words swap with the breath, Kai swells and settles in time. */
+.breath {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.breath-word {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--hero-ink);
+  animation: breath-word 0.9s var(--ease);
+}
+
+@keyframes breath-word {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(4px);
+  }
+}
+
+.breath-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.breath-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 7px;
+  background: var(--hero-track);
+  transition: width 0.4s var(--ease), background 0.3s;
+}
+
+.breath-dots i.done {
+  background: var(--hero-ink-2);
+}
+
+.breath-dots i.now {
+  width: 22px;
+  background: var(--hero-ink);
+}
+
+.timer-buddy {
+  position: relative;
+}
+
+.timer-card.is-breathing .timer-buddy .kai {
+  transition: transform 1.2s ease-in-out;
+}
+
+.timer-card[data-breath="in"] .timer-buddy .kai {
+  transform: scale(1.16);
+  transition-duration: 4s;
+}
+
+.timer-card[data-breath="out"] .timer-buddy .kai {
+  transform: scale(0.92);
+  transition-duration: 6s;
+}
+
+/* A soft halo that breathes with Kai */
+.timer-buddy::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--hero-glass-hover), transparent);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.8s, transform 1.2s ease-in-out;
+  pointer-events: none;
+}
+
+.timer-card[data-breath="in"] .timer-buddy::before {
+  opacity: 1;
+  transform: scale(1.35);
+  transition-duration: 0.8s, 4s;
+}
+
+.timer-card[data-breath="out"] .timer-buddy::before {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition-duration: 0.8s, 6s;
 }
 
 .timer-controls {
@@ -615,16 +677,13 @@
   gap: 12px;
   /* stays at the bottom when the card stretches to its row */
   margin-top: auto;
-  padding-top: 4px;
 }
 
 .timer-secondary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.12);
+  gap: 8px;
+  animation: tip-in 0.4s var(--ease);
 }
 
 .timer-secondary .circle-btn {
@@ -634,9 +693,10 @@
 
 .timer-secondary .btn {
   height: 48px;
+  padding: 0 18px;
 }
 
-/* Before a block starts: the intention's caption (hint, "Add as task", listening…) */
+/* Before a block starts: the intention's caption ("Add as task", listening…) */
 .timer-caption {
   flex: 1;
   min-width: 0;
@@ -647,49 +707,179 @@
 /* Play stays on the right when the secondary tray is hidden (idle) */
 .timer-controls .play {
   margin-left: auto;
+  transition: transform 0.2s var(--spring), background 0.2s;
+}
+
+.timer-controls .play:hover:not(:disabled) {
+  transform: scale(1.04);
 }
 
 .timer-controls .play svg {
   margin-left: 3px;
 }
 
-.timer-controls .play svg[class*="pause"] {
+.timer-controls .play.is-running svg {
   margin-left: 0;
 }
 
-/* ---------------------------------------------------------------- Side column */
+/* ---------------------------------------------------------------- Today */
 
-/* Soundscape: one row — artwork, name (a compact preset picker) + its sounds, play */
+.today-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 28px;
+}
+
+.today-ring {
+  position: relative;
+  flex: none;
+  width: 164px;
+  height: 164px;
+  padding: 0;
+  border-radius: 50%;
+  transition: transform 0.25s var(--spring);
+}
+
+@media (hover: hover) {
+  .today-ring:hover {
+    transform: scale(1.03);
+  }
+}
+
+.today-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.today-ring circle {
+  fill: none;
+  stroke-width: 9;
+}
+
+.today-ring .track {
+  stroke: var(--track);
+}
+
+.today-ring .fill {
+  stroke: var(--brand);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s var(--ease);
+}
+
+.today-ring .fill.met {
+  stroke: var(--brand-deep);
+}
+
+.today-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.today-num {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.today-unit {
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.today-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.today-sub {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.today-week {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.today-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.today-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--track);
+}
+
+.today-day.hit .today-dot {
+  background: var(--brand);
+}
+
+.today-day.now .today-dot {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--ink-4);
+}
+
+.today-letter {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--ink-3);
+}
+
+.today-day.now .today-letter {
+  color: var(--ink);
+}
+
+.today-streak {
+  margin-top: 12px;
+}
+
+/* ---------------------------------------------------------------- Sound */
+
 .sound-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding-top: 20px;
-  padding-bottom: 20px;
+  gap: 16px;
+  padding: 16px 18px 16px 16px;
 }
 
 .sound-art {
   display: grid;
   place-items: center;
-  width: 60px;
-  height: 60px;
-  color: rgba(255, 255, 255, 0.85);
-  transition: transform 0.15s var(--ease);
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 18px;
+  color: #fff;
+  transition: transform 0.25s var(--spring);
 }
 
 .sound-art svg {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
 }
 
 @media (hover: hover) {
   .sound-art:hover {
-    transform: scale(1.04);
+    transform: scale(1.05) rotate(-2deg);
   }
-}
-
-.sound-art:active {
-  transform: scale(0.96);
 }
 
 .sound-meta {
@@ -697,15 +887,14 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
+  gap: 2px;
 }
 
 .sound-pick {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  align-self: flex-start;
   max-width: 100%;
   border-radius: 8px;
   cursor: pointer;
@@ -717,40 +906,29 @@
   white-space: nowrap;
 }
 
-.sound-pick svg {
-  width: 17px;
-  height: 17px;
-  flex: none;
-  color: var(--ink-3);
-  transition: color 0.2s;
-}
-
 @media (hover: hover) {
-  .sound-pick:hover svg {
-    color: var(--ink);
+  .sound-pick:hover .card-title {
+    text-decoration: underline;
+    text-decoration-color: var(--ink-4);
+    text-underline-offset: 4px;
   }
 }
 
 .sound-pick:focus-within {
   outline: 2px solid var(--brand);
-  outline-offset: 4px;
+  outline-offset: 3px;
 }
 
-/* the invisible native picker, with a taller hit area than the 22px title */
 .sound-pick select {
   position: absolute;
-  inset: -11px -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 22px);
+  inset: 0;
   opacity: 0;
-  appearance: none;
-  border: 0;
-  font-size: 16px;
   cursor: pointer;
+  appearance: none;
+  font-size: 16px;
 }
 
 .sound-sub {
-  max-width: 100%;
   font-size: 13px;
   color: var(--ink-2);
   overflow: hidden;
@@ -758,8 +936,18 @@
   white-space: nowrap;
 }
 
+/* ---------------------------------------------------------------- Up next */
+
+.upnext-card .card-head {
+  margin-bottom: 8px;
+}
+
 .upnext {
-  padding: 0;
+  list-style: none;
+}
+
+.upnext + .upnext {
+  border-top: 1px solid var(--line);
 }
 
 .upnext-btn {
@@ -767,178 +955,148 @@
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 12px 0;
+  margin: 0 -10px;
+  width: calc(100% + 20px);
+  padding: 12px 10px;
+  border-radius: 16px;
   text-align: left;
+  transition: background 0.2s;
 }
 
-/* 1–4: the same numbers as the buttons on the timer */
+@media (hover: hover) {
+  .upnext-btn:hover:not(:disabled) {
+    background: var(--surface-soft);
+  }
+}
+
+.upnext-btn:disabled {
+  cursor: default;
+}
+
 .upnext-num {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
   flex: none;
-  box-shadow: inset 0 0 0 2px var(--ink-4);
+  border-radius: 50%;
+  background: var(--surface-soft);
+  font-size: 13px;
+  font-weight: 700;
   color: var(--ink-2);
-  font-size: 12.5px;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-  transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .upnext.current .upnext-num {
-  background: var(--brand);
-  box-shadow: none;
-  color: #fff;
+  background: var(--cta);
+  color: var(--on-cta);
 }
 
-.upnext-btn .list-main {
+.upnext-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.upnext-bar {
+  width: 44px;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.upnext-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--brand);
+}
+
+.upnext-count {
+  min-width: 28px;
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.upnext-empty {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0 6px;
 }
 
-.upnext-play {
-  width: 16px;
-  height: 16px;
-  color: var(--ink-3);
-  opacity: 0;
-  transition: opacity 0.2s;
+/* ---------------------------------------------------------------- Screen time */
+
+.screen-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.upnext-btn:hover .upnext-play {
-  opacity: 1;
+.screen-card .card-head {
+  margin-bottom: -4px;
+}
+
+.screen-figure {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.screen-top {
+  margin-top: -4px;
+}
+
+.screen-top .list-row {
+  padding: 10px 0;
+}
+
+.screen-empty {
+  font-size: 14px;
+  color: var(--ink-2);
 }
 
 /* ---------------------------------------------------------------- Deep focus */
 
 .view-home:has(.home-deep) {
-  max-width: 760px;
+  max-width: none;
+  min-height: 100%;
+  padding: 0;
 }
 
 .home-deep {
-  min-height: calc(100vh - 120px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px var(--gutter);
 }
 
 .deep-exit {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
-.circle-btn.glass-dark {
-  background: var(--glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  position: fixed;
+  z-index: 3;
+  top: calc(var(--titlebar) + 22px + env(safe-area-inset-top));
+  right: 24px;
 }
 
 .timer-card.is-deep {
-  padding: 36px;
+  width: min(760px, 100%);
+  min-height: 0;
+  padding: 36px 40px 40px;
 }
 
 .timer-card.is-deep .timer-digits {
-  font-size: 128px;
+  font-size: 148px;
 }
 
-/* Deep focus is the calmest screen: one big number, Kai, the intention and play.
-   The rest fades in on hover or keyboard focus. */
-
-.is-deep :is(.timer-top, .intention-tasks, .intention-foot, .timer-caption, .timer-secondary) {
-  transition: opacity 0.3s var(--ease), visibility 0.3s;
-}
-
-@media (hover: hover) {
-  .timer-card.is-deep:not(:hover):not(:focus-within) :is(.timer-top, .intention-tasks, .intention-foot, .timer-caption, .timer-secondary) {
-    opacity: 0;
-  }
-}
-
-/* Touch has no hover to reveal them: hide outright so nothing invisible can be tapped. Exit deep focus for the tray. */
-@media (hover: none) {
-  .is-deep :is(.timer-top, .intention-tasks, .intention-foot, .timer-caption, .timer-secondary) {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
-/* ---------------------------------------------------------------- Setup tip (one at a time) */
-
-.home-tip {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 18px 20px;
-}
-
-.home-tip-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.home-tip-title {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.home-tip-body {
-  margin-top: 2px;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: var(--ink-2);
-}
-
-.home-tip-actions {
-  display: flex;
-  gap: 8px;
-  flex: none;
-}
-
-@media (max-width: 760px) {
-  .home-tip {
-    flex-wrap: wrap;
-  }
-
-  .home-tip-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-
-/* ---------------------------------------------------------------- Screen time today */
-
-.screen-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.screen-card .card-head {
-  align-items: flex-start;
-  margin-bottom: 0;
-}
-
-.screen-total {
-  margin-top: 2px;
-}
-
-.screen-top {
-  margin-top: 2px;
-}
-
-.screen-top .list-row {
-  gap: 12px;
-}
-
-.screen-empty {
-  margin: 2px 0 0;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: var(--ink-2);
+.timer-card.is-deep .timer-progress {
+  max-width: 420px;
 }
 
 /* ---------------------------------------------------------------- Responsive */
@@ -946,80 +1104,63 @@
 @media (max-width: 1024px) {
   .home-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+  }
+
+  .home-side {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   }
 }
 
 @media (max-width: 760px) {
   .home-tabs {
-    margin-top: 20px;
-    margin-right: calc(-1 * var(--gutter));
+    margin-bottom: 20px;
   }
 
   .home-tabs .pills {
-    margin-right: 0;
-    padding-right: var(--gutter);
-    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
-    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    gap: 8px;
+  }
+
+  .home-grid,
+  .home-side {
+    gap: 14px;
+  }
+
+  .home-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home .topbar .now-chip {
+    display: none;
   }
 
   .timer-card {
-    padding: 22px;
-    gap: 18px;
+    min-height: 0;
+    gap: 14px;
+    padding: 22px 22px 22px;
   }
 
   .timer-digits {
-    font-size: 64px;
+    font-size: 68px;
   }
 
-  .timer-buddy .buddy svg {
-    width: 84px;
-    height: 84px;
+  .timer-buddy {
+    margin: -14px -8px -8px 0;
+  }
+
+  .timer-buddy .kai,
+  .timer-buddy .kai svg {
+    width: 104px !important;
+    height: 104px !important;
   }
 
   .intention-input {
     font-size: 22px;
   }
 
-  .today-tile {
-    gap: 12px;
-    padding: 16px;
-  }
-
-  .today-head {
-    gap: 8px;
-    font-size: 13px;
-  }
-
-  .today-head .icon-tile {
-    width: 30px;
-    height: 30px;
-  }
-
-  .today-head .icon-tile svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  /* Phones: the numbers get their own row under the intention, so it keeps its width */
   .intention-row {
     flex-direction: column;
     gap: 12px;
-  }
-
-  .intention-tasks {
-    margin-top: 0;
-    gap: 6px;
-  }
-
-  .task-num {
-    width: 32px;
-    height: 32px;
-  }
-
-  .timer-secondary {
-    gap: 6px;
-    padding: 6px;
   }
 
   .timer-secondary .circle-btn,
@@ -1036,16 +1177,106 @@
   }
 
   .timer-controls .circle-btn.xl {
-    width: 72px;
-    height: 72px;
+    width: 68px;
+    height: 68px;
   }
 
-  /* digits + gap + Kai must fit the phone card: 198 + 16 + 84 <= 358 - 2 × 26 */
+  .today-card {
+    gap: 18px;
+    padding: 20px;
+  }
+
+  .today-ring {
+    width: 116px;
+    height: 116px;
+  }
+
+  .today-num {
+    font-size: 30px;
+  }
+
+  .today-week {
+    gap: 6px;
+  }
+
   .timer-card.is-deep {
     padding: 26px;
   }
 
   .timer-card.is-deep .timer-digits {
-    font-size: 80px;
+    font-size: 92px;
   }
+
+  .home-tip-title {
+    font-size: 13.5px;
+  }
+}
+
+@media (max-width: 380px) {
+  .timer-digits {
+    font-size: 60px;
+  }
+
+  .today-ring {
+    width: 100px;
+    height: 100px;
+  }
+
+  .today-dot {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* ---------------------------------------------------------------- Check-in (after a block) */
+
+.checkin {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: tip-in 0.45s var(--ease);
+}
+
+.checkin-q {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--hero-ink);
+}
+
+.checkin-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkin-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 46px;
+  padding: 0 16px 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
+  font-size: 14px;
+  font-weight: 650;
+  transition: background 0.2s, transform 0.2s var(--spring);
+}
+
+@media (hover: hover) {
+  .checkin-opt:hover {
+    background: var(--hero-glass-hover);
+    transform: translateY(-2px);
+  }
+}
+
+.checkin-opt:active {
+  transform: scale(0.95);
+}
+
+.checkin-skip {
+  width: 38px;
+  height: 38px;
 }

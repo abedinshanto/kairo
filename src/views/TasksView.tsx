@@ -30,7 +30,7 @@ import {
   type Ref,
 } from "react";
 import { Buddy, type BuddyMood } from "../components/Buddy";
-import { PageTitle, PillTabs, SlideToConfirm, Stepper, TopBar, cx } from "../components/ui";
+import { PillTabs, SlideToConfirm, Stepper, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
 import { confirmDialog } from "../lib/dialogs";
 import { useQuery } from "../lib/hooks";
@@ -186,35 +186,32 @@ export function TasksView() {
     if (loaded) stickyHeroId = hero?.id ?? null;
   }, [loaded, hero?.id]);
 
-  const [headline, sub] = !loaded
-    ? ["Tasks", "Loading your plan"]
+  const sub = !loaded
+    ? "\u00a0"
     : !open.length
-      ? ["All clear", done.length ? `${plural(done.length, "task")} wrapped up` : "Nothing waiting on you"]
+      ? done.length
+        ? "All clear."
+        : "Nothing planned yet."
       : left
-        ? [`${plural(left, "block")} to go`, `About ${fmtDuration(left * focusMin * MINUTE)} of focus planned`]
-        : ["Estimates met", "Mark tasks done when they're finished"];
+        ? `${plural(left, "block")} to go · about ${fmtDuration(left * focusMin * MINUTE)}`
+        : "Every estimate met.";
 
   return (
     <div className="tasks">
       <TopBar
-        left={
+        title="Tasks"
+        sub={sub}
+        right={
           <>
             <PlanRing done={progressed} total={planned} allDone={loaded && !open.length && done.length > 0} />
-            <div style={{ minWidth: 0 }}>
-              <div className="who-name">{headline}</div>
-              <div className="who-sub">{sub}</div>
-            </div>
+            <button className="circle-btn" aria-label="Open the timer" title="Timer" onClick={() => setView("home")}>
+              <Timer />
+            </button>
           </>
-        }
-        right={
-          <button className="circle-btn" aria-label="Open the timer" title="Timer" onClick={() => setView("home")}>
-            <Timer />
-          </button>
         }
       />
 
       <header className="tasks-head">
-        <PageTitle strong="Your tasks," dim="one block at a time." />
         <div className="tasks-tabs">
           <PillTabs<Tab>
             label="Task lists"
@@ -263,8 +260,7 @@ export function TasksView() {
               done.length > 0 && (
                 <div className="card task-card">
                   <div className="task-card-head">
-                    <div className="card-title">Wrapped up</div>
-                    <div className="card-sub">Tap a check to bring a task back</div>
+                    <div className="card-title">Done</div>
                   </div>
                   <ul className="task-list">
                     {done.map((t) => (
@@ -305,12 +301,12 @@ function HeroTask({ task, order }: { task: Task; order: number[] }) {
       <article className="card hero task-hero" aria-label={`Up first: ${task.title}`}>
         <div className="task-hero-top">
           <span className="task-hero-buddy">
-            <Buddy mood={mood} tone="cloud" size={76} />
+            <Buddy mood={mood} size={84} />
           </span>
           <div className="task-hero-actions">
             <span className="chip on-brand">
               <Clock />
-              {task.focusMs > 0 ? `${fmtDuration(task.focusMs)} focused` : "Not started"}
+              {task.focusMs > 0 ? fmtDuration(task.focusMs) : "Not started"}
             </span>
             <TaskMenu task={task} order={order} onRename={() => setEditing(true)} onNote={() => setNoting(true)} onBrand />
           </div>
@@ -351,13 +347,13 @@ function HeroTask({ task, order }: { task: Task; order: number[] }) {
           <div className="task-hero-caption">
             <span>
               <strong>
-                {task.pomodoros} of {task.estimate}
+                {task.pomodoros}/{task.estimate}
               </strong>{" "}
-              blocks done
+              blocks
             </span>
             <span>
               {left
-                ? `About ${fmtDuration(left * focusMin * MINUTE)} to go`
+                ? `~${fmtDuration(left * focusMin * MINUTE)} left`
                 : task.pomodoros > task.estimate
                   ? `${plural(task.pomodoros - task.estimate, "block")} over`
                   : "Estimate reached"}
@@ -366,7 +362,7 @@ function HeroTask({ task, order }: { task: Task; order: number[] }) {
         </div>
 
         <div className="task-hero-foot">
-          <SlideToConfirm label="Slide to mark done" onConfirm={() => void actions.setDone(task, true)} />
+          <SlideToConfirm label="Slide to finish" onConfirm={() => void actions.setDone(task, true)} />
           <button
             className="circle-btn on-brand task-hero-play"
             aria-label={inFocus ? "Back to the timer" : `Focus on ${task.title}`}
@@ -385,9 +381,9 @@ function EmptyHero({ cleared }: { cleared: boolean }) {
   return (
     <div className="task-stack">
       <div className="card hero task-hero task-hero-empty">
-        <Buddy mood={cleared ? "happy" : "idle"} tone="cloud" size={128} />
-        <h2 className="task-empty-title">{cleared ? "All clear!" : "A fresh page"}</h2>
-        <p className="task-empty-copy">{cleared ? "Every task is done. Add the next one whenever you're ready." : "Add a task and guess how many focus blocks it needs."}</p>
+        <Buddy mood={cleared ? "happy" : "idle"} size={150} />
+        <h2 className="task-empty-title">{cleared ? "All clear" : "A fresh page"}</h2>
+        <p className="task-empty-copy">{cleared ? "Everything's done." : "What's the first thing?"}</p>
         <button
           type="button"
           className="btn btn-on-brand task-empty-cta"
@@ -397,7 +393,7 @@ function EmptyHero({ cleared }: { cleared: boolean }) {
             input?.focus({ preventScroll: true });
           }}
         >
-          <Plus /> {cleared ? "Add the next one" : "Add your first task"}
+          <Plus /> Add a task
         </button>
       </div>
     </div>
@@ -408,13 +404,9 @@ function EmptyToday({ others }: { others: number }) {
   return (
     <div className="task-stack">
       <div className="card hero task-hero task-hero-empty">
-        <Buddy mood="idle" tone="cloud" size={128} />
+        <Buddy mood="sleep" size={150} />
         <h2 className="task-empty-title">Nothing due today</h2>
-        <p className="task-empty-copy">
-          {others
-            ? "Give a task a day from its ••• menu, or add one here: it's due today."
-            : "Add a task here and it's due today. Saying “…tomorrow” or “by Friday” works too."}
-        </p>
+        <p className="task-empty-copy">{others ? "Your other tasks can wait." : "A quiet day."}</p>
         <button
           type="button"
           className="btn btn-on-brand task-empty-cta"
@@ -424,7 +416,7 @@ function EmptyToday({ others }: { others: number }) {
             input?.focus({ preventScroll: true });
           }}
         >
-          <Plus /> Add something for today
+          <Plus /> Add for today
         </button>
       </div>
     </div>
@@ -453,10 +445,10 @@ function DoneSummary({ tasks }: { tasks: Task[] }) {
   if (!tasks.length) {
     return (
       <div className="card tint task-summary is-empty">
-        <Buddy mood="idle" tone="blue" size={96} />
+        <Buddy mood="idle" size={96} />
         <div>
           <div className="card-title">Nothing done yet</div>
-          <p className="task-summary-copy">Slide a task to done and it will land here.</p>
+          <p className="task-summary-copy">Finished tasks land here.</p>
         </div>
       </div>
     );
@@ -469,10 +461,10 @@ function DoneSummary({ tasks }: { tasks: Task[] }) {
           <small>{tasks.length === 1 ? "task done" : "tasks done"}</small>
         </div>
         <p className="task-summary-copy">
-          {focus > 0 ? `${fmtDuration(focus)} of focus${blocks ? ` across ${plural(blocks, "block")}` : ""}.` : "Every one of them counts."} Lovely work.
+          {focus > 0 ? `${fmtDuration(focus)} of focus${blocks ? ` · ${plural(blocks, "block")}` : ""}` : "Lovely work."}
         </p>
       </div>
-      <Buddy mood="happy" tone="blue" size={116} />
+      <Buddy mood="happy" tone="leaf" size={116} />
     </div>
   );
 }
@@ -904,7 +896,7 @@ function TaskRow({ task, order = [], grip, style, dragging }: { task: Task; orde
                   </span>
                 ) : (
                   <span className="task-sub-text">
-                    {task.pomodoros} of {plural(task.estimate, "block")}
+                    {task.pomodoros}/{plural(task.estimate, "block")}
                     {task.focusMs > 0 && <span className="task-sub-time"> · {fmtDuration(task.focusMs)}</span>}
                   </span>
                 )}

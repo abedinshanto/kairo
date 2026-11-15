@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Buddy } from "../components/Buddy";
 import { EntitySheet, fmtShare, ruleKey } from "../components/EntitySheet";
-import { Avatar, PageTitle, PillTabs, Segmented, TopBar, cx } from "../components/ui";
+import { Avatar, PillTabs, Segmented, TopBar, cx } from "../components/ui";
 import { backend } from "../lib/backend";
 import { PRODUCTIVITY_LABEL, categoryLabel, entityName, productivityClass } from "../lib/categories";
 import { useQuery } from "../lib/hooks";
@@ -84,12 +84,11 @@ export function AppsView() {
             <ChevronLeft />
           </button>
         }
+        title="Apps & sites"
+        sub="Tap one to change how it counts."
       />
 
       <div className="apps-grid">
-        <div className="apps-title">
-          <PageTitle strong="Apps & sites," dim="your call." />
-        </div>
 
         <aside className="apps-side">
           <Summary range={range} onRange={pickRange} total={total} split={split} />
@@ -125,7 +124,6 @@ export function AppsView() {
               ]}
             />
           </div>
-          {(!data || visible.length > 0) && <p className="muted apps-hint">Tap any app or site to change how it counts.</p>}
         </div>
 
         <section className="apps-list-wrap" aria-label="Apps and sites">

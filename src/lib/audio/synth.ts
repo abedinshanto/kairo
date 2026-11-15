@@ -1,62 +1,27 @@
 // Offline synthesis of seamless ambience loops. Everything is generated on the
 // device at play time — no audio files are shipped or streamed.
+//
+// Every loop is *circular*: filters run over the buffer twice (the first pass
+// only warms their state up, so the start of the loop continues exactly where
+// its end leaves off), events that run past the end wrap around to the start,
+// and slow modulations complete whole cycles. The loop point is therefore
+// inaudible, with no crossfade (crossfading two unrelated stretches of noise
+// makes the level dip at every repeat).
+//
+// This module is pure (no DOM, no Web Audio), so it runs in a worker.
 
+/** Fills one channel of a loop in place. `out.length` is the loop length. */
 type Fill = (out: Float32Array, channel: number, sampleRate: number) => void;
-
-const SEAM_SECONDS = 0.6;
-
-/** Render `seconds` of audio per channel and blend the tail into the head so it loops without a click. */
-export function renderLoop(ctx: BaseAudioContext, seconds: number, fill: Fill, channels = 2): AudioBuffer {
-  const sr = ctx.sampleRate;
-  const n = Math.floor(seconds * sr);
-  const seam = Math.floor(SEAM_SECONDS * sr);
-  const buffer = ctx.createBuffer(channels, n, sr);
-  for (let ch = 0; ch < channels; ch++) {
-    const raw = new Float32Array(n + seam);
-    fill(raw, ch, sr);
-    const out = buffer.getChannelData(ch);
-    for (let i = 0; i < n; i++) out[i] = raw[i];
-    for (let i = 0; i < seam; i++) {
-      const k = i / seam;
-      out[i] = raw[i] * k + raw[n + i] * (1 - k);
-    }
-  }
-  return buffer;
-}
 
 const white = () => Math.random() * 2 - 1;
 
-export function fillWhite(out: Float32Array) {
-  for (let i = 0; i < out.length; i++) out[i] = white() * 0.5;
-}
+// ------------------------------------------------------------------ Circular filters
 
-export function fillPink(out: Float32Array) {
-  // Paul Kellet's refined pink filter.
-  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-  for (let i = 0; i < out.length; i++) {
-    const w = white();
-    b0 = 0.99886 * b0 + w * 0.0555179;
-    b1 = 0.99332 * b1 + w * 0.0750759;
-    b2 = 0.969 * b2 + w * 0.153852;
-    b3 = 0.8665 * b3 + w * 0.3104856;
-    b4 = 0.55 * b4 + w * 0.5329522;
-    b5 = -0.7616 * b5 - w * 0.016898;
-    out[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
-    b6 = w * 0.115926;
-  }
-}
-
-export function fillBrown(out: Float32Array) {
-  let last = 0;
-  for (let i = 0; i < out.length; i++) {
-    last = (last + 0.02 * white()) / 1.02;
-    out[i] = last * 3.5;
-  }
-}
-
+/** One-pole low-pass, run around the loop (warm-up pass, then the real one). */
 function onePoleLowpass(data: Float32Array, cutoff: number, sr: number) {
   const a = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
   let y = 0;
+  for (let i = 0; i < data.length; i++) y += a * (data[i] - y);
   for (let i = 0; i < data.length; i++) {
     y += a * (data[i] - y);
     data[i] = y;
@@ -66,17 +31,66 @@ function onePoleLowpass(data: Float32Array, cutoff: number, sr: number) {
 function onePoleHighpass(data: Float32Array, cutoff: number, sr: number) {
   const a = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
   let y = 0;
+  for (let i = 0; i < data.length; i++) y += a * (data[i] - y);
   for (let i = 0; i < data.length; i++) {
     y += a * (data[i] - y);
     data[i] = data[i] - y;
   }
 }
 
-/** Add a short event at `at`, wrapping past the end so loops stay seamless. */
+/** Add a short event at `at`, wrapping past the end so the loop stays seamless. */
 function addEvent(out: Float32Array, at: number, length: number, sample: (i: number) => number) {
   const n = out.length;
-  for (let i = 0; i < length; i++) out[(at + i) % n] += sample(i);
+  const start = ((at % n) + n) % n;
+  for (let i = 0; i < length; i++) out[(start + i) % n] += sample(i);
 }
+
+/** A one-pole low-pass as a running function, for shaping single events. */
+const smoother = (cutoff: number, sr: number) => {
+  const a = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
+  let y = 0;
+  return (x: number) => (y += a * (x - y));
+};
+
+// ------------------------------------------------------------------ Noise colours
+
+export function fillWhite(out: Float32Array) {
+  for (let i = 0; i < out.length; i++) out[i] = white() * 0.5;
+}
+
+/** Pink noise (Paul Kellet's refined filter), circular. */
+export function fillPink(out: Float32Array) {
+  for (let i = 0; i < out.length; i++) out[i] = white();
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < out.length; i++) {
+      const w = out[i];
+      b0 = 0.99886 * b0 + w * 0.0555179;
+      b1 = 0.99332 * b1 + w * 0.0750759;
+      b2 = 0.969 * b2 + w * 0.153852;
+      b3 = 0.8665 * b3 + w * 0.3104856;
+      b4 = 0.55 * b4 + w * 0.5329522;
+      b5 = -0.7616 * b5 - w * 0.016898;
+      const y = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+      b6 = w * 0.115926;
+      if (pass) out[i] = y;
+    }
+  }
+}
+
+/** Brown noise (leaky integrator), circular. */
+export function fillBrown(out: Float32Array) {
+  for (let i = 0; i < out.length; i++) out[i] = white();
+  let last = 0;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < out.length; i++) {
+      last = (last + 0.02 * out[i]) / 1.02;
+      if (pass) out[i] = last * 3.5;
+    }
+  }
+}
+
+// ------------------------------------------------------------------ Nature
 
 export const fillRain: Fill = (out, _ch, sr) => {
   fillPink(out);
@@ -110,12 +124,13 @@ export const fillOcean: Fill = (out, ch, sr) => {
   onePoleHighpass(surf, 600, sr);
   const p1 = Math.random() * Math.PI * 2 + ch * 0.4;
   const p2 = Math.random() * Math.PI * 2;
+  const w1 = (2 * Math.PI * 3) / n;
+  const w2 = (2 * Math.PI * 5) / n;
   for (let i = 0; i < n; i++) {
-    const t = i / n;
-    // Whole numbers of cycles across the buffer keep the swell periodic.
-    const swell = 0.55 + 0.3 * Math.sin(2 * Math.PI * 3 * t + p1) + 0.15 * Math.sin(2 * Math.PI * 5 * t + p2);
-    const s = Math.max(0, swell);
-    out[i] = rumble[i] * (0.35 + 0.65 * s) * 0.9 + surf[i] * Math.pow(s, 3) * 0.75;
+    // Whole numbers of cycles across the loop keep the swell periodic.
+    const swell = 0.55 + 0.3 * Math.sin(w1 * i + p1) + 0.15 * Math.sin(w2 * i + p2);
+    const s = swell > 0 ? swell : 0;
+    out[i] = rumble[i] * (0.35 + 0.65 * s) * 0.9 + surf[i] * s * s * s * 0.75;
   }
 };
 
@@ -127,7 +142,7 @@ export const fillFire: Fill = (out, _ch, sr) => {
   for (let c = 0; c < crackles; c++) {
     const at = Math.floor(Math.random() * out.length);
     const big = Math.random() < 0.15;
-    const amp = big ? 0.35 + Math.random() * 0.45 : 0.04 + Math.random() * 0.18;
+    const amp = big ? 0.3 + Math.random() * 0.35 : 0.04 + Math.random() * 0.18;
     const len = Math.floor(sr * (big ? 0.006 : 0.0025));
     const tau = len / 3;
     addEvent(out, at, len, (i) => white() * Math.exp(-i / tau) * amp);
@@ -148,13 +163,14 @@ export const fillStream: Fill = (out, _ch, sr) => {
   fillPink(out);
   onePoleLowpass(out, 2400, sr);
   onePoleHighpass(out, 160, sr);
-  let level = 1;
-  let target = 1;
   const step = Math.floor(sr * 0.04);
-  for (let i = 0; i < out.length; i++) {
-    if (i % step === 0) target = 0.88 + Math.random() * 0.24;
-    level += (target - level) * 0.004;
-    out[i] *= 0.95 * level;
+  const targets = Float32Array.from({ length: Math.ceil(out.length / step) }, () => 0.88 + Math.random() * 0.24);
+  let level = 1;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < out.length; i++) {
+      level += (targets[Math.floor(i / step)] - level) * 0.004;
+      if (pass) out[i] *= 0.95 * level;
+    }
   }
 
   // The babble: each bubble rings like a little bell whose pitch rises as it
@@ -187,9 +203,10 @@ export const fillStream: Fill = (out, _ch, sr) => {
 };
 
 export const fillForest: Fill = (out, ch, sr) => {
+  // Leaves in a breeze under the birds.
   fillPink(out);
   onePoleLowpass(out, 1100, sr);
-  for (let i = 0; i < out.length; i++) out[i] *= 0.18;
+  for (let i = 0; i < out.length; i++) out[i] *= 0.22;
   const seconds = out.length / sr;
   const calls = Math.floor(seconds * 0.55);
   for (let c = 0; c < calls; c++) {
@@ -220,6 +237,7 @@ export const fillNight: Fill = (out, ch, sr) => {
   fillPink(out);
   onePoleLowpass(out, 700, sr);
   for (let i = 0; i < out.length; i++) out[i] *= 0.12;
+  const seconds = out.length / sr;
   const crickets = [
     { f: 4300, every: 0.62, pan: 0 },
     { f: 4650, every: 0.83, pan: 1 },
@@ -227,30 +245,31 @@ export const fillNight: Fill = (out, ch, sr) => {
   ];
   for (const c of crickets) {
     const gain = c.pan === ch ? 1 : 0.4;
-    let t = Math.random() * c.every;
-    const seconds = out.length / sr;
-    while (t < seconds) {
+    // Each cricket chirps a whole number of times per loop, so its rhythm carries on across the repeat.
+    const count = Math.max(1, Math.round(seconds / c.every));
+    const every = seconds / count;
+    const offset = Math.random() * every;
+    for (let k = 0; k < count; k++) {
+      const t = offset + k * every + (Math.random() - 0.5) * every * 0.1;
       const pulses = 3 + Math.floor(Math.random() * 3);
       for (let p = 0; p < pulses; p++) {
         const at = Math.floor((t + p * 0.032) * sr);
         const len = Math.floor(sr * 0.014);
         addEvent(out, at, len, (i) => Math.sin((2 * Math.PI * c.f * i) / sr) * Math.sin((Math.PI * i) / len) * 0.05 * gain);
       }
-      t += c.every * (0.9 + Math.random() * 0.2);
     }
   }
 };
 
 /** One rumble of thunder (not looped): a slow-attack, long-tail brown-noise swell. */
-export function renderThunder(ctx: BaseAudioContext): AudioBuffer {
-  const sr = ctx.sampleRate;
+export function renderThunder(sr: number): Float32Array[] {
   const seconds = 6 + Math.random() * 3;
   const n = Math.floor(seconds * sr);
-  const buf = ctx.createBuffer(2, n, sr);
   const attack = 0.08 + Math.random() * 0.6;
   const peaks = [0, 0.4 + Math.random() * 0.8, 1.3 + Math.random() * 1.2];
+  const out: Float32Array[] = [];
   for (let ch = 0; ch < 2; ch++) {
-    const data = buf.getChannelData(ch);
+    const data = new Float32Array(n);
     fillBrown(data);
     onePoleLowpass(data, 380, sr);
     for (let i = 0; i < n; i++) {
@@ -261,11 +280,16 @@ export function renderThunder(ctx: BaseAudioContext): AudioBuffer {
         const local = t - p;
         env += (local < attack ? local / attack : Math.exp(-(local - attack) / 1.6)) * (p === 0 ? 1 : 0.6);
       }
-      data[i] *= Math.min(1.4, env) * 1.6;
+      // Fade the last half second so the buffer never ends on a cut.
+      const tail = Math.min(1, (n - i) / (sr * 0.5));
+      data[i] *= Math.min(1.4, env) * 1.6 * tail;
     }
+    out.push(data);
   }
-  return buf;
+  return out;
 }
+
+// ------------------------------------------------------------------ Places
 
 /** A two-pole band-pass (RBJ cookbook, 0 dB at the peak) whose centre can move. */
 class Resonator {
@@ -299,13 +323,6 @@ class Resonator {
   }
 }
 
-/** A one-pole low-pass as a running function, for shaping single events. */
-const smoother = (cutoff: number, sr: number) => {
-  const a = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
-  let y = 0;
-  return (x: number) => (y += a * (x - y));
-};
-
 export const fillCafe: Fill = (out, ch, sr) => {
   const n = out.length;
   const seconds = n / sr;
@@ -320,7 +337,7 @@ export const fillCafe: Fill = (out, ch, sr) => {
   // above ~2 kHz away, so they're made at a quarter of the rate and scaled up.
   const step = 4;
   const vr = sr / step;
-  const m = Math.ceil(n / step) + 1;
+  const m = Math.floor(n / step);
   const low = new Float32Array(m);
   const voices = 10;
   for (let v = 0; v < voices; v++) {
@@ -330,26 +347,33 @@ export const fillCafe: Fill = (out, ch, sr) => {
     const f1 = new Resonator(vr);
     const f2 = new Resonator(vr);
     const tilt = smoother(500, vr);
-    let i = Math.floor(Math.random() * vr * 3);
+    // Each voice talks once around the loop from its own starting point, and
+    // never starts a syllable it can't finish before coming back to it.
+    const origin = Math.floor(Math.random() * m);
+    let i = 0;
     let phase = 0;
     let drift = 0;
     while (i < m) {
       const syllables = 3 + Math.floor(Math.random() * 10);
-      for (let s = 0; s < syllables && i < m; s++) {
+      for (let s = 0; s < syllables; s++) {
         const len = Math.floor(vr * (0.1 + Math.random() * 0.17));
+        if (i + len >= m) {
+          i = m;
+          break;
+        }
         f1.set(300 + Math.random() * 500, 5);
         f2.set(900 + Math.random() * 1500, 7);
         const amp = 0.45 + Math.random() * 0.55;
         // Phrases fall in pitch towards their end.
         const f0 = pitch * (1.12 - (0.2 * s) / syllables);
-        for (let k = 0; k < len && i < m; k++, i++) {
+        for (let k = 0; k < len; k++, i++) {
           drift += (Math.random() - 0.5) * 0.004;
           drift *= 0.996;
           phase += (f0 * (1 + drift)) / vr;
           if (phase >= 1) phase -= 1;
           const buzz = tilt(phase * 2 - 1) + white() * 0.04;
           const env = Math.sqrt(Math.sin((Math.PI * k) / len));
-          low[i] += (f1.run(buzz) + 0.55 * f2.run(buzz)) * env * amp * gain;
+          low[(origin + i) % m] += (f1.run(buzz) + 0.55 * f2.run(buzz)) * env * amp * gain;
         }
       }
       i += Math.floor(vr * (0.25 + Math.random() * 1.8));
@@ -358,8 +382,9 @@ export const fillCafe: Fill = (out, ch, sr) => {
   const talk = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const x = i / step;
-    const j = Math.floor(x);
-    talk[i] = low[j] + (low[j + 1] - low[j]) * (x - j);
+    const j = Math.floor(x) % m;
+    const next = low[(j + 1) % m];
+    talk[i] = low[j] + (next - low[j]) * (x - Math.floor(x));
   }
   onePoleLowpass(talk, 2200, sr);
   onePoleHighpass(talk, 170, sr);
@@ -403,7 +428,7 @@ export const fillTrain: Fill = (out, ch, sr) => {
   const p2 = Math.random() * Math.PI * 2;
   for (let i = 0; i < n; i++) {
     const t = i / n;
-    // Whole cycles across the loop keep it seamless.
+    // Whole cycles across the loop keep it seamless (the loop is a whole number of seconds).
     const sway = 1 + 0.1 * Math.sin(2 * Math.PI * 3 * t + p1) + 0.05 * Math.sin(2 * Math.PI * 11 * t + p2);
     const hum = 0.05 * Math.sin((2 * Math.PI * 96 * i) / sr) + 0.02 * Math.sin((2 * Math.PI * 192 * i) / sr + ch);
     out[i] = out[i] * 1.1 * sway + air[i] * 0.09 + hum * sway;
@@ -422,9 +447,10 @@ export const fillTrain: Fill = (out, ch, sr) => {
       return (thump + metal) * amp;
     });
   };
-  const period = 1;
   const offset = Math.random() * 0.5;
-  for (let t = offset; t * sr < n; t += period) {
+  const joints = Math.round(n / sr);
+  for (let k = 0; k < joints; k++) {
+    const t = offset + k;
     const a = 0.85 + Math.random() * 0.3;
     const near = ch === 0 ? 1 : 0.8;
     clack(Math.floor(t * sr), 0.55 * a * near);
@@ -443,7 +469,7 @@ export const fillLibrary: Fill = (out, ch, sr) => {
   onePoleHighpass(out, 70, sr);
   for (let i = 0; i < n; i++) out[i] *= 0.45;
 
-  const side = () => (Math.random() < 0.5 ? ch === 0 : ch === 1) ? 1 : 0.45;
+  const side = () => ((Math.random() < 0.5 ? ch === 0 : ch === 1) ? 1 : 0.45);
 
   // Pages turning: a quick papery swish, lifted then laid down.
   const turns = Math.max(3, Math.floor(seconds * 0.14));
@@ -507,3 +533,116 @@ export const fillLibrary: Fill = (out, ch, sr) => {
     addEvent(out, at, Math.floor(sr * 0.25), (i) => low(white()) * 3 * Math.exp(-i / (sr * 0.04)) * amp);
   }
 };
+
+// ------------------------------------------------------------------ Loudness
+
+/**
+ * RBJ biquad, run once over a copy (only used to measure, so it needn't be
+ * circular).
+ */
+function biquad(data: Float32Array, b0: number, b1: number, b2: number, a1: number, a2: number): Float32Array {
+  const out = new Float32Array(data.length);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < data.length; i++) {
+    const x = data[i];
+    const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1;
+    x1 = x;
+    y2 = y1;
+    y1 = y;
+    out[i] = y;
+  }
+  return out;
+}
+
+/**
+ * Loudness in LUFS (ITU-R BS.1770 K-weighting, ungated), the measure streaming
+ * services normalise with. Rumbles count for less than hiss and birdsong, as
+ * they do to the ear.
+ */
+export function loudness(channels: Float32Array[], sr: number): number {
+  let sum = 0;
+  for (const data of channels) {
+    // Stage 1: high shelf, +4 dB above ~1.5 kHz (the head's acoustic effect).
+    const G = 4, fc = 1681.97, Q = 0.7072;
+    const A = 10 ** (G / 40);
+    let w = (2 * Math.PI * fc) / sr;
+    let alpha = Math.sin(w) / (2 * Q);
+    let cw = Math.cos(w);
+    const sA = 2 * Math.sqrt(A) * alpha;
+    let a0 = A + 1 - (A - 1) * cw + sA;
+    const shelf = biquad(
+      data,
+      (A * (A + 1 + (A - 1) * cw + sA)) / a0,
+      (-2 * A * (A - 1 + (A + 1) * cw)) / a0,
+      (A * (A + 1 + (A - 1) * cw - sA)) / a0,
+      (2 * (A - 1 - (A + 1) * cw)) / a0,
+      (A + 1 - (A - 1) * cw - sA) / a0,
+    );
+    // Stage 2: high-pass at ~38 Hz (bass the ear barely weighs).
+    w = (2 * Math.PI * 38.13) / sr;
+    alpha = Math.sin(w) / (2 * 0.5003);
+    cw = Math.cos(w);
+    a0 = 1 + alpha;
+    const k = biquad(shelf, (1 + cw) / 2 / a0, -(1 + cw) / a0, (1 + cw) / 2 / a0, (-2 * cw) / a0, (1 - alpha) / a0);
+    let ms = 0;
+    for (let i = 0; i < k.length; i++) ms += k[i] * k[i];
+    sum += ms / k.length;
+  }
+  return -0.691 + 10 * Math.log10(sum / channels.length + 1e-12);
+}
+
+/** Every loop is rendered to this loudness, so sounds sit together at the same slider level. */
+export const TARGET_LUFS = -20;
+const PEAK_CEILING = 0.92;
+
+/** Scale to the target loudness, without letting a crackle or a clink clip. */
+function normalise(channels: Float32Array[], sr: number) {
+  let peak = 0;
+  for (const c of channels) for (let i = 0; i < c.length; i++) peak = Math.max(peak, Math.abs(c[i]));
+  const gain = Math.min(10 ** ((TARGET_LUFS - loudness(channels, sr)) / 20), peak > 0 ? PEAK_CEILING / peak : 1);
+  for (const c of channels) for (let i = 0; i < c.length; i++) c[i] *= gain;
+}
+
+// ------------------------------------------------------------------ Loops by name
+
+/** Loop lengths. Longer loops for sounds with memorable events, so the repeat isn't noticed. */
+export const LOOPS: Record<string, { seconds: number; fill: Fill }> = {
+  white: { seconds: 6, fill: fillWhite },
+  pink: { seconds: 6, fill: fillPink },
+  brown: { seconds: 8, fill: fillBrown },
+  rain: { seconds: 12, fill: fillRain },
+  ocean: { seconds: 26, fill: fillOcean },
+  fire: { seconds: 14, fill: fillFire },
+  stream: { seconds: 10, fill: fillStream },
+  forest: { seconds: 30, fill: fillForest },
+  night: { seconds: 14, fill: fillNight },
+  cafe: { seconds: 24, fill: fillCafe },
+  // A whole number of seconds: the rail joints come once a second.
+  train: { seconds: 16, fill: fillTrain },
+  library: { seconds: 32, fill: fillLibrary },
+};
+
+/**
+ * Render a loop (or, for "thunder-0"… "thunder-2", one rumble) as stereo
+ * channels at `sr`, normalised to the shared loudness.
+ */
+export function renderSound(key: string, sr: number): Float32Array[] {
+  if (key.startsWith("thunder")) {
+    const chans = renderThunder(sr);
+    // Thunder is an event over silence: give its peak the loudness of a loop.
+    normalise(chans, sr);
+    return chans;
+  }
+  const spec = LOOPS[key];
+  if (!spec) throw new Error(`Unknown sound: ${key}`);
+  // A multiple of 4 samples, so the café's quarter-rate chatter tiles exactly.
+  const n = Math.floor((spec.seconds * sr) / 4) * 4;
+  const chans = [0, 1].map((ch) => {
+    const out = new Float32Array(n);
+    spec.fill(out, ch, sr);
+    return out;
+  });
+  normalise(chans, sr);
+  return chans;
+}

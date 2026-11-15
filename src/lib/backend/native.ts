@@ -42,6 +42,7 @@ export function createNativeBackend(): Backend {
     spanDelete: (id) => invoke("span_delete", { id }),
     sessionUpdate: (id, taskId, intention) => invoke("session_update", { id, taskId, intention }),
     sessionDelete: (id) => invoke("session_delete", { id }),
+    sessionRate: (id, rating) => invoke("session_rate", { id, rating }),
     async importData() {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const path = await open({

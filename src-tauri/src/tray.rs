@@ -165,23 +165,25 @@ pub fn update_timer<R: Runtime>(app: &AppHandle<R>, snap: &TimerSnapshot) {
         let s = app.state::<AppState>().settings.read().clone();
         (s.show_timer_in_tray, s.short_break_minutes, s.long_break_minutes)
     };
-    let time = clock(snap.remaining_ms);
-    let phase = snap.phase.label();
+    // Flow blocks count up.
+    let time = if snap.flow { clock(snap.duration_ms - snap.remaining_ms) } else { clock(snap.remaining_ms) };
+    let phase = if snap.flow { "Flow" } else { snap.phase.label() };
 
     let (title, status, toggle) = match snap.status {
         TimerStatus::Running => (
             Some(time.clone()),
-            format!("{phase} · {time} left"),
+            if snap.flow { format!("{phase} · {time}") } else { format!("{phase} · {time} left") },
             "Pause",
         ),
         TimerStatus::Paused => (
             Some(format!("❚❚ {time}")),
-            format!("{phase} paused · {time} left"),
+            if snap.flow { format!("{phase} paused · {time}") } else { format!("{phase} paused · {time} left") },
             "Resume",
         ),
         TimerStatus::Idle => (
             None,
             match snap.phase {
+                Phase::Focus if snap.flow => "Ready to flow".to_string(),
                 Phase::Focus => format!("Ready to focus · {time}"),
                 _ => format!("{phase} · {time}"),
             },

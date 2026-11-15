@@ -12,6 +12,11 @@ import type {
 
 const MIN_RECORDED_MS = 60_000;
 const MAX_DURATION_MS = 4 * 3_600_000;
+/** A flow block has no set end; after this long it wraps up by itself. */
+export const FLOW_CAP_MS = 3 * 3_600_000;
+
+/** The break a flow block earns: a fifth of the time focused, 1–30 minutes. */
+export const earnedBreakMs = (focusedMs: number) => Math.min(30, Math.max(1, Math.round(focusedMs / 5 / 60_000))) * 60_000;
 
 export type SessionRecord = Omit<FocusSession, "id">;
 
@@ -34,10 +39,13 @@ export class TimerEngine {
   intention = "";
   taskId: number | null = null;
   interruptions = 0;
+  /** This focus block counts up (flow mode was on when it began). */
+  flow = false;
 
   constructor(settings: Settings) {
-    this.durationMs = minutesFor("focus", settings);
-    this.remainingMs = this.durationMs;
+    this.durationMs = 0;
+    this.remainingMs = 0;
+    this.enter("focus", settings);
   }
 
   remaining(now: number) {
@@ -57,6 +65,7 @@ export class TimerEngine {
       intention: this.intention,
       taskId: this.taskId,
       interruptions: this.interruptions,
+      flow: this.flow,
       now,
     };
   }
@@ -64,7 +73,8 @@ export class TimerEngine {
   private enter(phase: Phase, s: Settings) {
     this.phase = phase;
     this.status = "idle";
-    this.durationMs = minutesFor(phase, s);
+    this.flow = phase === "focus" && s.flowMode;
+    this.durationMs = this.flow ? FLOW_CAP_MS : minutesFor(phase, s);
     this.remainingMs = this.durationMs;
     this.startedAt = null;
     this.interruptions = 0;
@@ -122,6 +132,7 @@ export class TimerEngine {
       taskId: this.taskId,
       interruptions: this.interruptions,
     };
+    const flowed = this.flow;
     let next: Phase;
     let auto: boolean;
     if (finished === "focus") {
@@ -134,6 +145,12 @@ export class TimerEngine {
       auto = s.autoStartFocus;
     }
     this.enter(next, s);
+    if (flowed && finished === "focus") {
+      // Flow: the break is earned, never shorter than a long break's setting when one is due.
+      const earned = earnedBreakMs(actual);
+      this.durationMs = next === "long_break" ? Math.max(earned, this.durationMs) : earned;
+      this.remainingMs = this.durationMs;
+    }
     if (auto) this.run(now);
     return {
       record,
@@ -172,6 +189,8 @@ export class TimerEngine {
   }
 
   extend(minutes: number, now: number) {
+    // A flow block has no end to move.
+    if (this.flow) return;
     const requested = Math.max(-60, Math.min(60, minutes)) * 60_000;
     const remaining = this.remaining(now);
     const delta = Math.min(Math.max(requested, -(remaining - 1000)), MAX_DURATION_MS - this.durationMs);

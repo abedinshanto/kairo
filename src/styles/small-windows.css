@@ -35,7 +35,7 @@ html.os-linux .mini {
   margin: 8px 8px 0;
   border-radius: 14px;
   background: var(--hero);
-  color: var(--on-brand);
+  color: var(--hero-ink);
 }
 
 .panel-timer-top {
@@ -50,23 +50,23 @@ html.os-linux .mini {
   gap: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
 }
 
 .panel-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--hero-track);
 }
 
 .panel-dot.on {
-  background: #6ee7a8;
-  box-shadow: 0 0 0 3px rgba(110, 231, 168, 0.25);
+  background: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent);
 }
 
 .panel-dot.paused {
-  background: #ffd27a;
+  background: var(--warn);
 }
 
 .panel-timer .circle-btn.sm {
@@ -92,7 +92,7 @@ html.os-linux .mini {
   height: 5px;
   margin-top: 10px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--hero-track);
   overflow: hidden;
 }
 
@@ -100,7 +100,7 @@ html.os-linux .mini {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #fff;
+  background: var(--hero-fill);
   transition: width 0.5s linear;
 }
 
@@ -226,8 +226,8 @@ html.os-linux .mini {
 }
 
 .panel-task.on .panel-num {
-  background: var(--brand);
-  color: #fff;
+  background: var(--cta);
+  color: var(--on-cta);
 }
 
 .panel-task-title {
@@ -288,7 +288,7 @@ html.os-linux .mini {
 }
 
 .panel-ring .track {
-  stroke: var(--surface-sunk);
+  stroke: var(--track);
 }
 
 .panel-ring .fill {

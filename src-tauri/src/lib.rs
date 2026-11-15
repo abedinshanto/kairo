@@ -275,6 +275,7 @@ pub fn run() {
             commands::span_update,
             commands::span_delete,
             commands::session_update,
+            commands::session_rate,
             commands::session_delete,
             commands::import_data,
             commands::backups_list,

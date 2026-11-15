@@ -15,6 +15,9 @@ pub struct Settings {
     pub long_break_every: u32,
     pub auto_start_breaks: bool,
     pub auto_start_focus: bool,
+    /// Flow mode: focus counts up with no set end, and the break that follows
+    /// is earned (a fifth of the time focused).
+    pub flow_mode: bool,
 
     // Goals
     pub daily_focus_goal_minutes: u32,
@@ -77,6 +80,7 @@ impl Default for Settings {
             long_break_every: 4,
             auto_start_breaks: true,
             auto_start_focus: false,
+            flow_mode: false,
             daily_focus_goal_minutes: 240,
             distraction_budget_minutes: 60,
             category_limits: BTreeMap::new(),
@@ -198,6 +202,8 @@ pub struct TimerSnapshot {
     pub intention: String,
     pub task_id: Option<i64>,
     pub interruptions: u32,
+    /// A flow block: it counts up (elapsed = duration − remaining) and its break is earned.
+    pub flow: bool,
     pub now: i64,
 }
 
@@ -257,6 +263,9 @@ pub struct FocusSession {
     pub intention: String,
     pub task_id: Option<i64>,
     pub interruptions: u32,
+    /// How the block felt, asked right after it: 1 scattered, 2 okay, 3 deep.
+    #[serde(default)]
+    pub rating: Option<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

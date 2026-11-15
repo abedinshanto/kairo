@@ -2,15 +2,24 @@
 
 .display {
   text-wrap: balance;
-  font-size: 40px;
-  line-height: 1.12;
+  font-size: 44px;
+  line-height: 1.06;
   font-weight: 700;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
   color: var(--ink);
 }
 
 .display .dim {
   color: var(--ink-3);
+}
+
+/* One quiet line under a page's title */
+.page-sub {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-2);
+  letter-spacing: -0.01em;
 }
 
 .title {
@@ -35,7 +44,7 @@
 }
 
 .big-number {
-  font-size: 34px;
+  font-size: 36px;
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.05;
@@ -83,7 +92,7 @@
 }
 
 .card.hero {
-  color: var(--on-brand);
+  color: var(--hero-ink);
   background: var(--hero);
   box-shadow: var(--hero-shadow);
   border-radius: var(--r-2xl);
@@ -97,7 +106,9 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(120% 80% at 0% 0%, rgba(255, 255, 255, 0.1), transparent 55%);
+  background:
+    radial-gradient(90% 70% at 0% 0%, rgba(255, 255, 255, 0.55), transparent 60%),
+    radial-gradient(60% 50% at 100% 100%, rgba(255, 255, 255, 0.18), transparent 70%);
   pointer-events: none;
 }
 
@@ -123,14 +134,18 @@
 
 .hero .card-sub,
 .hero .muted {
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
+}
+
+:root[data-theme="dark"] .card.hero::after {
+  background: radial-gradient(90% 70% at 0% 0%, rgba(255, 255, 255, 0.06), transparent 60%);
 }
 
 /* Focus rings stay visible on coloured cards */
 .card.hero :focus-visible,
 .sky :focus-visible,
 .timer-card :focus-visible {
-  outline-color: #fff;
+  outline-color: var(--hero-ink);
 }
 
 /* ================================================================ Buttons */
@@ -164,25 +179,26 @@
   opacity: 0.45;
 }
 
-.btn-primary {
-  background: var(--brand);
-  color: var(--on-brand);
-  box-shadow: 0 10px 24px -10px var(--brand);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--brand-deep);
-}
-
-.btn-dark {
-  background: var(--ink);
-  color: var(--surface);
+/* The primary action: a deep ink pill (light in dark mode) */
+.btn-primary,
+.btn-dark,
+.btn-on-brand {
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
 }
 
 @media (hover: hover) {
-  .btn-dark:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--ink) 88%, var(--brand));
+  .btn-primary:hover:not(:disabled),
+  .btn-dark:hover:not(:disabled),
+  .btn-on-brand:hover:not(:disabled) {
+    background: var(--cta-hover);
   }
+}
+
+.btn-brand {
+  background: var(--brand);
+  color: var(--on-brand);
 }
 
 .btn-soft {
@@ -224,15 +240,12 @@
   color: var(--danger-ink);
 }
 
-.btn-on-brand {
-  background: #fff;
-  color: var(--on-white);
-}
-
 .btn-glass {
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  color: var(--on-brand);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .btn-glass:hover:not(:disabled) {
@@ -258,13 +271,13 @@
 .circle-btn {
   display: inline-grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   flex: none;
   border-radius: 50%;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.12s var(--ease), background 0.2s, color 0.2s;
 }
 
@@ -308,8 +321,8 @@
 }
 
 .circle-btn.xl {
-  width: 84px;
-  height: 84px;
+  width: 80px;
+  height: 80px;
 }
 
 .circle-btn.xl svg {
@@ -320,27 +333,32 @@
 .circle-btn.brand {
   background: var(--brand);
   color: var(--on-brand);
-  box-shadow: 0 12px 26px -10px var(--brand);
+  box-shadow: 0 12px 24px -12px var(--brand);
 }
 
 .circle-btn.brand:hover:not(:disabled) {
   background: var(--brand-deep);
 }
 
-.circle-btn.on-brand {
-  background: #fff;
-  color: var(--on-white);
-  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.35);
+/* The hero's main control: a deep ink circle */
+.circle-btn.on-brand,
+.circle-btn.ink {
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
 }
 
-.circle-btn.on-brand:hover:not(:disabled) {
-  background: #f3f6ff;
+.circle-btn.on-brand:hover:not(:disabled),
+.circle-btn.ink:hover:not(:disabled) {
+  background: var(--cta-hover);
 }
 
 .circle-btn.glass {
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  color: var(--on-brand);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .circle-btn.glass:hover:not(:disabled) {
@@ -385,12 +403,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 48px;
-  padding: 0 22px;
+  height: 44px;
+  padding: 0 20px;
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--glass);
   box-shadow: inset 0 0 0 1px var(--line);
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--ink);
   transition: background 0.25s var(--ease), color 0.25s, box-shadow 0.25s;
@@ -408,13 +426,14 @@
 }
 
 .pill.active {
-  background: var(--brand);
-  color: var(--on-brand);
-  box-shadow: 0 10px 22px -12px var(--brand);
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
 }
 
 .pill.active .pill-count {
-  color: var(--on-brand-2);
+  color: var(--on-cta);
+  opacity: 0.62;
 }
 
 .pill:disabled {
@@ -487,8 +506,8 @@
 
 .chip.on-brand {
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  color: var(--on-brand);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
 }
 
 .badge {
@@ -615,7 +634,7 @@
 .avatar.has-icon.favicon {
   border-radius: 28%;
   background: #fff;
-  box-shadow: inset 0 0 0 1px rgba(15, 20, 36, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(20, 40, 28, 0.08);
 }
 
 .avatar.has-icon.favicon img {
@@ -698,7 +717,7 @@
 
 .icon-tile.brand-solid {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
 }
 
 /* ================================================================ Inputs */
@@ -789,7 +808,7 @@
   height: 24px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 2px 6px rgba(15, 20, 36, 0.2);
+  box-shadow: 0 2px 6px rgba(20, 40, 28, 0.2);
   transition: transform 0.3s var(--spring);
 }
 
@@ -834,7 +853,7 @@
   margin-top: -8px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(15, 20, 36, 0.25), 0 0 0 1px rgba(15, 20, 36, 0.04);
+  box-shadow: 0 2px 8px rgba(20, 40, 28, 0.25), 0 0 0 1px rgba(20, 40, 28, 0.04);
   transition: transform 0.15s var(--ease);
 }
 
@@ -844,7 +863,7 @@
   border: 0;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(15, 20, 36, 0.25);
+  box-shadow: 0 2px 8px rgba(20, 40, 28, 0.25);
 }
 
 .slider:active::-webkit-slider-thumb {
@@ -856,7 +875,7 @@
 }
 
 .slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--brand), 0 2px 8px rgba(15, 20, 36, 0.25);
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--brand), 0 2px 8px rgba(20, 40, 28, 0.25);
 }
 
 .slider:focus-visible::-moz-range-thumb {
@@ -864,19 +883,19 @@
 }
 
 .slider.on-brand::-webkit-slider-runnable-track {
-  background: linear-gradient(90deg, #fff var(--val), rgba(255, 255, 255, 0.28) var(--val));
+  background: linear-gradient(90deg, var(--hero-fill) var(--val), var(--hero-track) var(--val));
 }
 
 .slider.on-brand::-moz-range-track {
-  background: linear-gradient(90deg, #fff var(--val), rgba(255, 255, 255, 0.28) var(--val));
+  background: linear-gradient(90deg, var(--hero-fill) var(--val), var(--hero-track) var(--val));
 }
 
 .slider.on-brand:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(8, 24, 90, 0.35), 0 0 0 5px #fff;
+  box-shadow: 0 0 0 3px var(--hero-glass), 0 0 0 5px var(--hero-ink);
 }
 
 .slider.on-brand:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px rgba(8, 24, 90, 0.35), 0 0 0 5px #fff;
+  box-shadow: 0 0 0 3px var(--hero-glass), 0 0 0 5px var(--hero-ink);
 }
 
 /* Dark: controls lift with a hairline instead of a shadow that disappears */
@@ -942,7 +961,7 @@
 .meter {
   height: 8px;
   border-radius: 8px;
-  background: var(--surface-sunk);
+  background: var(--track);
   overflow: hidden;
 }
 
@@ -963,11 +982,11 @@
 }
 
 .hero .meter {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--hero-track);
 }
 
 .hero .meter > span {
-  background: #fff;
+  background: var(--hero-fill);
 }
 
 /* ================================================================ Lists */
@@ -1073,8 +1092,8 @@
 
 .hero .delta {
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  color: var(--on-brand);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
+  color: var(--hero-ink);
 }
 
 /* ================================================================ Empty */
@@ -1189,7 +1208,7 @@
   height: 64px;
   border-radius: var(--r-pill);
   background: var(--hero-glass);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px var(--hero-glass-line);
   overflow: hidden;
   touch-action: none;
   user-select: none;
@@ -1199,7 +1218,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--hero-glass);
 }
 
 .slide-label {
@@ -1212,7 +1231,7 @@
   padding-left: 52px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--on-brand);
+  color: var(--hero-ink);
   pointer-events: none;
 }
 
@@ -1231,8 +1250,8 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--brand-deep);
-  color: #fff;
+  background: var(--cta);
+  color: var(--on-cta);
   box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.4);
   cursor: grab;
 }
@@ -1256,6 +1275,7 @@
 
 .slide.light .slide-knob {
   background: var(--brand);
+  color: var(--on-brand);
 }
 
 @keyframes nudge {
@@ -1288,7 +1308,7 @@
   gap: 12px;
   width: 100%;
   padding: 10px 10px 10px 12px;
-  border-radius: 22px;
+  border-radius: 24px;
   background: var(--glass);
   backdrop-filter: blur(24px) saturate(1.6);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
@@ -1324,55 +1344,6 @@
   }
 }
 
-/* ================================================================ Buddy (mascot) */
-
-.buddy {
-  display: inline-block;
-  flex: none;
-}
-
-.buddy svg {
-  display: block;
-  overflow: visible;
-}
-
-.buddy .buddy-float {
-  animation: buddy-float 4.5s ease-in-out infinite;
-  transform-origin: 60px 100px;
-}
-
-.buddy .buddy-eyes {
-  transform-origin: 60px 58px;
-  animation: buddy-blink 5.5s infinite;
-}
-
-.buddy.still .buddy-float,
-.buddy.still .buddy-eyes {
-  animation: none;
-}
-
-.buddy.mood-break .buddy-float,
-.buddy.mood-sleep .buddy-float {
-  animation-duration: 6.5s;
-}
-
-@keyframes buddy-float {
-  50% {
-    transform: translateY(-4px) rotate(-1.5deg);
-  }
-}
-
-@keyframes buddy-blink {
-  0%,
-  92%,
-  100% {
-    transform: scaleY(1);
-  }
-  95% {
-    transform: scaleY(0.1);
-  }
-}
-
 /* ================================================================ Soundscape artwork (shared by Home & Sounds) */
 
 .art {
@@ -1392,34 +1363,34 @@
 }
 
 .art-deep-work {
-  background: linear-gradient(155deg, #8fb0ff 0%, #4a7bff 45%, #1d3fb8 100%);
+  background: linear-gradient(155deg, #d9f0d6 0%, #8fcf9f 50%, #3f8f63 100%);
 }
 .art-rainy-night {
-  background: linear-gradient(160deg, #7c9cc9 0%, #3c5a8f 50%, #1d2a4d 100%);
+  background: linear-gradient(160deg, #d3dff0 0%, #8fa6c9 50%, #4b5f86 100%);
 }
 .art-ocean-calm {
-  background: linear-gradient(160deg, #9be7f0 0%, #3bb4d6 45%, #1a6fa8 100%);
+  background: linear-gradient(160deg, #d4f1f1 0%, #86cfd3 50%, #3d8ea3 100%);
 }
 .art-forest {
-  background: linear-gradient(160deg, #c3eba7 0%, #5fbf7a 45%, #23794e 100%);
+  background: linear-gradient(160deg, #e6f5cf 0%, #a5d68a 50%, #4f9a55 100%);
 }
 .art-campfire {
-  background: linear-gradient(160deg, #ffd29a 0%, #ff8a4c 45%, #c2410c 100%);
+  background: linear-gradient(160deg, #fde6c8 0%, #f5b07d 50%, #cf6a3c 100%);
 }
 .art-flow {
-  background: linear-gradient(160deg, #e3d7ff 0%, #a58bff 45%, #5b3fd6 100%);
+  background: linear-gradient(160deg, #ece6fd 0%, #b9a8f1 50%, #7a63c9 100%);
 }
 .art-corner-cafe {
-  background: linear-gradient(160deg, #f0d2b0 0%, #c08a5c 45%, #6f4322 100%);
+  background: linear-gradient(160deg, #f3e5d4 0%, #d1ae8a 50%, #8f6544 100%);
 }
 .art-night-train {
-  background: linear-gradient(160deg, #c9c4f2 0%, #6f68b8 45%, #2c2766 100%);
+  background: linear-gradient(160deg, #dedcf3 0%, #9c97cf 50%, #545190 100%);
 }
 .art-library {
-  background: linear-gradient(160deg, #efe3bb 0%, #bfa463 45%, #6b5521 100%);
+  background: linear-gradient(160deg, #f4ecd1 0%, #d6c18a 50%, #8f7a3e 100%);
 }
 .art-custom {
-  background: linear-gradient(160deg, #dfe8ff 0%, #a7bfff 50%, #6d94ff 100%);
+  background: linear-gradient(160deg, #e9f5e6 0%, #b8dfbf 50%, #6fb487 100%);
 }
 
 /* Touch: every control is at least 44px */
@@ -1471,6 +1442,83 @@
 
 @media (prefers-reduced-motion: reduce) {
   .spin {
+    animation: none;
+  }
+}
+
+/* ================================================================ Shared live bits */
+
+/* A softly pulsing "live" dot (listening, in focus) */
+.live-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 28%, transparent);
+  animation: live-pulse 2s var(--ease) infinite;
+}
+
+@keyframes live-pulse {
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand) 6%, transparent);
+  }
+}
+
+/* Three little bars that dance while a soundscape plays */
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.eq i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: eq-bar 0.9s ease-in-out infinite;
+}
+
+.eq i:nth-child(2) {
+  animation-delay: -0.3s;
+  animation-duration: 0.75s;
+}
+
+.eq i:nth-child(3) {
+  animation-delay: -0.55s;
+  animation-duration: 1.05s;
+}
+
+@keyframes eq-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.circle-btn.ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-2);
+}
+
+@media (hover: hover) {
+  .circle-btn.ghost:hover:not(:disabled) {
+    background: var(--surface-soft);
+    color: var(--ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq i,
+  .live-dot {
     animation: none;
   }
 }

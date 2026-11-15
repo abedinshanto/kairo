@@ -1,7 +1,10 @@
 /*
- * Kairo design tokens — "soft premium".
- * Light-first: airy cool canvas, white cards, one confident royal blue.
- * Dark is a stepped twin (same hues, re-stepped for the dark surface), not an inversion.
+ * Kairo design tokens — "sage".
+ * Calm and minimal: a soft sage canvas with mint light, white cards, deep
+ * green-black ink, one fresh leaf green for progress and state, and a dark ink
+ * pill for the one action that matters. Hero cards are light washes (mint for
+ * focus, sky for a short break, lilac for a long one) with ink text.
+ * Dark is a stepped twin (same hues on a deep forest surface), not an inversion.
  */
 
 :root {
@@ -9,90 +12,108 @@
   --font: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Canvas & surfaces */
-  --canvas: #edf1fb;
-  --canvas-glow-1: rgba(110, 148, 255, 0.36);
-  --canvas-glow-2: rgba(176, 194, 255, 0.5);
+  --canvas: #eef4ee;
+  --canvas-glow-1: rgba(178, 228, 186, 0.55);
+  --canvas-glow-2: rgba(226, 242, 214, 0.9);
+  --canvas-glow-3: rgba(203, 232, 233, 0.5);
   --surface: #ffffff;
-  --surface-soft: #f5f7fb;
-  --surface-sunk: #eceff5;
-  --surface-tint: #e9efff;
-  --glass: rgba(255, 255, 255, 0.72);
-  --nav-glass: rgba(255, 255, 255, 0.88);
-  --scrim: rgba(225, 230, 240, 0.6);
-  --switch-off: #e3e7ef;
+  --surface-soft: #f3f7f2;
+  --surface-sunk: #e8efe7;
+  --surface-tint: #e4f2e3;
+  --glass: rgba(255, 255, 255, 0.7);
+  --nav-glass: rgba(255, 255, 255, 0.78);
+  --scrim: rgba(214, 228, 216, 0.55);
+  --switch-off: #dce5db;
+  /* Empty part of rings, meters and progress bars */
+  --track: #e5ece4;
 
-  /* Lines (used sparingly — prefer space and shadow) */
-  --line: rgba(17, 24, 39, 0.06);
-  --line-strong: rgba(17, 24, 39, 0.1);
+  /* Lines (used sparingly: prefer space and shadow) */
+  --line: rgba(20, 40, 28, 0.06);
+  --line-strong: rgba(20, 40, 28, 0.1);
 
   /* Ink */
-  --ink: #0f1424;
-  --ink-2: #5f6675;
-  /* Icons and large text only — small text uses --ink-2 */
-  --ink-3: #767d8b;
-  --ink-4: #c7ccd6;
+  --ink: #15201a;
+  --ink-2: #56645b;
+  /* Icons and large text only: small text uses --ink-2 */
+  --ink-3: #7b897f;
+  --ink-4: #c4cfc6;
+
+  /* Brand: a fresh leaf green for progress, state and accents */
+  --brand: #2f9a5c;
+  --brand-hi: #4fba79;
+  --brand-deep: #237c48;
+  --brand-tint: #dcf0dd;
+  --brand-tint-2: #edf7ec;
+  /* Brand text on white and on tints (4.5:1) */
+  --brand-ink: #1f7442;
+  /* Text on a brand fill */
   --on-brand: #ffffff;
   --on-brand-2: rgba(255, 255, 255, 0.86);
+  /* Brand ink on white chips sitting on hero cards (fixed in both themes) */
+  --on-white: #1f7442;
 
-  /* Brand */
-  --brand: #2058f5;
-  --brand-hi: #4a7bff;
-  --brand-deep: #1543c9;
-  --brand-tint: #dfe8ff;
-  --brand-tint-2: #eef3ff;
-  --brand-ink: #1a4fe0;
-  /* Brand ink on white chips sitting on hero cards — fixed in both themes. */
-  --on-white: #1a4fe0;
-  --hero: linear-gradient(155deg, #3a6af8 0%, #2058f5 48%, #1543c9 100%);
-  --hero-shadow: 0 30px 60px -22px rgba(32, 88, 245, 0.55);
+  /* The one primary action: a deep ink pill */
+  --cta: #15201a;
+  --cta-hover: #24332a;
+  --on-cta: #ffffff;
+  --cta-shadow: 0 14px 30px -14px rgba(21, 32, 26, 0.55);
 
-  /* Phases (hero card fills) */
+  /* Hero washes (light, ink text) */
+  --hero: linear-gradient(158deg, #f4fbf1 0%, #def3dc 46%, #c4e8c9 100%);
+  --hero-shadow: 0 30px 60px -30px rgba(47, 122, 76, 0.45), 0 2px 8px rgba(20, 40, 28, 0.04);
+  --hero-ink: #15201a;
+  --hero-ink-2: rgba(21, 32, 26, 0.66);
+  --hero-track: rgba(21, 32, 26, 0.09);
+  --hero-fill: #15201a;
+
+  /* Phases (hero fills) */
   --phase-focus: var(--hero);
   --phase-focus-shadow: var(--hero-shadow);
-  /* Deep enough for white text at every stop */
-  --phase-short: linear-gradient(155deg, #0a8a68 0%, #08805f 50%, #066a4f 100%);
-  --phase-short-solid: #08805f;
-  --phase-short-shadow: 0 30px 60px -22px rgba(8, 128, 95, 0.5);
-  --phase-long: linear-gradient(155deg, #7a5cf0 0%, #6d4ae8 50%, #5537cc 100%);
-  --phase-long-solid: #6d4ae8;
-  --phase-long-shadow: 0 30px 60px -22px rgba(109, 74, 232, 0.5);
+  --phase-short: linear-gradient(158deg, #f3f9fe 0%, #dcecfa 48%, #c3dff4 100%);
+  --phase-short-solid: #3f8fd0;
+  --phase-short-shadow: 0 30px 60px -30px rgba(63, 128, 190, 0.45), 0 2px 8px rgba(20, 40, 28, 0.04);
+  --phase-long: linear-gradient(158deg, #f8f5ff 0%, #e8e1fb 48%, #d5caf5 100%);
+  --phase-long-solid: #7b62d6;
+  --phase-long-shadow: 0 30px 60px -30px rgba(120, 96, 210, 0.45), 0 2px 8px rgba(20, 40, 28, 0.04);
 
-  /* Data (validated: blue ↔ coral with a neutral gray between) */
-  --productive: #2058f5;
-  --neutral: #c9cfdb;
-  --distracting: #f25c3b;
-  --distracting-tint: #ffe9e3;
+  /* Data (validated for colour-blind separation: dark green ↔ light coral, grey between) */
+  --productive: #2a8c50;
+  --neutral: #cad4cc;
+  --distracting: #f08a5d;
+  --distracting-tint: #fdeee6;
   /* Focus blocks drawn in charts (ink, so they never read as a productivity series) */
   --focus-mark: var(--ink);
 
   /* Status */
-  --good: #16a34a;
-  --good-tint: #dcfce7;
-  --warn: #d97706;
-  --warn-tint: #fef3c7;
-  --danger: #dc2626;
-  --danger-tint: #fee2e2;
-  /* Status text (meets 4.5:1 on its tint and on white) */
-  --good-ink: #15803d;
-  --warn-ink: #b8341a;
-  --danger-ink: #b91c1c;
-  /* Glass on hero cards: navy, so white text keeps its contrast */
-  --hero-glass: rgba(8, 24, 90, 0.22);
-  --hero-glass-hover: rgba(8, 24, 90, 0.32);
+  --good: #2f9a5c;
+  --good-tint: #dcf0dd;
+  --warn: #d98a1a;
+  --warn-tint: #fcf0d9;
+  --danger: #d4483a;
+  --danger-tint: #fbe5e1;
+  /* Status text (4.5:1 on its tint and on white) */
+  --good-ink: #1f7442;
+  --warn-ink: #a8481c;
+  --danger-ink: #b0322a;
+
+  /* Glass on hero cards: white, so ink keeps its contrast */
+  --hero-glass: rgba(255, 255, 255, 0.58);
+  --hero-glass-hover: rgba(255, 255, 255, 0.82);
+  --hero-glass-line: rgba(255, 255, 255, 0.7);
 
   /* Radii */
   --r-sm: 12px;
   --r-md: 18px;
   --r-lg: 24px;
-  --r-xl: 32px;
-  --r-2xl: 40px;
+  --r-xl: 30px;
+  --r-2xl: 38px;
   --r-pill: 999px;
 
-  /* Elevation */
-  --shadow-sm: 0 1px 2px rgba(15, 20, 36, 0.04), 0 2px 8px rgba(15, 20, 36, 0.04);
-  --shadow-md: 0 2px 4px rgba(15, 20, 36, 0.03), 0 12px 32px -8px rgba(15, 20, 36, 0.1);
-  --shadow-lg: 0 24px 60px -18px rgba(15, 20, 36, 0.22);
-  --shadow-nav: 0 18px 50px -12px rgba(15, 20, 36, 0.22), 0 2px 6px rgba(15, 20, 36, 0.05);
+  /* Elevation: soft, slightly green-tinted */
+  --shadow-sm: 0 1px 2px rgba(20, 40, 28, 0.035), 0 6px 18px -8px rgba(20, 40, 28, 0.08);
+  --shadow-md: 0 2px 6px rgba(20, 40, 28, 0.04), 0 18px 40px -16px rgba(20, 40, 28, 0.16);
+  --shadow-lg: 0 30px 70px -24px rgba(20, 40, 28, 0.3);
+  --shadow-nav: 0 22px 50px -20px rgba(20, 40, 28, 0.32), 0 2px 8px rgba(20, 40, 28, 0.05);
 
   /* Motion */
   --ease: cubic-bezier(0.22, 0.75, 0.2, 1);
@@ -102,61 +123,86 @@
   --page-max: 1120px;
   --gutter: 32px;
   --titlebar: 0px;
-  --nav-h: 76px;
+  --nav-h: 72px;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #0b0d14;
-  --canvas-glow-1: rgba(76, 125, 255, 0.16);
-  --canvas-glow-2: rgba(124, 92, 246, 0.1);
-  --surface: #151925;
-  --surface-soft: #1b2030;
-  --surface-sunk: #10131c;
-  --surface-tint: #1c2747;
-  --glass: rgba(21, 25, 37, 0.78);
-  --nav-glass: rgba(21, 25, 37, 0.9);
-  --scrim: rgba(5, 7, 12, 0.6);
-  --switch-off: #2c3245;
+  --canvas: #0c120f;
+  --canvas-glow-1: rgba(64, 150, 96, 0.16);
+  --canvas-glow-2: rgba(44, 98, 74, 0.14);
+  --canvas-glow-3: rgba(40, 92, 110, 0.12);
+  --surface: #141c17;
+  --surface-soft: #1a231d;
+  --surface-sunk: #0f1612;
+  --surface-tint: #183020;
+  --glass: rgba(20, 28, 23, 0.74);
+  --nav-glass: rgba(22, 31, 25, 0.82);
+  --scrim: rgba(4, 8, 6, 0.6);
+  --switch-off: #2b3830;
+  --track: rgba(255, 255, 255, 0.09);
 
   --line: rgba(255, 255, 255, 0.06);
-  --line-strong: rgba(255, 255, 255, 0.11);
+  --line-strong: rgba(255, 255, 255, 0.1);
 
-  --ink: #f2f4f8;
-  --ink-2: #9aa3b5;
-  --ink-3: #828ca2;
-  --ink-4: #3c4356;
+  --ink: #edf3ee;
+  --ink-2: #9eaba2;
+  --ink-3: #829087;
+  --ink-4: #38453c;
 
-  --brand: #4c7dff;
-  --brand-hi: #6f97ff;
-  --brand-deep: #2f5ef0;
-  --brand-tint: #1f2c52;
-  --brand-tint-2: #182240;
-  --brand-ink: #8fb0ff;
-  --hero: linear-gradient(155deg, #3a6af8 0%, #2f63f4 50%, #1d47cf 100%);
-  --hero-shadow: 0 30px 60px -24px rgba(47, 99, 244, 0.5);
+  --brand: #4cb877;
+  --brand-hi: #6fd096;
+  --brand-deep: #36a061;
+  --brand-tint: #1b3325;
+  --brand-tint-2: #16261c;
+  --brand-ink: #7fd8a2;
+  --on-brand: #08130c;
+  --on-brand-2: rgba(8, 19, 12, 0.8);
 
-  --productive: #4c7dff;
-  --neutral: #4a5063;
-  --distracting: #e8583a;
-  --distracting-tint: #3b2026;
+  --cta: #e9f3eb;
+  --cta-hover: #ffffff;
+  --on-cta: #0c140f;
+  --cta-shadow: 0 14px 30px -16px rgba(0, 0, 0, 0.8);
 
-  --good: #22c55e;
-  --good-tint: #12301f;
-  --warn: #f59e0b;
-  --warn-tint: #33250b;
-  --danger: #ef4444;
-  --danger-tint: #3a1515;
-  --good-ink: #4ade80;
-  --warn-ink: #ff8a6b;
-  --danger-ink: #f87171;
-  /* Lifted controls on dark surfaces (plain hex: no color-mix needed) */
-  --control-lifted: #353948;
+  --hero: linear-gradient(158deg, #20402d 0%, #183224 50%, #12261a 100%);
+  --hero-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --hero-ink: #f1f8f2;
+  --hero-ink-2: rgba(241, 248, 242, 0.7);
+  --hero-track: rgba(255, 255, 255, 0.12);
+  --hero-fill: #f1f8f2;
+
+  --phase-short: linear-gradient(158deg, #1f3549 0%, #182a3b 50%, #12202e 100%);
+  --phase-short-solid: #6eaee6;
+  --phase-short-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --phase-long: linear-gradient(158deg, #2f2849 0%, #251f3b 50%, #1c182e 100%);
+  --phase-long-solid: #a593ef;
+  --phase-long-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  --productive: #4cb877;
+  --neutral: #46524a;
+  --distracting: #e57a4f;
+  --distracting-tint: #3a2219;
+
+  --good: #4cb877;
+  --good-tint: #183020;
+  --warn: #f0a63a;
+  --warn-tint: #33260f;
+  --danger: #ef6a5a;
+  --danger-tint: #3a1814;
+  --good-ink: #7fd8a2;
+  --warn-ink: #ff9d72;
+  --danger-ink: #ff8f80;
+
+  --hero-glass: rgba(255, 255, 255, 0.08);
+  --hero-glass-hover: rgba(255, 255, 255, 0.14);
+  --hero-glass-line: rgba(255, 255, 255, 0.08);
+  /* Lifted controls on dark surfaces */
+  --control-lifted: #2c3a31;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 12px 32px -10px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 24px 60px -18px rgba(0, 0, 0, 0.7);
-  --shadow-nav: 0 18px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-md: 0 14px 32px -12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 30px 70px -20px rgba(0, 0, 0, 0.75);
+  --shadow-nav: 0 20px 50px -14px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 html.is-mac.is-native {
@@ -166,6 +212,6 @@ html.is-mac.is-native {
 @media (max-width: 760px) {
   :root {
     --gutter: 18px;
-    --nav-h: 72px;
+    --nav-h: 66px;
   }
 }

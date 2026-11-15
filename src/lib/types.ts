@@ -23,6 +23,8 @@ export interface Settings {
   longBreakEvery: number;
   autoStartBreaks: boolean;
   autoStartFocus: boolean;
+  /** Focus counts up with no set end; the break after it is earned (a fifth of the time). */
+  flowMode: boolean;
   dailyFocusGoalMinutes: number;
   distractionBudgetMinutes: number;
   /** Daily minutes allowed per category ("social" → 30). */
@@ -62,6 +64,8 @@ export interface Settings {
   onboarded?: boolean;
   /** What Kairo calls you in greetings (optional, stays on device). */
   name?: string;
+  /** Bring the main window forward when a focus block ends, so the break is taken. */
+  breakScreen?: boolean;
   /** Home suggestions the user said "not now" to. */
   tipsDismissed?: string[];
   /** Local midnight of the last day whose summary was opened (hides Home's prompt). */
@@ -81,6 +85,8 @@ export interface TimerSnapshot {
   intention: string;
   taskId: number | null;
   interruptions: number;
+  /** A flow block: it counts up (elapsed = duration − remaining) and earns its break. */
+  flow: boolean;
   now: number;
 }
 
@@ -138,6 +144,8 @@ export interface FocusSession {
   intention: string;
   taskId: number | null;
   interruptions: number;
+  /** How the block felt, asked right after it: 1 scattered, 2 okay, 3 deep. */
+  rating?: number | null;
 }
 
 export interface Task {
@@ -276,6 +284,8 @@ export interface Backend {
   /** Point a focus block at another task (or none). */
   sessionUpdate(id: number, taskId: number | null, intention: string): Promise<void>;
   sessionDelete(id: number): Promise<void>;
+  /** How a focus block felt: 1 scattered, 2 okay, 3 deep (null clears it). */
+  sessionRate(id: number, rating: number | null): Promise<void>;
 
   /** Pick a Kairo JSON export and merge it into this device's data (null: cancelled). */
   importData(): Promise<ImportCounts | null>;

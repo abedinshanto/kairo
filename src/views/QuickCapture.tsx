@@ -123,7 +123,7 @@ export function QuickCapture() {
           className="capture-input"
           value={text}
           maxLength={160}
-          placeholder={listening ? "Listening…" : thinking ? "Writing it down…" : missed ? "Didn't catch that. Try again?" : "Add a task, or what you're working on…"}
+          placeholder={listening ? "Listening…" : thinking ? "Writing it down…" : missed ? "Didn't catch that. Try again?" : "Add a task…"}
           onChange={(e) => {
             setText(e.target.value);
             setDone(null);
@@ -149,7 +149,7 @@ export function QuickCapture() {
             {due ? ` · due ${due.tone === "later" || due.tone === "overdue" ? due.label : due.label.toLowerCase()}` : ""}
           </span>
         ) : (
-          <span className="capture-parsed">Try “Call the gym tomorrow” or “Landing page, three blocks”.</span>
+          <span className="capture-parsed">e.g. “Call the gym tomorrow, one block”</span>
         )}
         <span className="capture-keys">
           <kbd>

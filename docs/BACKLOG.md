@@ -3,6 +3,26 @@
 Ideas and requests waiting for a go-ahead. Nothing here is built until it's approved.
 Sizes are relative: **S** small, **M** medium, **L** large.
 
+## Competitor research (2026-11-15)
+
+What comparable apps do, and what Kairo took from it in 0.5.0:
+
+| App | Known for | Taken |
+| --- | --- | --- |
+| Session (Mac) | Intention before a session, a short reflection after, app/site blocking | **Check-ins** after each block |
+| Flow (Mac) | Menu bar timer, app and site blocking, full-screen breaks | **Bring Kairo forward on breaks** |
+| Flowtime apps (Flowmo, BreakTimer), Focus Friend | Count-up timer, break earned in proportion (about 1/5); the most-requested timer option | **Flow mode** |
+| Forest, Focus Friend, Finch | A character or plant that grows with your focus; gentle rewards, no punishment | **Kai blooms** at the daily goal |
+| Rize, Timing, Opal | Automatic tracking, a daily focus score, distraction blocking | Kairo already tracks and scores; blocking is item 2 below |
+| Calm/Headspace-style break content, Finch | Guided breathing | **Breathe with Kai** |
+
+Still worth doing, in rough order of value:
+
+- **Focus shield (blocking)**, item 2 below: the most common paid feature across Session, Flow, Rize and Opal. Needs native window work on each OS and testing on real machines.
+- **Command palette** (⌘K): every action (start, pause, a preset, a task, a screen) from the keyboard.
+- **Calendar awareness**: read the local calendar (no account) to suggest blocks between meetings and log meetings as time.
+- **Shortcuts / automation hooks** (macOS Shortcuts, a URL scheme): start a block from other apps.
+
 ## Shipped in 0.4.0
 
 From the plan below: 3 menu bar panel, 4 quick capture, 5 edit your history, 6 weekly review,

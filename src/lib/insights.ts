@@ -213,6 +213,30 @@ export function generateInsights(input: InsightInput): Insight[] {
     });
   }
 
+  // Check-ins: how the blocks felt, and when the deep ones happen.
+  const rated = sessions.filter((s) => s.kind === "focus" && s.rating);
+  if (rated.length >= 4) {
+    const deep = rated.filter((s) => s.rating === 3);
+    const scattered = rated.filter((s) => s.rating === 1);
+    const morning = (list: FocusSession[]) => list.filter((s) => new Date(s.start).getHours() < 12).length / Math.max(1, list.length);
+    const detours = (list: FocusSession[]) => list.reduce((a, s) => a + s.interruptions, 0) / Math.max(1, list.length);
+    const share = deep.length / rated.length;
+    let body = `${deep.length} of ${rated.length} blocks you checked in on felt deep.`;
+    if (deep.length >= 2 && scattered.length >= 2) {
+      const m = morning(deep) - morning(scattered);
+      if (Math.abs(m) >= 0.25) body += ` Your deep ones happen ${m > 0 ? "before noon" : "in the afternoon"} more often: plan the hard work then.`;
+      else if (detours(scattered) - detours(deep) >= 0.5) body += " The scattered ones had more detours: Focus guard and a closed chat app help.";
+    }
+    out.push({
+      id: "quality",
+      tone: share >= 0.5 ? "positive" : share < 0.25 ? "warning" : "neutral",
+      icon: share >= 0.5 ? "check" : "target",
+      weight: 58,
+      title: share >= 0.5 ? "Most of your blocks felt deep" : `${Math.round(share * 100)}% of your blocks felt deep`,
+      body,
+    });
+  }
+
   return out.sort((a, b) => b.weight - a.weight);
 }
 

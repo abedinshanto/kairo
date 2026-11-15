@@ -14,10 +14,9 @@
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   /* The title spans the page; the summary then starts level with the search field. */
   grid-template-areas:
-    "title title"
     "controls side"
     "list side";
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
   column-gap: 24px;
   align-items: start;
 }
@@ -403,7 +402,6 @@
   .apps-grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "title"
       "side"
       "controls"
       "list";

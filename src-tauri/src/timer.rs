@@ -12,6 +12,14 @@ use crate::{
 /// Focus sessions shorter than this are discarded instead of recorded.
 const MIN_RECORDED_MS: i64 = 60_000;
 const MAX_DURATION_MS: i64 = 4 * 60 * 60 * 1000;
+/// A flow block has no set end; after this long it wraps up by itself.
+const FLOW_CAP_MS: i64 = 3 * 60 * 60 * 1000;
+
+/// The break a flow block earns: a fifth of the time focused, 1–30 minutes.
+fn earned_break_ms(focused_ms: i64) -> i64 {
+    let minutes = (focused_ms as f64 / 5.0 / 60_000.0).round() as i64;
+    minutes.clamp(1, 30) * 60_000
+}
 
 pub struct Timer {
     phase: Phase,
@@ -26,6 +34,8 @@ pub struct Timer {
     intention: String,
     task_id: Option<i64>,
     interruptions: u32,
+    /// This focus block counts up (flow mode was on when it began).
+    flow: bool,
     last_tray_second: i64,
 }
 
@@ -73,20 +83,22 @@ struct Effects {
 
 impl Timer {
     pub fn new(settings: &Settings) -> Self {
-        let duration = minutes_ms(Phase::Focus.minutes(settings));
-        Self {
+        let mut t = Self {
             phase: Phase::Focus,
             status: TimerStatus::Idle,
-            duration_ms: duration,
-            remaining_ms: duration,
+            duration_ms: 0,
+            remaining_ms: 0,
             ends_at: 0,
             started_at: None,
             cycle: 0,
             intention: String::new(),
             task_id: None,
             interruptions: 0,
+            flow: false,
             last_tray_second: -1,
-        }
+        };
+        t.enter(Phase::Focus, settings);
+        t
     }
 
     fn remaining(&self, now: i64) -> i64 {
@@ -109,6 +121,7 @@ impl Timer {
             intention: self.intention.clone(),
             task_id: self.task_id,
             interruptions: self.interruptions,
+            flow: self.flow,
             now,
         }
     }
@@ -125,7 +138,8 @@ impl Timer {
     fn enter(&mut self, phase: Phase, settings: &Settings) {
         self.phase = phase;
         self.status = TimerStatus::Idle;
-        self.duration_ms = minutes_ms(phase.minutes(settings));
+        self.flow = phase == Phase::Focus && settings.flow_mode;
+        self.duration_ms = if self.flow { FLOW_CAP_MS } else { minutes_ms(phase.minutes(settings)) };
         self.remaining_ms = self.duration_ms;
         self.started_at = None;
         self.interruptions = 0;
@@ -203,6 +217,7 @@ impl Timer {
             task_id: self.task_id,
             interruptions: self.interruptions,
         };
+        let flowed = self.flow;
         let (next, auto) = match finished {
             Phase::Focus => {
                 self.cycle += 1;
@@ -220,6 +235,15 @@ impl Timer {
             Phase::ShortBreak => (Phase::Focus, settings.auto_start_focus),
         };
         self.enter(next, settings);
+        if flowed && finished == Phase::Focus {
+            // Flow: the break is earned, never shorter than a long break's setting when one is due.
+            let earned = earned_break_ms(actual);
+            self.duration_ms = match next {
+                Phase::LongBreak => earned.max(self.duration_ms),
+                _ => earned,
+            };
+            self.remaining_ms = self.duration_ms;
+        }
         if auto {
             self.run(now);
         }
@@ -281,6 +305,10 @@ impl Timer {
     }
 
     fn extend(&mut self, minutes: i64, now: i64) {
+        // A flow block has no end to move.
+        if self.flow {
+            return;
+        }
         let requested = minutes.clamp(-60, 60) * 60_000;
         let remaining = self.remaining(now);
         let delta = requested
@@ -619,6 +647,55 @@ mod tests {
         t.act(Action::Start, 0, &s);
         assert!(t.act(Action::Finish, 60_000, &s).record.is_none());
         assert_eq!(t.phase, Phase::Focus);
+    }
+
+    #[test]
+    fn flow_blocks_count_up_and_earn_their_break() {
+        let s = Settings { flow_mode: true, ..settings() };
+        let mut t = Timer::new(&s);
+        assert!(t.flow);
+        assert_eq!(t.duration_ms, FLOW_CAP_MS);
+        t.act(Action::Start, 0, &s);
+        t.extend(5, 0);
+        assert_eq!(t.duration_ms, FLOW_CAP_MS, "nothing to extend in flow");
+
+        // 40 minutes of flow earn an 8-minute break.
+        let fx = t.act(Action::Finish, 40 * 60_000, &s);
+        let rec = fx.record.unwrap();
+        assert!(rec.completed);
+        assert_eq!(rec.actual_ms, 40 * 60_000);
+        assert_eq!((t.phase, t.status, t.duration_ms), (Phase::ShortBreak, TimerStatus::Running, 8 * 60_000));
+        assert!(!t.flow, "breaks count down");
+        assert!(t.snapshot(0, &s).ends_at.is_some());
+
+        // Back to focus: flow again. A long break is never shorter than its setting.
+        t.complete(t.ends_at, &s);
+        assert!(t.flow);
+        t.act(Action::Start, 0, &s);
+        t.act(Action::Finish, 10 * 60_000, &s);
+        assert_eq!((t.phase, t.duration_ms), (Phase::LongBreak, 15 * 60_000));
+
+        // A very long stretch earns at most 30 minutes; a tiny one at least a minute.
+        assert_eq!(earned_break_ms(4 * 60 * 60_000), 30 * 60_000);
+        assert_eq!(earned_break_ms(61_000), 60_000);
+    }
+
+    #[test]
+    fn flow_mode_applies_from_the_next_untouched_block() {
+        let mut s = settings();
+        let mut t = Timer::new(&s);
+        assert!(!t.flow);
+        s.flow_mode = true;
+        t.apply_settings(&s);
+        assert!(t.flow && t.duration_ms == FLOW_CAP_MS, "an idle block switches at once");
+        t.act(Action::Start, 0, &s);
+        s.flow_mode = false;
+        t.apply_settings(&s);
+        assert!(t.flow, "a block under way keeps its style");
+        // The cap wraps a forgotten flow block up by itself.
+        let fx = t.complete(t.ends_at, &s);
+        assert_eq!(fx.record.unwrap().actual_ms, FLOW_CAP_MS);
+        assert_eq!(t.duration_ms, 30 * 60_000);
     }
 
     #[test]

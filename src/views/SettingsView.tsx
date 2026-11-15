@@ -8,7 +8,6 @@ import {
   Moon,
   Play,
   Search,
-  Settings as SettingsIcon,
   ShieldCheck,
   Sun,
   Trash2,
@@ -18,7 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Buddy } from "../components/Buddy";
-import { Avatar, PageTitle, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
+import { Avatar, Segmented, Slider, Stepper, Switch, TopBar, cx } from "../components/ui";
 import { soundEngine } from "../lib/audio/engine";
 import { backend, isNative } from "../lib/backend";
 import { CATEGORIES, categoryLabel, entityName } from "../lib/categories";
@@ -180,17 +179,8 @@ export function SettingsView() {
   return (
     <div className="settings" ref={page}>
       <TopBar
-        left={
-          <>
-            <span className="buddy-avatar set-topmark" aria-hidden>
-              <SettingsIcon />
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <div className="who-name">Kairo</div>
-              <div className="who-sub">Timer, tracking and appearance</div>
-            </div>
-          </>
-        }
+        title="Settings"
+        sub="Everything stays on this device."
         right={
           <button
             className="circle-btn"
@@ -202,7 +192,6 @@ export function SettingsView() {
           </button>
         }
       />
-      <PageTitle strong="Settings," dim="make it yours." />
 
       <div className="input-wrap set-search">
         <Search aria-hidden />
@@ -227,7 +216,7 @@ export function SettingsView() {
           <Buddy mood="idle" size={64} />
           <div>
             <strong>Nothing matches “{query.trim()}”</strong>
-            <span>Try another word, like “sound”, “backup” or “shortcut”.</span>
+            <span>Try “sound”, “backup” or “shortcut”.</span>
           </div>
         </div>
       )}
@@ -241,10 +230,13 @@ export function SettingsView() {
           so headings line up and each pair of cards ends together. */}
       <div className={cx("set-cols", !desktop && "loose")}>
         <Group id="timer" title="Focus timer">
-          <Row label="Focus block">
+          <Row label="Flow mode" desc="Count up instead, and earn your break: a fifth of the time you focused." keywords="stopwatch count up flowtime">
+            <Switch label="Flow mode" checked={s.flowMode} onChange={(v) => update({ flowMode: v })} />
+          </Row>
+          <Row label="Focus block" off={s.flowMode}>
             <Stepper label="focus minutes" value={s.focusMinutes} onChange={(v) => update({ focusMinutes: v })} min={5} max={120} step={5} format={mins} />
           </Row>
-          <Row label="Short break">
+          <Row label="Short break" off={s.flowMode}>
             <Stepper label="short break minutes" value={s.shortBreakMinutes} onChange={(v) => update({ shortBreakMinutes: v })} min={1} max={30} format={mins} />
           </Row>
           <Row label="Long break">
@@ -266,6 +258,11 @@ export function SettingsView() {
           <Row label="Start focus after breaks">
             <Switch label="Start focus automatically after breaks" checked={s.autoStartFocus} onChange={(v) => update({ autoStartFocus: v })} />
           </Row>
+          {desktop && (
+            <Row label="Bring Kairo forward on breaks" desc="So the break actually gets taken. Breathe with Kai while it lasts." keywords="break screen fullscreen breathing">
+              <Switch label="Bring Kairo forward on breaks" checked={!!s.breakScreen} onChange={(v) => update({ breakScreen: v })} />
+            </Row>
+          )}
           <ChimeRows />
         </Group>
 
@@ -508,7 +505,6 @@ function ProfileCard() {
           onChange={(e) => update({ name: e.target.value })}
           onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
         />
-        <p className="set-profile-note">Only used for greetings.</p>
       </div>
     </section>
   );

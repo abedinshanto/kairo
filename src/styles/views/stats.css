@@ -3,7 +3,7 @@
 /* Title and period span the page; below them both columns start on one line
    and their last cards stretch so they end on one line too (as on Home). */
 .stats-intro {
-  margin-bottom: 28px;
+  margin-bottom: 26px;
 }
 
 .stats-grid {
@@ -48,7 +48,13 @@
 }
 
 .stats-tabs {
-  margin-top: 26px;
+  margin-top: 0;
+}
+
+.stats-back {
+  margin-left: 8px;
+  font: inherit;
+  color: var(--brand-ink);
 }
 
 
@@ -110,7 +116,7 @@
 }
 
 .stats-hero :focus-visible {
-  outline-color: #fff;
+  outline-color: var(--hero-ink);
 }
 
 .stats-hero-top {
@@ -125,7 +131,7 @@
 .stats-hero-label {
   font-size: 15px;
   font-weight: 650;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
   white-space: nowrap;
 }
 
@@ -135,23 +141,23 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
   white-space: nowrap;
 }
 
 .stats-hero-delta .delta {
   height: 30px;
   padding: 0 11px 0 9px;
-  background: #fff;
-  color: var(--brand-ink);
+  background: var(--hero-glass-hover);
+  color: var(--hero-ink);
 }
 
 .stats-hero-delta .delta.good {
-  color: #15803d;
+  color: var(--good-ink);
 }
 
 .stats-hero-delta .delta.bad {
-  color: #d23a1c;
+  color: var(--danger-ink);
 }
 
 .stats-hero-body {
@@ -181,7 +187,7 @@
   margin-top: 12px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
 }
 
 /* The score is secondary: a small ring that explains itself on tap. */
@@ -197,7 +203,7 @@
 }
 
 .stats-hero-score:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--hero-glass);
 }
 
 .stats-hero-score:active:not(:disabled) {
@@ -210,6 +216,7 @@
 
 .stats-hero .score-label {
   margin-top: 3px;
+  color: var(--hero-ink-2);
   font-size: 10.5px;
 }
 
@@ -234,7 +241,7 @@
   gap: 7px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--on-brand-2);
+  color: var(--hero-ink-2);
   white-space: nowrap;
 }
 
@@ -343,7 +350,7 @@
 
 .stats .icon-tile.brand-solid {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
 }
 
 .stats .tile .big-number small {
@@ -537,7 +544,7 @@
 
 .block-check.done {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand);
   box-shadow: none;
 }
 

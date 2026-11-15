@@ -402,6 +402,11 @@ export function createDemoBackend(): Backend {
       }
       emit({ type: "data" });
     },
+    async sessionRate(id, rating) {
+      const s = sessions.find((x) => x.id === id);
+      if (s) s.rating = rating !== null && rating >= 1 && rating <= 3 ? rating : null;
+      emit({ type: "data" });
+    },
     async sessionDelete(id) {
       const i = sessions.findIndex((x) => x.id === id);
       if (i >= 0) sessions.splice(i, 1);
