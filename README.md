@@ -34,6 +34,8 @@ Installers for macOS, Windows, Linux and Android are on the [Releases page](../.
 - **Quick capture** (default <kbd>⌘/Ctrl</kbd> <kbd>⌥/Alt</kbd> <kbd>K</kbd>): a box over whatever you're doing. Type or say a task ("call the gym tomorrow, one block") and press Enter to add it, or <kbd>⇧</kbd> Enter to focus on it now. Press the shortcut again to talk.
 - **Global shortcut** (default <kbd>⌘/Ctrl</kbd> <kbd>⇧</kbd> <kbd>Space</kbd>) starts or pauses the timer from any app.
 - **Deep focus mode** (<kbd>F</kbd>) leaves only the timer on screen.
+- **Command palette** (<kbd>⌘/Ctrl</kbd> <kbd>K</kbd>): start, pause or finish a block, jump to any screen, focus on a task, play a sound or switch the theme, all from the keyboard.
+- On a wide window, a **sidebar** keeps every screen and a live mini timer in reach; it narrows to a rail on medium windows and becomes a tab bar on phones.
 - Native notifications when a phase ends. On mobile the OS schedules them, so they fire even if the app is suspended.
 
 **Tracking (on-device)**
@@ -207,7 +209,7 @@ The timer runs in Rust, not in the webview, so the countdown, tray title and not
 
 - **Name & identity:** set `productName` and `identifier` in `src-tauri/tauri.conf.json`, then regenerate icons with `npx tauri icon branding/icon-1024.png` (rendered from `branding/logo.svg`). The Android adaptive icon's foreground is Kai alone on a green background colour, so replace `icons/android/*/ic_launcher_foreground.png` and keep `values/ic_launcher_background.xml` green after running it.
 - **Default categories:** `src-tauri/src/categories.rs`. Users can override any app or site from the Apps & Sites screen.
-- **Design:** the design system is described in [`docs/DESIGN.md`](docs/DESIGN.md). Tokens for the light and dark themes are in `src/styles/tokens.css`.
+- **Design:** the design system is described in [`docs/DESIGN.md`](docs/DESIGN.md). Tokens for the light and dark themes are in `src/styles/tokens.css`. The [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill (MIT) is installed for Claude Code in `.claude/skills/ui-ux-pro-max/` and serves as the UI review checklist.
 
 ## Tests
 

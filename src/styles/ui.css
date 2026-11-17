@@ -1120,7 +1120,7 @@
 .sheet-scrim {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--z-sheet);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1289,7 +1289,7 @@
 
 .toasts {
   position: fixed;
-  z-index: 70;
+  z-index: var(--z-toast);
   top: calc(18px + var(--titlebar) + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
@@ -1335,6 +1335,21 @@
 .toast-body {
   font-size: 13px;
   color: var(--ink-2);
+}
+
+.toast.leaving {
+  animation: toast-out var(--dur-exit) var(--ease-in) forwards;
+}
+
+.toast-action {
+  flex: none;
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
 }
 
 @keyframes toast-in {
@@ -1520,5 +1535,47 @@
   .eq i,
   .live-dot {
     animation: none;
+  }
+}
+
+/* ================================================================ Touch targets (coarse pointers)
+   Every control is at least 44×44 on touch screens. `:root` outranks the
+   view stylesheets' compact desktop sizes. Where a control must stay small
+   visually (the task grip in a card's margin), its hit area grows instead. */
+@media (pointer: coarse) {
+  :root .circle-btn.sm,
+  :root .task-num,
+  :root .composer-mic,
+  :root .composer-due:not(.is-set),
+  :root .checkin-skip {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  :root .composer-due.is-set,
+  :root button.chip,
+  :root .timer-top .chip.flow-toggle,
+  :root .intention-add,
+  :root .set-export .btn,
+  :root .home-tip .btn-sm {
+    min-height: 44px;
+  }
+
+  :root .sky-stop {
+    height: 44px;
+  }
+
+  :root .sky-stop select {
+    height: 44px;
+  }
+
+  :root .intention-input {
+    min-height: 44px;
+  }
+
+  :root .task-grip::before {
+    content: "";
+    position: absolute;
+    inset: -2px -12px;
   }
 }

@@ -2,7 +2,7 @@ import { ArrowDownRight, ArrowUpRight, Bell, Check, ChevronsRight, Minus, Plus, 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useAppIcon } from "../../lib/icons";
 import { appMark, siteMark } from "../../lib/siteMarks";
-import { useApp } from "../../lib/store";
+import { useApp, type Toast } from "../../lib/store";
 
 export function cx(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
@@ -403,23 +403,68 @@ export function Equalizer() {
 
 export function Toasts() {
   const toasts = useApp((s) => s.toasts);
-  const dismiss = useApp((s) => s.dismissToast);
   return (
-    <div className="toasts" aria-live="polite">
+    <section className="toasts" aria-live="polite" aria-label="Notifications">
       {toasts.map((t) => (
-        <div key={t.id} className="toast" role="status">
-          <span className={cx("icon-tile", t.tone === "success" ? "good" : t.tone === "warning" ? "warn" : undefined)}>
-            {t.tone === "success" ? <Check /> : t.tone === "warning" ? <TriangleAlert /> : <Bell />}
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="toast-title">{t.title}</div>
-            {t.body && <div className="toast-body">{t.body}</div>}
-          </div>
-          <button className="circle-btn sm soft" aria-label="Dismiss" onClick={() => dismiss(t.id)}>
-            <X />
-          </button>
-        </div>
+        <ToastItem key={t.id} toast={t} />
       ))}
+    </section>
+  );
+}
+
+/** Toasts leave after a few seconds, but never while you're reading or reaching for one. */
+const TOAST_MS = 4500;
+const TOAST_ACTION_MS = 7000;
+
+function ToastItem({ toast: t }: { toast: Toast }) {
+  const dismiss = useApp((s) => s.dismissToast);
+  const [held, setHeld] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const left = useRef(t.action ? TOAST_ACTION_MS : TOAST_MS);
+  useEffect(() => {
+    if (held || leaving) return;
+    const started = Date.now();
+    const timer = window.setTimeout(() => setLeaving(true), left.current);
+    return () => {
+      window.clearTimeout(timer);
+      left.current = Math.max(1200, left.current - (Date.now() - started));
+    };
+  }, [held, leaving]);
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = window.setTimeout(() => dismiss(t.id), 200);
+    return () => window.clearTimeout(timer);
+  }, [leaving, dismiss, t.id]);
+  return (
+    <div
+      className={cx("toast", leaving && "leaving")}
+      role="status"
+      onPointerEnter={() => setHeld(true)}
+      onPointerLeave={() => setHeld(false)}
+      onFocus={() => setHeld(true)}
+      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setHeld(false)}
+    >
+      <span className={cx("icon-tile", t.tone === "success" ? "good" : t.tone === "warning" ? "warn" : undefined)} aria-hidden>
+        {t.tone === "success" ? <Check /> : t.tone === "warning" ? <TriangleAlert /> : <Bell />}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="toast-title">{t.title}</div>
+        {t.body && <div className="toast-body">{t.body}</div>}
+      </div>
+      {t.action && (
+        <button
+          className="btn btn-soft btn-sm toast-action"
+          onClick={() => {
+            t.action!.run();
+            setLeaving(true);
+          }}
+        >
+          {t.action.label}
+        </button>
+      )}
+      <button className="circle-btn sm ghost" aria-label="Dismiss" onClick={() => setLeaving(true)}>
+        <X />
+      </button>
     </div>
   );
 }

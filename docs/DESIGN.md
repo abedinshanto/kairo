@@ -44,6 +44,13 @@ show very little text; Kairo follows suit. Every word on screen has to earn its 
   by lightness as well as hue, so they survive colour-blindness. Status `--good`, `--warn`,
   `--danger` with `-tint` and `-ink`.
 - Radii `--r-sm 12 · --r-md 18 · --r-lg 24 · --r-xl 30 · --r-2xl 38 · --r-pill`.
+- Type scale `--fs-caption 12 · --fs-label 13 · --fs-body 15 · --fs-title 17 · --fs-headline 22 ·
+  --fs-display 44`. Spacing on a 4px rhythm `--sp-1 … --sp-12` (4 … 48).
+- Motion: `--dur-press 120ms` (feedback), `--dur-state 200ms` (hover, toggles), `--dur-enter
+  320ms`, `--dur-exit 200ms` (exits ≈ ⅔ of entrances), `--dur-page 480ms`; arrive with
+  `--ease-out`, leave with `--ease-in`, bounce only with `--spring`.
+- Layers `--z-raised 1 · --z-nav 40 · --z-sheet 60 · --z-onboarding 65 · --z-toast 70 ·
+  --z-palette 80 · --z-skip 100`. Never a raw z-index above 1 in a view stylesheet.
 - Shadows `--shadow-sm` (cards), `--shadow-md`, `--shadow-lg` (sheets), `--shadow-nav`.
 - Font: Plus Jakarta Sans (variable). Weights 500/600/650/700. Titles −0.04em tracking.
 
@@ -92,9 +99,31 @@ CSS (`src/styles/ui.css`, `shell.css`):
 
 **Exemplar:** `src/views/HomeView.tsx` + `src/styles/views/home.css`.
 
+## Navigation (`src/App.tsx`, `src/styles/shell.css`)
+
+One set of destinations, three shapes (Material's adaptive navigation):
+
+- **≥ 1100px: sidebar** (236px). Kai and the name, **Search ⌘K**, Home · Stats · Sounds · Tasks,
+  a live **mini timer** (on every screen but Home, where the timer is already the hero), and
+  Settings set apart below a hairline as secondary navigation.
+- **761–1099px: rail** (88px). The same items, icon over label; the timer shrinks to its time and
+  play button.
+- **≤ 760px: tab bar.** A floating glass bar with all five items labelled; the active one gets an
+  ink pill behind its icon.
+
+Every item always shows its label (never icon-only). Apps & sites and the summaries highlight
+Stats. A **skip link** is the first Tab stop; after navigating, focus moves to the new page's
+`h1`. The scroller has `scroll-padding` so keyboard focus is never hidden behind the tab bar.
+
+**Command palette** (`src/components/CommandPalette.tsx`): ⌘K / Ctrl+K anywhere (or the sidebar's
+Search). Timer actions, screens, open tasks ("Focus on …"), sounds, theme and tracking, grouped,
+best match first; arrow keys + Enter, Esc closes and returns focus. An unmatched query suggests
+what to try. It's a combobox with a listbox (`aria-activedescendant`), the app behind is inert.
+
 ## Layout
 
-Content sits in `.page` (max 1120px, 32px gutters, 18px on phones). Desktop screens are a
+Content sits in `.page` (max 1120px, 32px gutters, 18px on phones) to the right of the sidebar or
+rail (`--sidebar-w`). Desktop screens are a
 two-column grid (`1.3fr / 1fr`, 20px gap, `align-items: stretch`) whose rows start and end on the
 same lines; the last card in a column stretches to take up the slack. ≤ 1024px stacks; ≤ 760px is
 phone layout. The floating glass nav sits at the bottom; the page pads for it.
@@ -115,10 +144,32 @@ caches rendered loops (64 MB, least-recently-used out first), unlocks audio on t
 and keeps the context awake until a chime has rung out. Live sounds (wind, binaural, pad) have
 trims measured to the same loudness.
 
-## Accessibility
+## Accessibility & interaction
 
-Real buttons, `aria-label` on icon-only buttons, visible focus rings (ink on heroes), 44px touch
-targets, text ≥ 4.5:1 in both themes, reduced motion respected.
+Real buttons, `aria-label` on icon-only buttons, visible focus rings (ink on heroes), text ≥ 4.5:1
+in both themes, reduced motion respected. Pointer targets are at least 24×24 on desktop and
+44×44 on touch screens (`@media (pointer: coarse)` in `ui.css`; a control that must stay small
+visually, like the task grip, gets a larger invisible hit area instead).
+
+Toasts dismiss themselves after 4.5s (7s with an action), but never while hovered or focused;
+they can carry one action, such as **Undo** after finishing a task.
+
+## UI UX Pro Max (design QA)
+
+The [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill is installed
+for Claude Code in `.claude/skills/ui-ux-pro-max/`. Use it for any UI change: its rules
+(`references/quick-reference.md`) are the checklist, and its search answers focused questions,
+run from the project root:
+
+```bash
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "focus not obscured sticky" --domain ux
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "rerender memo list" --domain react
+```
+
+Its generated palettes and landing-page patterns don't fit Kairo (it's an app, and its sage
+direction was chosen by the owner): keep this file as the source of truth and use the skill for
+rules and reviews. Kairo's last audit (axe-core on every screen, light and dark, desktop and
+phone) found no violations.
 
 ## Verify
 

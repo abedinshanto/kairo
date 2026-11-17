@@ -57,7 +57,7 @@ html.is-mac.is-native .drag-strip {
   max-width: var(--page-max);
   margin: 0 auto;
   padding: calc(var(--titlebar) + 34px + env(safe-area-inset-top)) var(--gutter) calc(var(--nav-h) + 64px + env(safe-area-inset-bottom));
-  animation: page-in 0.5s var(--ease);
+  animation: page-in var(--dur-page) var(--ease-out);
 }
 
 @keyframes page-in {
@@ -170,119 +170,649 @@ html.is-mac.is-native .drag-strip {
   flex: none;
 }
 
-/* ================================================================ Bottom navigation (floating glass pill) */
+/* ================================================================ Navigation
+   One set of destinations, three shapes (Material's adaptive navigation):
+   a sidebar on wide windows (≥1100px), a rail with labels on medium ones,
+   and a tab bar on phones. Every item always shows its label. */
 
-.nav {
+.sidenav {
   position: fixed;
-  z-index: 40;
-  left: 50%;
-  bottom: calc(22px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  z-index: var(--z-nav);
+  inset: 0 auto 0 0;
+  width: var(--sidebar-w);
+  display: none;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: calc(var(--titlebar) + 22px + env(safe-area-inset-top)) var(--sp-3) var(--sp-4);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow: inset -1px 0 0 var(--line);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+/* macOS: the traffic lights sit at the top left. */
+html.is-mac.is-native .sidenav {
+  padding-top: 58px;
+}
+
+.sidenav-brand {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2) var(--sp-4);
+}
+
+.sidenav-name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.sidenav-search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 44px;
+  margin-bottom: var(--sp-3);
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition: box-shadow var(--dur-state) var(--ease-out), color var(--dur-state);
+}
+
+.sidenav-search > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.sidenav-search .nav-label {
+  flex: 1;
+}
+
+@media (hover: hover) {
+  .sidenav-search:hover {
+    color: var(--ink);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+kbd,
+.sidenav-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--surface-sunk);
+  box-shadow: inset 0 -1px 0 var(--line-strong);
+  color: var(--ink-2);
+  font: 600 11px/1 var(--font);
+  letter-spacing: 0.02em;
+}
+
+.sidenav-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.sidenav-list.secondary {
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.sidenav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 44px;
+  padding: 0 var(--sp-3);
+  border-radius: 14px;
+  color: var(--ink-2);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: left;
+  transition:
+    background var(--dur-state) var(--ease-out),
+    color var(--dur-state),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.nav-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.nav-icon svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.9;
+}
+
+@media (hover: hover) {
+  .sidenav-item:hover:not(.active) {
+    background: var(--surface-soft);
+    color: var(--ink);
+  }
+}
+
+.sidenav-item:active:not(.active) {
+  transform: scale(0.97);
+}
+
+.sidenav-item.active {
+  background: var(--cta);
+  color: var(--on-cta);
+  box-shadow: var(--cta-shadow);
+}
+
+.sidenav-fill {
+  flex: 1;
+  min-height: var(--sp-4);
+}
+
+/* The timer, kept in reach on every screen but Home */
+.mini-timer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  animation: mini-in var(--dur-enter) var(--ease-out);
+}
+
+@keyframes mini-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.mini-timer-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 2px;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.mini-timer-ring {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+
+.mini-timer-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mini-timer-ring circle {
+  fill: none;
+  stroke-width: 4;
+}
+
+.mini-timer-ring .track {
+  stroke: var(--track);
+}
+
+.mini-timer-ring .fill {
+  stroke: var(--brand);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.mini-timer.phase-short_break .mini-timer-ring .fill {
+  stroke: var(--phase-short-solid);
+}
+
+.mini-timer.phase-long_break .mini-timer-ring .fill {
+  stroke: var(--phase-long-solid);
+}
+
+.mini-timer-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mini-timer-phase {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-timer-time {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.mini-timer.is-paused .mini-timer-time {
+  color: var(--ink-2);
+}
+
+.mini-timer-play {
+  flex: none;
+}
+
+.preview-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--sp-3) var(--sp-2) 0;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.preview-chip svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--brand-ink);
+}
+
+/* Phones: a floating tab bar, every item labelled */
+.tabbar {
+  position: fixed;
+  z-index: var(--z-nav);
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: none;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: min(440px, calc(100% - 24px));
   padding: 6px;
-  border-radius: var(--r-pill);
+  border-radius: 26px;
   background: var(--nav-glass);
   backdrop-filter: blur(28px) saturate(1.8);
   -webkit-backdrop-filter: blur(28px) saturate(1.8);
   box-shadow: var(--shadow-nav), inset 0 0 0 1px var(--hero-glass-line);
 }
 
-.nav-item {
-  position: relative;
+.tabbar-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 52px;
-  min-width: 52px;
-  padding: 0 15px;
-  border-radius: var(--r-pill);
+  gap: 3px;
+  min-height: 56px;
+  border-radius: 20px;
   color: var(--ink-2);
-  font-size: 14.5px;
+  font-size: 11px;
   font-weight: 650;
-  transition: background 0.35s var(--ease), color 0.25s, padding 0.35s var(--ease), min-width 0.35s var(--ease);
+  touch-action: manipulation;
 }
 
-.nav-item svg {
-  width: 22px;
-  height: 22px;
-  flex: none;
-  stroke-width: 1.9;
+.tabbar-item .nav-icon {
+  width: 52px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  transition: background var(--dur-state) var(--ease-out), color var(--dur-state);
 }
 
-.nav-item .nav-label {
-  display: none;
+.tabbar-item .nav-icon svg {
+  width: 21px;
+  height: 21px;
 }
 
-@media (hover: hover) {
-  .nav-item:hover:not(.active) {
-    color: var(--ink);
-    background: var(--surface-soft);
-  }
-}
-
-.nav-item:active:not(.active) {
+.tabbar-item:active .nav-icon {
   transform: scale(0.94);
 }
 
-.nav-item.active {
-  /* fixed minimum so the nav keeps one width on every tab */
-  min-width: 124px;
-  padding: 0 22px 0 18px;
+.tabbar-item.active {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tabbar-item.active .nav-icon {
   background: var(--cta);
   color: var(--on-cta);
-  box-shadow: var(--cta-shadow);
 }
 
-.nav-item.active .nav-label {
-  display: inline;
-  animation: nav-label-in 0.4s var(--ease);
-}
+/* ---------------------------------------------------------------- Which shape where */
 
-@keyframes nav-label-in {
-  from {
-    opacity: 0;
-    transform: translateX(-4px);
+@media (min-width: 1100px) {
+  :root {
+    --sidebar-w: 236px;
+  }
+
+  .sidenav {
+    display: flex;
   }
 }
 
-.preview-chip {
-  position: fixed;
-  z-index: 39;
-  left: 24px;
-  bottom: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: var(--r-pill);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-2);
-  background: var(--glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: var(--shadow-sm);
-  pointer-events: none;
+/* A rail: icons with their labels underneath */
+@media (min-width: 761px) and (max-width: 1099px) {
+  :root {
+    --sidebar-w: 88px;
+  }
+
+  .sidenav {
+    display: flex;
+    align-items: stretch;
+    padding-left: var(--sp-2);
+    padding-right: var(--sp-2);
+  }
+
+  .sidenav-brand {
+    justify-content: center;
+    padding: 0 0 var(--sp-3);
+  }
+
+  .sidenav-name,
+  .sidenav-kbd,
+  .mini-timer-ring,
+  .mini-timer-phase,
+  .preview-chip .nav-label {
+    display: none;
+  }
+
+  .sidenav-search,
+  .sidenav-item {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    height: auto;
+    min-height: 56px;
+    padding: 6px 0;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .sidenav-search {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .sidenav-item.active {
+    background: transparent;
+    color: var(--ink);
+    box-shadow: none;
+    font-weight: 700;
+  }
+
+  .sidenav-item .nav-icon,
+  .sidenav-search > svg {
+    width: 52px;
+    height: 30px;
+    padding: 0 15px;
+    border-radius: var(--r-pill);
+    transition: background var(--dur-state) var(--ease-out);
+  }
+
+  .sidenav-item.active .nav-icon {
+    background: var(--cta);
+    color: var(--on-cta);
+  }
+
+  @media (hover: hover) {
+    .sidenav-item:hover:not(.active) {
+      background: transparent;
+    }
+
+    .sidenav-item:hover:not(.active) .nav-icon,
+    .sidenav-search:hover > svg {
+      background: var(--surface);
+    }
+  }
+
+  .mini-timer {
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding: var(--sp-2) 0;
+  }
+
+  .mini-timer-main {
+    justify-content: center;
+  }
+
+  .mini-timer-time {
+    font-size: 13px;
+  }
+
+  .preview-chip {
+    justify-content: center;
+    margin: var(--sp-2) 0 0;
+  }
 }
 
-.preview-chip svg {
-  width: 13px;
-  height: 13px;
+@media (max-width: 760px) {
+  .tabbar {
+    display: grid;
+  }
+
+  .scroll {
+    /* Keyboard focus never ends up hidden behind the tab bar. */
+    scroll-padding-bottom: calc(var(--nav-h) + 40px);
+  }
+}
+
+.scroll {
+  margin-left: var(--sidebar-w);
+  scroll-padding-top: var(--sp-6);
+}
+
+.app.deep {
+  --sidebar-w: 0px;
+}
+
+/* Wide layouts have no bar at the bottom to clear. */
+@media (min-width: 761px) {
+  .page {
+    padding-bottom: calc(var(--sp-12) + env(safe-area-inset-bottom));
+  }
+
+  .toasts {
+    left: calc(50% + var(--sidebar-w) / 2);
+  }
+}
+
+/* ================================================================ Skip link */
+
+.skip-link {
+  position: fixed;
+  z-index: var(--z-skip);
+  top: calc(var(--titlebar) + 12px);
+  left: 12px;
+  height: 44px;
+  padding: 0 var(--sp-5);
+  border-radius: var(--r-pill);
+  background: var(--cta);
+  color: var(--on-cta);
+  font-size: 14px;
+  font-weight: 650;
+  transform: translateY(-200%);
+  transition: transform var(--dur-state) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+main:focus {
+  outline: none;
+}
+
+/* Titles take focus after navigating (for screen readers); no ring needed there. */
+.page h1:focus {
+  outline: none;
+}
+
+/* ================================================================ Command palette */
+
+.palette-scrim {
+  position: fixed;
+  z-index: var(--z-palette);
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: max(10vh, 56px) var(--sp-4) var(--sp-4);
+  background: var(--scrim);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade-in var(--dur-state) var(--ease-out);
+}
+
+.palette {
+  width: min(600px, 100%);
+  max-height: min(560px, 80vh);
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--line);
+  overflow: hidden;
+  animation: palette-in var(--dur-enter) var(--ease-out);
+}
+
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+
+.palette-field {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 60px;
+  padding: 0 var(--sp-4) 0 var(--sp-5);
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.palette-field > svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--ink-3);
+}
+
+.palette-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.palette-input::placeholder {
+  color: var(--ink-3);
+}
+
+.palette-list {
+  overflow-y: auto;
+  padding: var(--sp-2);
+  scroll-padding: var(--sp-2);
+}
+
+.palette-group {
+  padding: var(--sp-3) var(--sp-3) var(--sp-1);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  border-radius: 12px;
+  font-size: var(--fs-body);
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.palette-item.active {
+  background: var(--brand-tint-2);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .palette-item.active {
+  background: var(--surface-soft);
+}
+
+.palette-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--ink-2);
+}
+
+.palette-item.active .palette-icon {
+  background: var(--surface);
   color: var(--brand-ink);
 }
 
-/* ================================================================ Responsive */
-
-/* The preview chip only shows where it has room beside the nav */
-@media (max-width: 1280px) {
-  .preview-chip {
-    display: none;
-  }
+.palette-icon svg {
+  width: 16px;
+  height: 16px;
 }
+
+.palette-num {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.palette-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sp-8) var(--sp-4);
+  color: var(--ink-2);
+  font-size: 14px;
+  text-align: center;
+}
+
+.palette-empty strong {
+  color: var(--ink);
+}
+
+/* ================================================================ Responsive */
 
 @media (max-width: 1024px) {
   .grid-3 {
@@ -302,28 +832,6 @@ html.is-mac.is-native .drag-strip {
 
   .topbar {
     margin-bottom: 20px;
-  }
-
-  .nav {
-    gap: 2px;
-    padding: 6px;
-    bottom: calc(14px + env(safe-area-inset-bottom));
-  }
-
-  .nav-item {
-    height: 48px;
-    min-width: 48px;
-    padding: 0 12px;
-  }
-
-  .nav-item.active {
-    min-width: 112px;
-    padding: 0 16px 0 14px;
-  }
-
-  .nav-item svg {
-    width: 20px;
-    height: 20px;
   }
 
   .pill {
@@ -349,23 +857,9 @@ html.is-mac.is-native .drag-strip {
   .card.hero {
     border-radius: 32px;
   }
-}
 
-/* Small phones (360dp): slimmer items so the nav keeps a gutter on both sides */
-@media (max-width: 380px) {
-  .nav {
-    gap: 4px;
-  }
-
-  .nav-item {
-    min-width: 44px;
-    height: 46px;
-    padding: 0 11px;
-  }
-
-  .nav-item.active {
-    min-width: 104px;
-    padding: 0 14px 0 12px;
+  .palette-scrim {
+    padding-top: calc(var(--sp-4) + env(safe-area-inset-top));
   }
 }
 

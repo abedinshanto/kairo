@@ -26,3 +26,6 @@ dist-ssr
 # Voice model (downloaded by scripts/fetch-voice-model.mjs)
 src-tauri/voice/*.bin
 src-tauri/voice/*.part
+
+# Python bytecode (from running skill scripts)
+__pycache__/

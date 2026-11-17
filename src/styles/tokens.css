@@ -115,15 +115,53 @@
   --shadow-lg: 0 30px 70px -24px rgba(20, 40, 28, 0.3);
   --shadow-nav: 0 22px 50px -20px rgba(20, 40, 28, 0.32), 0 2px 8px rgba(20, 40, 28, 0.05);
 
-  /* Motion */
+  /* Motion: one rhythm everywhere. Feedback is quick, arrivals decelerate,
+     exits accelerate and run about two thirds as long as the entrance. */
   --ease: cubic-bezier(0.22, 0.75, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 0.75, 0.2, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
   --spring: cubic-bezier(0.34, 1.5, 0.64, 1);
+  --dur-press: 120ms;
+  --dur-state: 200ms;
+  --dur-enter: 320ms;
+  --dur-exit: 200ms;
+  --dur-page: 480ms;
+
+  /* Type scale (px): caption 12, label 13, body 15, title 17, headline 22, display 44 */
+  --fs-caption: 12px;
+  --fs-label: 13px;
+  --fs-body: 15px;
+  --fs-title: 17px;
+  --fs-headline: 22px;
+  --fs-display: 44px;
+
+  /* Spacing: a 4px rhythm */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* Layers */
+  --z-raised: 1;
+  --z-nav: 40;
+  --z-sheet: 60;
+  --z-onboarding: 65;
+  --z-toast: 70;
+  --z-palette: 80;
+  --z-skip: 100;
 
   /* Layout */
   --page-max: 1120px;
   --gutter: 32px;
   --titlebar: 0px;
   --nav-h: 72px;
+  /* Side navigation: a full sidebar on wide windows, a rail in between */
+  --sidebar-w: 0px;
 }
 
 :root[data-theme="dark"] {
