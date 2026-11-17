@@ -2,21 +2,11 @@ Kairo is a calm focus timer that shows where your time goes, privately and on yo
 
 ## What's new
 
-- **A new look.** Calm sage and mint, light cards, one dark button for the thing that matters, and far fewer words on every screen. Headers lead with the page's name; captions only appear when they have something to say. Dark mode got the same treatment.
-- **Meet the new Kai.** A soft little sprout that breathes, blinks, looks around and follows your pointer with its eyes. It settles in while you focus, puts its sunglasses on for a break, is all ears while you dictate and dozes off when nothing's going on. Tap it and it squishes. The app icon is the new Kai too.
-- **Home, simplified.** A greeting for the time of day, the timer, one *Today* card (focus against your goal and the last seven days at a glance), your sound, what's next and today's screen time.
-- **A calmer welcome.** Two short steps instead of three.
-- **Flow mode.** Turn on **Flow** on the timer (or in Settings) and focus counts up with no set end. Stop when you're done and take the break you earned: a fifth of the time you focused (40 minutes buys an 8-minute break).
-- **Breathe with Kai.** On a break, tap *Breathe with Kai* for a minute of slow breathing, Kai swelling and settling with you. Turn on *Bring Kairo forward on breaks* in Settings and Kairo comes to the front when a block ends.
-- **Check-ins.** After each block, Kai asks how it felt: scattered, okay or deep. One tap (or skip). You can change it later from Stats › Focus blocks, and Stats points out when your deep blocks tend to happen.
-- **Kai blooms.** Reach your daily focus goal and a blossom opens on Kai's sprout, everywhere in the app, for the rest of the day.
-- **Sound, fixed and rebalanced:**
-  - Pressing play no longer freezes the window for a moment: sounds are now made in the background.
-  - Every sound plays at the same loudness, so a preset no longer jumps in volume and the crickets in *Campfire* (and birds in *Forest Morning*) can actually be heard.
-  - Loops repeat seamlessly; noise no longer dips in volume every few seconds.
-  - The end-of-block chime rings out in full instead of being cut off when the break fades your sound out, and it now rings even if you never played a sound.
-  - Turning off the last sound in a mix stops playback instead of leaving it stuck on "Playing".
-- **Smoother:** only the countdown updates while the timer runs, not the whole Home screen.
+- **A sidebar on wide windows.** Every screen, a search box and a live mini timer are always in reach; Settings sits apart at the bottom. Medium windows get a slim rail, phones a tab bar, and every item now shows its name.
+- **Command palette.** Press **⌘/Ctrl + K** anywhere: start, pause or finish a block, switch modes, focus on a task, jump to a screen, play a soundscape or change the theme, without touching the mouse.
+- **Undo.** Finished a task by mistake? The toast has an **Undo** button. Toasts also wait while you hover or focus them.
+- **Easier to use with a keyboard, a screen reader or a finger:** a *Skip to content* link, focus moves to the title of each new screen, nothing is hidden behind the tab bar, and every control is at least 44 points on touch screens.
+- **One rhythm for motion and spacing** across the app (shared type, spacing, timing and layering scales), checked against the UI UX Pro Max rule set and an automated accessibility audit with no remaining issues.
 
 ## Downloads
 

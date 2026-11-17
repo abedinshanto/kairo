@@ -3,7 +3,7 @@
 .onb {
   position: fixed;
   inset: 0;
-  z-index: 65;
+  z-index: var(--z-onboarding);
   display: flex;
   justify-content: center;
   padding: calc(var(--titlebar) + 22px + env(safe-area-inset-top)) var(--gutter) calc(26px + env(safe-area-inset-bottom));

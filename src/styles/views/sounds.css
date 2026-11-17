@@ -752,6 +752,13 @@
 
 /* ---------------------------------------------------------------- Responsive */
 
+/* Beside the sidebar the presets' column gets narrow: give it an even share. */
+@media (max-width: 1320px) {
+  .sounds-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 1024px) {
   .sounds-grid {
     grid-template-columns: minmax(0, 1fr);

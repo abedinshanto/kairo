@@ -100,7 +100,14 @@ const actions = {
       if (done && timer?.taskId === task.id && timer.status === "idle") {
         await setIntention(timer.intention === task.title ? "" : timer.intention, null);
       }
-      if (done) toast({ title: "Nice work!", body: `“${task.title}” is done.`, tone: "success" });
+      if (done) {
+        toast({
+          title: "Nice work!",
+          body: `“${task.title}” is done.`,
+          tone: "success",
+          action: { label: "Undo", run: () => void actions.setDone(task, false) },
+        });
+      }
     }),
 
   rename: (task: Task, title: string) => {

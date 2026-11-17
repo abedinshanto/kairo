@@ -17,6 +17,8 @@ export interface Toast {
   title: string;
   body?: string;
   tone?: "default" | "success" | "warning";
+  /** One follow-up, such as Undo. */
+  action?: { label: string; run: () => void };
 }
 
 interface State {
@@ -45,6 +47,8 @@ interface State {
   checkIn: number | null;
   /** Today's focus goal is met: Kai blooms for the rest of the day. */
   bloom: boolean;
+  /** The ⌘K command palette is open. */
+  paletteOpen: boolean;
 
   init(): Promise<void>;
   openSummary(day?: number, week?: boolean): void;
@@ -67,6 +71,7 @@ interface State {
   rateCheckIn(rating: number | null): Promise<void>;
   /** Re-check today's focus against the goal (and celebrate when it's newly met). */
   refreshBloom(celebrate?: boolean): Promise<void>;
+  setPalette(open: boolean): void;
 }
 
 let persistTimer: number | undefined;
@@ -104,6 +109,7 @@ export const useApp = create<State>((set, get) => ({
   summaryWeek: false,
   checkIn: null,
   bloom: false,
+  paletteOpen: false,
 
   async init() {
     if (initialised) return;
@@ -261,6 +267,10 @@ export const useApp = create<State>((set, get) => ({
     set({ deepFocus });
   },
 
+  setPalette(paletteOpen) {
+    set({ paletteOpen });
+  },
+
   updateSettings(patch) {
     const next = withDefaults({ ...get().settings, ...patch });
     set({ settings: next });
@@ -340,8 +350,8 @@ export const useApp = create<State>((set, get) => ({
 
   toast(t) {
     const id = toastId++;
+    // Each toast dismisses itself (pausing while it's hovered or focused).
     set((s) => ({ toasts: [...s.toasts.slice(-2), { id, ...t }] }));
-    window.setTimeout(() => get().dismissToast(id), 5200);
   },
   dismissToast(id) {
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
